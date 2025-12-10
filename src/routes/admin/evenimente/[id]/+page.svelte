@@ -2,21 +2,17 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
+  import {
+    events,
+    type Event as EventType,
+    fetchEventById,
+    updateEvent,
+    deleteEvent,
+  } from "$lib/stores/events";
 
-  type EventType = "piata" | "festival" | "atelier";
-
-  interface Event {
-    id?: string;
-    title: string;
-    description: string;
-    date: string;
-    location: string;
-    event_type: EventType;
-    image_url: string;
-  }
-
-  let event: Event | null = null;
-  let formData: Event = {
+  let event: EventType | null = null;
+  let formData: EventType = {
+    id: "",
     title: "",
     description: "",
     date: "",
@@ -26,47 +22,55 @@
   };
 
   let submitting = false;
-  let deleting = false;
+  let deletingFlag = false;
   let error = "";
   let imageFile: File | null = null;
   let imagePreview = "";
   let loading = true;
 
   onMount(async () => {
-    try {
-      const res = await fetch(`/api/evenimente/${$page.params.id}`);
-      if (res.ok) {
-        const data: Event = await res.json();
-        event = data;
-        formData = { ...data };
-        imagePreview = data.image_url;
-      } else {
-        error = "Eveniment nu găsit";
-      }
-    } catch (err: unknown) {
-      error = "Eroare la încărcarea evenimentului";
-      console.error(err);
-    } finally {
+    const id = $page.params.id;
+    if (!id) {
+      error = "ID eveniment invalid";
       loading = false;
+      return;
     }
+
+    const data = await fetchEventById(id);
+    if (data) {
+      event = data;
+      formData = { ...data };
+      imagePreview = data.image_url;
+    } else {
+      error = "Eveniment nu găsit";
+    }
+    loading = false;
   });
 
-  function handleImageChange(e: Event & { target: HTMLInputElement }) {
-    const file = e.target?.files?.[0];
-    if (file) {
-      imageFile = file;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        imagePreview = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
+  function handleImageChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    imageFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      imagePreview = reader.result as string;
+    };
+    reader.readAsDataURL(file);
   }
 
-  async function handleSubmit(e: Event) {
+  async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     submitting = true;
     error = "";
+
+    const id = $page.params.id;
+    if (!id) {
+      error = "ID eveniment invalid";
+      submitting = false;
+      return;
+    }
 
     try {
       let imageUrl = formData.image_url;
@@ -86,18 +90,11 @@
         }
       }
 
-      const res = await fetch(`/api/evenimente/${$page.params.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          image_url: imageUrl,
-        }),
+      const updated = await updateEvent(id, {
+        ...formData,
+        image_url: imageUrl,
       });
-
-      if (res.ok) {
+      if (updated) {
         goto("/admin/evenimente");
       } else {
         error = "Eroare la actualizare";
@@ -111,24 +108,24 @@
   }
 
   async function handleDelete() {
+    const id = $page.params.id;
+    if (!id) {
+      error = "ID eveniment invalid";
+      return;
+    }
+
     if (!confirm("Ești sigur?")) return;
 
-    deleting = true;
+    deletingFlag = true;
     try {
-      const res = await fetch(`/api/evenimente/${$page.params.id}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        goto("/admin/evenimente");
-      } else {
-        error = "Eroare la ștergere";
-      }
+      const success = await deleteEvent(id);
+      if (success) goto("/admin/evenimente");
+      else error = "Eroare la ștergere";
     } catch (err: unknown) {
       error = "Eroare la ștergere";
       console.error(err);
     } finally {
-      deleting = false;
+      deletingFlag = false;
     }
   }
 </script>
@@ -146,7 +143,7 @@
       <button
         class="btn btn-danger"
         on:click={handleDelete}
-        disabled={loading || deleting}
+        disabled={loading || deletingFlag}
       >
         <i class="bi bi-trash"></i> Șterge
       </button>
@@ -158,7 +155,12 @@
   <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <i class="bi bi-exclamation-triangle"></i>
     {error}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
   </div>
 {/if}
 

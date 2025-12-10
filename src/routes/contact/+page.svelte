@@ -1,45 +1,45 @@
-<script>
-  import Hero from '$lib/components/Hero.svelte';
-  import { onMount } from 'svelte';
+<script lang="ts">
+  import Hero from "$lib/components/Hero.svelte";
+  import { onMount } from "svelte";
 
   let formData = {
-    name: '',
-    email: '',
-    phone: '',
-    subject: '',
-    message: ''
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: "",
   };
 
   let submitting = false;
   let submitted = false;
-  let error = '';
+  let error = "";
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     submitting = true;
-    error = '';
+    error = "";
 
     try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
+      const res = await fetch("/api/contact", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       if (res.ok) {
         submitted = true;
-        formData = { name: '', email: '', phone: '', subject: '', message: '' };
+        formData = { name: "", email: "", phone: "", subject: "", message: "" };
 
         setTimeout(() => {
           submitted = false;
         }, 5000);
       } else {
-        error = 'A apărut o eroare. Încearcă din nou!';
+        error = "A apărut o eroare. Încearcă din nou!";
       }
     } catch (err) {
-      error = 'Eroare de conexiune. Încearcă din nou!';
+      error = "Eroare de conexiune. Încearcă din nou!";
       console.error(err);
     } finally {
       submitting = false;
@@ -102,7 +102,10 @@
               <i class="bi bi-envelope"></i> Email
             </h5>
             <p class="card-text">
-              <a href="mailto:desagatech@gmail.com" class="text-decoration-none">
+              <a
+                href="mailto:desagatech@gmail.com"
+                class="text-decoration-none"
+              >
                 desagatech@gmail.com
               </a>
             </p>
@@ -115,13 +118,34 @@
               <i class="bi bi-share"></i> Social Media
             </h5>
             <div class="d-flex gap-3">
-              <a href="#" class="btn btn-sm btn-outline-primary rounded-circle">
+              <a
+                href="https://facebook.com/desagaculegume"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow us on Facebook"
+                class="text-white text-decoration-none"
+                title="Facebook"
+              >
                 <i class="bi bi-facebook"></i>
               </a>
-              <a href="#" class="btn btn-sm btn-outline-primary rounded-circle">
+              <a
+                href="https://instagram.com/desagaculegume"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow us on Instagram"
+                class="text-white text-decoration-none"
+                title="Instagram"
+              >
                 <i class="bi bi-instagram"></i>
               </a>
-              <a href="#" class="btn btn-sm btn-outline-primary rounded-circle">
+              <a
+                href="https://youtube.com/@desagaculegume"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Subscribe on YouTube"
+                class="text-white text-decoration-none"
+                title="YouTube"
+              >
                 <i class="bi bi-youtube"></i>
               </a>
             </div>
@@ -136,10 +160,13 @@
         </h2>
 
         {#if submitted}
-          <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <div
+            class="alert alert-success alert-dismissible fade show"
+            role="alert"
+          >
             <i class="bi bi-check-circle"></i>
-            <strong>Mesaj trimis cu succes!</strong> Vă mulțumim pentru mesaj. Vom reveni în curând
-            cu un răspuns.
+            <strong>Mesaj trimis cu succes!</strong> Vă mulțumim pentru mesaj.
+            Vom reveni în curând cu un răspuns.
             <button
               type="button"
               class="btn-close"
@@ -150,9 +177,13 @@
         {/if}
 
         {#if error}
-          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <div
+            class="alert alert-danger alert-dismissible fade show"
+            role="alert"
+          >
             <i class="bi bi-exclamation-triangle"></i>
-            <strong>Eroare!</strong> {error}
+            <strong>Eroare!</strong>
+            {error}
             <button
               type="button"
               class="btn-close"
@@ -175,7 +206,9 @@
           </div>
 
           <div class="mb-3">
-            <label for="email" class="form-label text-brown fw-bold">Email</label>
+            <label for="email" class="form-label text-brown fw-bold"
+              >Email</label
+            >
             <input
               type="email"
               class="form-control"
@@ -186,7 +219,9 @@
           </div>
 
           <div class="mb-3">
-            <label for="phone" class="form-label text-brown fw-bold">Telefon (opțional)</label>
+            <label for="phone" class="form-label text-brown fw-bold"
+              >Telefon (opțional)</label
+            >
             <input
               type="tel"
               class="form-control"
@@ -196,7 +231,9 @@
           </div>
 
           <div class="mb-3">
-            <label for="subject" class="form-label text-brown fw-bold">Subiect</label>
+            <label for="subject" class="form-label text-brown fw-bold"
+              >Subiect</label
+            >
             <input
               type="text"
               class="form-control"
@@ -207,7 +244,9 @@
           </div>
 
           <div class="mb-3">
-            <label for="message" class="form-label text-brown fw-bold">Mesaj</label>
+            <label for="message" class="form-label text-brown fw-bold"
+              >Mesaj</label
+            >
             <textarea
               class="form-control"
               id="message"
@@ -224,7 +263,11 @@
               disabled={submitting}
             >
               {#if submitting}
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 Se trimite...
               {:else}
                 <i class="bi bi-send"></i> Trimite mesajul

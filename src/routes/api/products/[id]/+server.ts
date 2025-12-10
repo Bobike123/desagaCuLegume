@@ -1,7 +1,8 @@
 import { supabaseServer } from '$lib/api/supabase';
 import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 
-export async function GET({ params }) {
+export const GET: RequestHandler = async ({ params }) => {
   const supabase = supabaseServer();
 
   try {
@@ -14,11 +15,12 @@ export async function GET({ params }) {
     if (error) throw error;
     return json(data);
   } catch (err) {
-    return json({ error: err.message }, { status: 400 });
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return json({ error: message }, { status: 400 });
   }
-}
+};
 
-export async function PUT({ params, request, locals }) {
+export const PUT: RequestHandler = async ({ params, request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -36,11 +38,12 @@ export async function PUT({ params, request, locals }) {
     if (error) throw error;
     return json(data);
   } catch (err) {
-    return json({ error: err.message }, { status: 400 });
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return json({ error: message }, { status: 400 });
   }
-}
+};
 
-export async function DELETE({ params, locals }) {
+export const DELETE: RequestHandler = async ({ params, locals }) => {
   if (!locals.user) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -56,6 +59,7 @@ export async function DELETE({ params, locals }) {
     if (error) throw error;
     return json({ success: true });
   } catch (err) {
-    return json({ error: err.message }, { status: 400 });
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return json({ error: message }, { status: 400 });
   }
-}
+};

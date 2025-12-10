@@ -1,7 +1,15 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
 
-  let products = [];
+  interface Product {
+    id: string;
+    name: string;
+    category: string;
+    price?: number;
+    in_stock: boolean;
+  }
+
+  let products: Product[] = [];
   let loading = true;
   let error = '';
   let searchQuery = '';
@@ -27,7 +35,7 @@
     return matchesSearch && matchesCategory;
   });
 
-  async function deleteProduct(id) {
+  async function deleteProduct(id: string) {
     if (!confirm('Ești sigur că vrei să ștergi acest produs?')) return;
 
     try {
@@ -68,7 +76,6 @@
   </div>
 {/if}
 
-<!-- Search & Filter -->
 <div class="row g-3 mb-4">
   <div class="col-md-6">
     <input
@@ -124,7 +131,7 @@
                 </span>
               </td>
               <td>
-                <a href="/admin/produse/{product.id}" class="btn btn-sm btn-primary me-2">
+                <a href={`/admin/produse/${product.id}`} class="btn btn-sm btn-primary me-2">
                   <i class="bi bi-pencil"></i> Edit
                 </a>
                 <button

@@ -39,6 +39,7 @@
 	"dependencies": {
 		"@supabase/supabase-js": "^2.87.1",
 		"@sveltejs/adapter-vercel": "^6.2.0",
-		"bootstrap": "^5.3.8"
+		"bootstrap": "^5.3.8",
+		"resend": "^6.6.0"
 	}
 }

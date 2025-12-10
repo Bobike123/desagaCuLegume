@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import { supabase } from "$lib/api/supabase";
     import { goto } from "$app/navigation";
     import { isAdmin, user } from "$lib/stores/auth";
@@ -8,7 +8,7 @@
     let error = "";
     let loading = false;
 
-    async function handleLogin(e) {
+    async function handleLogin(e: Event) {
         e.preventDefault();
         loading = true;
         error = "";

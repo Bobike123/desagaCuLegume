@@ -1,7 +1,7 @@
-import { getSupabaseServer } from '$lib/api/supabase';
+import { supabaseServer } from '$lib/api/supabase';
 
 export async function load() {
-  const supabase = getSupabaseServer();
+  const supabase = supabaseServer();
 
   try {
     const { data: noutati, error } = await supabase

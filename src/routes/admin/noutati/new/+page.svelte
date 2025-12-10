@@ -94,7 +94,12 @@
   <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <i class="bi bi-exclamation-triangle"></i>
     {error}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
   </div>
 {/if}
 
@@ -220,8 +225,7 @@
     color: var(--desaga-brown) !important;
   }
 
-  .form-control:focus,
-  .form-select:focus {
+  .form-control:focus {
     border-color: var(--desaga-green);
     box-shadow: 0 0 0 0.2rem rgba(118, 236, 30, 0.25);
   }

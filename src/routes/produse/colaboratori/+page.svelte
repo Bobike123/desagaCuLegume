@@ -1,15 +1,16 @@
-<script>
-  import Hero from '$lib/components/Hero.svelte';
-  import ProductCard from '$lib/components/ProductCard.svelte';
-  import { products } from '$lib/stores/products';
-  import { fetchProducts } from '$lib/stores/products';
-  import { onMount } from 'svelte';
+<script lang="ts">
+  import Hero from "$lib/components/Hero.svelte";
+  import ProductCard from "$lib/components/ProductCard.svelte";
+  import { products } from "$lib/stores/products";
+  import { fetchProducts } from "$lib/stores/products";
+  import type { Product } from "$lib/stores/products";
+  import { onMount } from "svelte";
 
-  let filteredProducts = [];
+  let filteredProducts: Product[] = [];
 
   onMount(async () => {
     await fetchProducts();
-    filteredProducts = $products.filter((p) => p.category === 'colaboratori');
+    filteredProducts = $products.filter((p) => p.category === "colaboratori");
   });
 </script>
 
@@ -31,13 +32,12 @@
         <h2 class="h2 text-brown fw-bold mb-3">
           <i class="bi bi-people"></i> Consumă SĂNĂTOS
         </h2>
-        <p class="lead">
-          Din Fermă direct la Rulota DeSaga
-        </p>
+        <p class="lead">Din Fermă direct la Rulota DeSaga</p>
         <p>
-          Pentru că vrem ca Rulota DeSaga să fie o mică Băcănie, am hotărât să completăm oferta
-          de legume-fructe proaspete și procesate și cu alte produse făcute de oameni faini, pe
-          care am avut ocazia să-i cunoaștem la târguri și evenimente.
+          Pentru că vrem ca Rulota DeSaga să fie o mică Băcănie, am hotărât să
+          completăm oferta de legume-fructe proaspete și procesate și cu alte
+          produse făcute de oameni faini, pe care am avut ocazia să-i cunoaștem
+          la târguri și evenimente.
         </p>
 
         <div class="card bg-light border-0 my-4">
@@ -101,7 +101,7 @@
     {#if filteredProducts.length === 0}
       <div class="alert alert-info text-center" role="alert">
         <h4 class="alert-heading">
-          <i class="bi bi-info-circle"></i> Nicio produs disponibilă
+          <i class="bi bi-info-circle"></i> Niciun produs disponibil
         </h4>
         <p>Revino mai târziu pentru produse de la colaboratori!</p>
       </div>

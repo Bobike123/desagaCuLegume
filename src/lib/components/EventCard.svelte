@@ -1,10 +1,20 @@
 <script lang="ts">
-  export let event = {
+  interface Event {
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    location: string;
+    event_type: string;
+    image_url?: string;
+  }
+
+  export let event: Event = {
     id: "",
     title: "",
     description: "",
     image_url: "/images/placeholder.jpg",
-    date: new Date(),
+    date: "",
     location: "",
     event_type: "festival",
   };
@@ -29,7 +39,7 @@
 
 <div class="event-card card h-100">
   <img
-    src={event.image_url}
+    src={event.image_url || "/images/placeholder.jpg"}
     alt={event.title}
     class="event-image card-img-top"
   />
@@ -42,7 +52,7 @@
     <div class="mt-3">
       <p class="event-date mb-2">
         <i class="bi bi-calendar-event"></i>
-        {formatDate(event.date.toString())}
+        {formatDate(event.date)}
       </p>
 
       <p class="event-location mb-2">

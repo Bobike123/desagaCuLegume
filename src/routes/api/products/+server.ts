@@ -17,8 +17,10 @@ export async function GET({ url }) {
     if (error) throw error;
     return json(data || []);
   } catch (err) {
-    return json({ error: err.message }, { status: 400 });
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return json({ error: message }, { status: 400 });
   }
+
 }
 
 export async function POST({ request, locals }) {
@@ -38,6 +40,8 @@ export async function POST({ request, locals }) {
     if (error) throw error;
     return json(data, { status: 201 });
   } catch (err) {
-    return json({ error: err.message }, { status: 400 });
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return json({ error: message }, { status: 400 });
   }
+
 }

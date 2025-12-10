@@ -1,47 +1,50 @@
-<script>
-  import { goto } from '$app/navigation';
+<script lang="ts">
+  import { goto } from "$app/navigation";
 
   let formData = {
-    title: '',
-    description: '',
-    date: '',
-    location: '',
-    event_type: 'festival',
-    image_url: ''
+    title: "",
+    description: "",
+    date: "",
+    location: "",
+    event_type: "festival",
+    image_url: "",
   };
 
   let submitting = false;
-  let error = '';
-  let imageFile = null;
-  let imagePreview = '';
+  let error = "";
+  let imageFile: File | null = null;
+  let imagePreview = "";
 
-  function handleImageChange(e) {
-    const file = e.target.files;
+  function handleImageChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const file = target.files?.[0];
     if (file) {
       imageFile = file;
       const reader = new FileReader();
       reader.onload = (event) => {
-        imagePreview = event.target.result;
+        if (event.target?.result && typeof event.target.result === "string") {
+          imagePreview = event.target.result;
+        }
       };
       reader.readAsDataURL(file);
     }
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: Event) {
     e.preventDefault();
     submitting = true;
-    error = '';
+    error = "";
 
     try {
       let imageUrl = formData.image_url;
 
       if (imageFile) {
         const formDataObj = new FormData();
-        formDataObj.append('file', imageFile);
+        formDataObj.append("file", imageFile);
 
-        const uploadRes = await fetch('/api/products/upload', {
-          method: 'POST',
-          body: formDataObj
+        const uploadRes = await fetch("/api/products/upload", {
+          method: "POST",
+          body: formDataObj,
         });
 
         if (uploadRes.ok) {
@@ -50,24 +53,25 @@
         }
       }
 
-      const res = await fetch('/api/evenimente', {
-        method: 'POST',
+      const res = await fetch("/api/evenimente", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...formData,
-          image_url: imageUrl
-        })
+          image_url: imageUrl,
+        }),
       });
 
       if (res.ok) {
-        goto('/admin/evenimente');
+        goto("/admin/evenimente");
       } else {
-        error = 'Eroare la crearea evenimentului';
+        error = "Eroare la crearea evenimentului";
       }
     } catch (err) {
-      error = err.message || 'Eroare necunoscută';
+      const message = err instanceof Error ? err.message : "Eroare necunoscută";
+      error = message;
       console.error(err);
     } finally {
       submitting = false;
@@ -89,8 +93,14 @@
 
 {#if error}
   <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="bi bi-exclamation-triangle"></i> {error}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <i class="bi bi-exclamation-triangle"></i>
+    {error}
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
   </div>
 {/if}
 
@@ -100,7 +110,9 @@
       <div class="card-body p-4">
         <form on:submit={handleSubmit}>
           <div class="mb-3">
-            <label for="title" class="form-label text-brown fw-bold">Titlu *</label>
+            <label for="title" class="form-label text-brown fw-bold"
+              >Titlu *</label
+            >
             <input
               type="text"
               class="form-control"
@@ -113,7 +125,9 @@
 
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="date" class="form-label text-brown fw-bold">Data și ora *</label>
+              <label for="date" class="form-label text-brown fw-bold"
+                >Data și ora *</label
+              >
               <input
                 type="datetime-local"
                 class="form-control"
@@ -124,7 +138,9 @@
               />
             </div>
             <div class="col-md-6 mb-3">
-              <label for="type" class="form-label text-brown fw-bold">Tip Eveniment *</label>
+              <label for="type" class="form-label text-brown fw-bold"
+                >Tip Eveniment *</label
+              >
               <select
                 class="form-select"
                 id="type"
@@ -140,7 +156,9 @@
           </div>
 
           <div class="mb-3">
-            <label for="location" class="form-label text-brown fw-bold">Locație *</label>
+            <label for="location" class="form-label text-brown fw-bold"
+              >Locație *</label
+            >
             <input
               type="text"
               class="form-control"
@@ -152,7 +170,9 @@
           </div>
 
           <div class="mb-3">
-            <label for="description" class="form-label text-brown fw-bold">Descriere *</label>
+            <label for="description" class="form-label text-brown fw-bold"
+              >Descriere *</label
+            >
             <textarea
               class="form-control"
               id="description"
@@ -164,7 +184,9 @@
           </div>
 
           <div class="mb-3">
-            <label for="image" class="form-label text-brown fw-bold">Imagine</label>
+            <label for="image" class="form-label text-brown fw-bold"
+              >Imagine</label
+            >
             <input
               type="file"
               class="form-control"
@@ -175,7 +197,12 @@
             />
             {#if imagePreview}
               <div class="mt-3">
-                <img src={imagePreview} alt="Preview" class="img-fluid rounded" style="max-height: 200px;" />
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  class="img-fluid rounded"
+                  style="max-height: 200px;"
+                />
               </div>
             {/if}
           </div>
@@ -187,7 +214,11 @@
               disabled={submitting}
             >
               {#if submitting}
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 Se salvează...
               {:else}
                 <i class="bi bi-check-circle"></i> Crează Eveniment

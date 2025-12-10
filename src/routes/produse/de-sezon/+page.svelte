@@ -1,11 +1,12 @@
-<script>
+<script lang="ts">
   import Hero from '$lib/components/Hero.svelte';
   import ProductCard from '$lib/components/ProductCard.svelte';
   import { products } from '$lib/stores/products';
   import { fetchProducts } from '$lib/stores/products';
+  import type { Product } from '$lib/stores/products';
   import { onMount } from 'svelte';
 
-  let filteredProducts = [];
+  let filteredProducts: Product[] = [];
 
   onMount(async () => {
     await fetchProducts();
@@ -85,7 +86,7 @@
     {#if filteredProducts.length === 0}
       <div class="alert alert-info text-center" role="alert">
         <h4 class="alert-heading">
-          <i class="bi bi-info-circle"></i> Nicio produto disponibilă
+          <i class="bi bi-info-circle"></i> Niciun produs disponibil
         </h4>
         <p>Revino mai târziu pentru produse de sezon!</p>
       </div>

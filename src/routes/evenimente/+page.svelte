@@ -1,11 +1,21 @@
-<script>
+<script lang="ts">
   import Hero from '$lib/components/Hero.svelte';
   import EventCard from '$lib/components/EventCard.svelte';
   import { onMount } from 'svelte';
 
-  let events = [];
+  interface Event {
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    location: string;
+    event_type: string;
+    image_url?: string;
+  }
+
+  let events: Event[] = [];
   let loading = true;
-  let filteredEvents = [];
+  let filteredEvents: Event[] = [];
   let selectedType = 'all';
 
   onMount(async () => {
@@ -22,7 +32,7 @@
   });
 
   $: filteredEvents =
-    selectedType === 'all' ? events : events.filter((e) => e.event_type === selectedType);
+    selectedType === 'all' ? events : events.filter((e: Event) => e.event_type === selectedType);
 </script>
 
 <svelte:head>

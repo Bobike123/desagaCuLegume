@@ -106,9 +106,6 @@
             >
               <i class="bi bi-facebook"></i> Facebook
             </a>
-            <a href="#" class="btn btn-sm btn-info">
-              <i class="bi bi-twitter"></i> Twitter
-            </a>
             <button
               class="btn btn-sm btn-secondary"
               on:click={() => {

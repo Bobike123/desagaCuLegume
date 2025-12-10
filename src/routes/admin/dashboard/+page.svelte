@@ -1,15 +1,23 @@
 <script lang="ts">
   import { user } from "$lib/stores/auth";
+  import type { Noutate } from "$lib/stores/noutati";
   import { onMount } from "svelte";
 
-  let stats = {
+  interface Stats {
+    totalProducts: number;
+    totalNews: number;
+    totalEvents: number;
+    inStock: number;
+  }
+
+  let stats: Stats = {
     totalProducts: 0,
     totalNews: 0,
     totalEvents: 0,
     inStock: 0,
   };
 
-  let recentNews = [];
+  let recentNews: Noutate[] = [];
   let loading = true;
 
   onMount(async () => {
@@ -21,19 +29,19 @@
       ]);
 
       if (productsRes.ok) {
-        const products = await productsRes.json();
+        const products: { in_stock: boolean }[] = await productsRes.json();
         stats.totalProducts = products.length;
         stats.inStock = products.filter((p) => p.in_stock).length;
       }
 
       if (noutatiRes.ok) {
-        const news = await noutatiRes.json();
+        const news: Noutate[] = await noutatiRes.json();
         stats.totalNews = news.length;
         recentNews = news.slice(0, 5);
       }
 
       if (evenimenteRes.ok) {
-        const events = await evenimenteRes.json();
+        const events: unknown[] = await evenimenteRes.json();
         stats.totalEvents = events.length;
       }
     } catch (error) {

@@ -1,28 +1,38 @@
-<script>
-  import { page } from '$app/stores';
-  import { onMount } from 'svelte';
+<script lang="ts">
+  import { page } from "$app/stores";
+  import { onMount } from "svelte";
 
-  let event = null;
+  interface Event {
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    location: string;
+    event_type: string;
+    image_url?: string;
+  }
+
+  let event: Event | null = null;
   let loading = true;
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('ro-RO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("ro-RO", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
-  const getEventTypeLabel = (type) => {
+  const getEventTypeLabel = (type: string) => {
     switch (type) {
-      case 'piata':
-        return '🏪 Piață';
-      case 'festival':
-        return '🎉 Festival';
-      case 'atelier':
-        return '🎨 Atelier';
+      case "piata":
+        return "🏪 Piață";
+      case "festival":
+        return "🎉 Festival";
+      case "atelier":
+        return "🎨 Atelier";
       default:
         return type;
     }
@@ -35,7 +45,7 @@
         event = await res.json();
       }
     } catch (error) {
-      console.error('Error loading event:', error);
+      console.error("Error loading event:", error);
     } finally {
       loading = false;
     }
@@ -43,7 +53,7 @@
 </script>
 
 <svelte:head>
-  <title>{event?.title || 'Eveniment'} - DeSaga cu Legume</title>
+  <title>{event?.title || "Eveniment"} - DeSaga cu Legume</title>
 </svelte:head>
 
 <div class="container py-5">
@@ -112,10 +122,7 @@
 
         <!-- Action Buttons -->
         <div class="d-flex gap-2 mb-5 flex-wrap">
-          <button class="btn btn-primary btn-lg" on:click={() => {}}>
-            <i class="bi bi-calendar-check"></i> Adaugă în calendar
-          </button>
-          <a href="/contact" class="btn btn-outline-primary btn-lg">
+          <a href="/contact" class="btn btn-primary btn-lg">
             <i class="bi bi-envelope"></i> Întrebare
           </a>
           <a href="/evenimente" class="btn btn-outline-secondary btn-lg">
@@ -129,17 +136,33 @@
             <i class="bi bi-share"></i> Împărtășește evenimentul
           </h5>
           <div class="d-flex gap-2">
-            <a href="#" class="btn btn-sm btn-primary">
+            <a
+              href="https://www.facebook.com/sharer/sharer.php?u={encodeURIComponent(
+                typeof window !== 'undefined' ? window.location.href : '',
+              )}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-sm btn-primary"
+            >
               <i class="bi bi-facebook"></i> Facebook
             </a>
-            <a href="#" class="btn btn-sm btn-info">
+            <a
+              href="https://twitter.com/intent/tweet?url={encodeURIComponent(
+                typeof window !== 'undefined' ? window.location.href : '',
+              )}&text={encodeURIComponent(event.title)}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-sm btn-info"
+            >
               <i class="bi bi-twitter"></i> Twitter
             </a>
             <button
               class="btn btn-sm btn-secondary"
               on:click={() => {
-                navigator.clipboard.writeText(window.location.href);
-                alert('Link copiat!');
+                if (typeof navigator !== "undefined") {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert("Link copiat!");
+                }
               }}
             >
               <i class="bi bi-link-45deg"></i> Copiază linkul
@@ -158,7 +181,8 @@
               </h5>
 
               <p class="card-text">
-                <strong>Tip:</strong> {getEventTypeLabel(event.event_type)}
+                <strong>Tip:</strong>
+                {getEventTypeLabel(event.event_type)}
               </p>
 
               <p class="card-text">
@@ -185,7 +209,9 @@
         <i class="bi bi-exclamation-triangle"></i> Eveniment nu găsit
       </h4>
       <p>
-        Evenimentul pe care îl cauți nu există. <a href="/evenimente">Înapoi la evenimente</a>
+        Evenimentul pe care îl cauți nu există. <a href="/evenimente"
+          >Înapoi la evenimente</a
+        >
       </p>
     </div>
   {/if}

@@ -1,14 +1,16 @@
 <script lang="ts">
-  export let noutate = {
+  import type { Noutate } from "$lib/stores/noutati";
+
+  export let noutate: Noutate = {
     id: "",
     title: "",
     excerpt: "",
+    content: "",
     image_url: "/images/placeholder.jpg",
     created_at: new Date(),
     author_id: "",
+    published: true,
   };
-
-  export let date: string | Date;
 
   const formatDate = (dateStr: string | Date) => {
     const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
@@ -26,7 +28,7 @@
   <div class="card-body d-flex flex-column">
     <h5 class="news-title card-title">{noutate.title}</h5>
 
-    <p class="news-excerpt card-text flex-grow-1">{noutate.excerpt}</p>
+    <p class="news-excerpt card-text grow">{noutate.excerpt}</p>
 
     <div class="d-flex justify-content-between align-items-center mt-3">
       <small class="news-meta text-secondary">
@@ -46,26 +48,21 @@
     border-color: var(--desaga-border);
     transition: all 0.3s ease;
   }
-
   .news-card:hover {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   }
-
   .news-image {
     height: 200px;
     object-fit: cover;
   }
-
   .news-title {
     color: var(--desaga-brown);
     font-weight: bold;
   }
-
   .news-excerpt {
     color: var(--desaga-text);
     font-size: 0.95rem;
   }
-
   .news-meta {
     color: var(--desaga-text);
     font-size: 0.85rem;

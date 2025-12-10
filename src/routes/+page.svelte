@@ -14,6 +14,7 @@
     location: string;
     description: string;
     image_url: string;
+    event_type: string; // Added event_type property
   }
   let events: Event[] = [];
 

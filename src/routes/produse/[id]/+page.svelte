@@ -14,7 +14,7 @@
     if (found) {
       product = found;
       relatedProducts = $products
-        .filter((p) => p.category === product?.category && p.id !== product.id)
+        .filter((p) => p.category === found.category && p.id !== found.id)
         .slice(0, 4);
     }
   });
