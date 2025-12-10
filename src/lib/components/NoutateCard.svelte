@@ -1,0 +1,73 @@
+<script lang="ts">
+  export let noutate = {
+    id: "",
+    title: "",
+    excerpt: "",
+    image_url: "/images/placeholder.jpg",
+    created_at: new Date(),
+    author_id: "",
+  };
+
+  export let date: string | Date;
+
+  const formatDate = (dateStr: string | Date) => {
+    const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+    return d.toLocaleDateString("ro-RO");
+  };
+</script>
+
+<div class="news-card card h-100">
+  <img
+    src={noutate.image_url}
+    alt={noutate.title}
+    class="news-image card-img-top"
+  />
+
+  <div class="card-body d-flex flex-column">
+    <h5 class="news-title card-title">{noutate.title}</h5>
+
+    <p class="news-excerpt card-text flex-grow-1">{noutate.excerpt}</p>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <small class="news-meta text-secondary">
+        <i class="bi bi-calendar"></i>
+        {formatDate(noutate.created_at)}
+      </small>
+
+      <a href="/noutati/{noutate.id}" class="btn btn-sm btn-primary">
+        Citeste
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .news-card {
+    border-color: var(--desaga-border);
+    transition: all 0.3s ease;
+  }
+
+  .news-card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .news-image {
+    height: 200px;
+    object-fit: cover;
+  }
+
+  .news-title {
+    color: var(--desaga-brown);
+    font-weight: bold;
+  }
+
+  .news-excerpt {
+    color: var(--desaga-text);
+    font-size: 0.95rem;
+  }
+
+  .news-meta {
+    color: var(--desaga-text);
+    font-size: 0.85rem;
+  }
+</style>
