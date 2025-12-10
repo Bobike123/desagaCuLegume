@@ -10,18 +10,19 @@
   interface Event {
     id: string;
     title: string;
-    date: string; // keep string if API returns ISO string
+    date: string;
     location: string;
     description: string;
     image_url: string;
-    event_type: string; // Added event_type property
+    event_type: string;
   }
+
   let events: Event[] = [];
 
   onMount(async () => {
     await fetchProducts();
     await fetchNoutati();
-    const res = await fetch("/api/evenimente");
+    const res = await fetch("/api/esdeveniments");
     if (res.ok) {
       events = await res.json();
     }
@@ -35,7 +36,7 @@
 <Hero
   title="DeSaga cu Legume"
   subtitle="Local • Gustos • Sănătos"
-  backgroundImage="/images/hero.jpg"
+  backgroundImage="images/hero.jpg"
   height="500px"
 />
 
@@ -44,7 +45,7 @@
   <div class="container">
     <div class="row align-items-center">
       <div class="col-md-6 mb-4">
-        <img src="/images/local.jpg" alt="Local" class="img-fluid rounded" />
+        <img src="images/local.jpg" alt="Local" class="img-fluid rounded" />
       </div>
       <div class="col-md-6">
         <h2 class="h1 text-brown fw-bold mb-4">
@@ -77,7 +78,7 @@
   <div class="container">
     <div class="row align-items-center">
       <div class="col-md-6 order-md-2 mb-4">
-        <img src="/images/gustos.jpg" alt="Gustos" class="img-fluid rounded" />
+        <img src="images/gustos.jpg" alt="Gustos" class="img-fluid rounded" />
       </div>
       <div class="col-md-6 order-md-1">
         <h2 class="h1 text-brown fw-bold mb-4">
@@ -105,11 +106,7 @@
   <div class="container">
     <div class="row align-items-center">
       <div class="col-md-6 mb-4">
-        <img
-          src="/images/sanatos.jpg"
-          alt="Sănătos"
-          class="img-fluid rounded"
-        />
+        <img src="images/sanatos.jpg" alt="Sănătos" class="img-fluid rounded" />
       </div>
       <div class="col-md-6">
         <h2 class="h1 text-brown fw-bold mb-4">

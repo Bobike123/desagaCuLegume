@@ -4,11 +4,15 @@ import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
 	plugins: [sveltekit()],
+	resolve: {
+		alias: {
+			$lib: '/src/lib'
+		}
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
 			{
-				extends: './vite.config.ts',
 				test: {
 					name: 'client',
 					browser: {
@@ -21,7 +25,6 @@ export default defineConfig({
 				}
 			},
 			{
-				extends: './vite.config.ts',
 				test: {
 					name: 'server',
 					environment: 'node',

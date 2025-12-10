@@ -161,7 +161,8 @@
   <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <i class="bi bi-exclamation-triangle"></i>
     {error}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button type="button" title="ok" class="btn-close" data-bs-dismiss="alert"
+    ></button>
   </div>
 {/if}
 
