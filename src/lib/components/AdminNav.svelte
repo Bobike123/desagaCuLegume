@@ -1,13 +1,13 @@
 <script>
-  import { page } from '$app/stores';
-  import { logout } from '$lib/stores/auth';
+  import { page } from "$app/stores";
+  import { logout } from "$lib/stores/auth";
 
   async function handleLogout() {
     await logout();
   }
 </script>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-brown sticky-top">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
   <div class="container-fluid">
     <a class="navbar-brand fw-bold" href="/admin/dashboard">
       <i class="bi bi-gear"></i> Admin Panel
@@ -17,31 +17,34 @@
       <ul class="navbar-nav ms-auto">
         <li class="nav-item">
           <a
-            class="nav-link {$page.url.pathname === '/admin/dashboard' ? 'active' : ''}"
+            class="nav-link {$page.url.pathname === '/admin/dashboard'
+              ? 'active'
+              : ''}"
             href="/admin/dashboard"
           >
             <i class="bi bi-house"></i> Dashboard
           </a>
         </li>
-
         <li class="nav-item">
           <a
-            class="nav-link {$page.url.pathname.startsWith('/admin/produse') ? 'active' : ''}"
+            class="nav-link {$page.url.pathname.startsWith('/admin/produse')
+              ? 'active'
+              : ''}"
             href="/admin/produse"
           >
             <i class="bi bi-box"></i> Produse
           </a>
         </li>
-
         <li class="nav-item">
           <a
-            class="nav-link {$page.url.pathname.startsWith('/admin/noutati') ? 'active' : ''}"
+            class="nav-link {$page.url.pathname.startsWith('/admin/noutati')
+              ? 'active'
+              : ''}"
             href="/admin/noutati"
           >
             <i class="bi bi-newspaper"></i> Noutăți
           </a>
         </li>
-
         <li class="nav-item">
           <a
             class="nav-link {$page.url.pathname.startsWith('/admin/evenimente')
@@ -49,10 +52,9 @@
               : ''}"
             href="/admin/evenimente"
           >
-            <i class="bi bi-calendar-event"></i> evenimente
+            <i class="bi bi-calendar-event"></i> Evenimente
           </a>
         </li>
-
         <li class="nav-item">
           <button class="nav-link btn btn-link" on:click={handleLogout}>
             <i class="bi bi-box-arrow-right"></i> Logout
@@ -64,20 +66,16 @@
 </nav>
 
 <style>
-  .bg-brown {
-    background-color: var(--desaga-brown) !important;
-  }
-
   .nav-link {
     color: white !important;
   }
 
   .nav-link:hover {
-    color: var(--desaga-green) !important;
+    color: #066423 !important;
   }
 
   .nav-link.active {
-    color: var(--desaga-green) !important;
+    color: #066423 !important;
   }
 
   .btn-link {
@@ -86,6 +84,6 @@
   }
 
   .btn-link:hover {
-    color: var(--desaga-green) !important;
+    color: #066423 !important;
   }
 </style>

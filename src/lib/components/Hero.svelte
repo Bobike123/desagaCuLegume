@@ -1,15 +1,17 @@
 <script>
-  export let title = 'DeSaga cu Legume';
-  export let subtitle = 'Local • Gustos • Sănătos';
-  export let backgroundImage = '/images/hero.jpg';
-  export let height = '400px';
+  export let title = "DeSaga cu Legume";
+  export let subtitle = "Local • Gustos • Sănătos";
+  export let backgroundImage = "/images/hero.jpg";
+  export let height = "400px";
 </script>
 
 <section
   class="hero d-flex align-items-center justify-content-center text-center"
   style="background-image: url({backgroundImage}); background-size: cover; background-position: center; height: {height}; position: relative;"
 >
-  <div style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.4);"></div>
+  <div
+    style="position: absolute; inset: 0; background-color: rgba(6,100,35,0.3);"
+  ></div>
 
   <div class="container position-relative z-index-1" style="z-index: 1;">
     <h1 class="display-3 fw-bold text-white mb-3">{title}</h1>

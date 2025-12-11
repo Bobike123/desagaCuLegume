@@ -17,10 +17,8 @@
     alt={product.title}
     class="product-image card-img-top"
   />
-
   <div class="card-body">
     <h5 class="product-name card-title">{product.title}</h5>
-
     <p class="product-category badge">
       {product.category === "de-sezon"
         ? "🌱 De Sezon"
@@ -30,19 +28,16 @@
             ? "🤝 Colaboratori"
             : "🍽️ HORECA"}
     </p>
-
     <p class="card-text text-secondary">
       {product.description || "Produs de calitate"}
     </p>
-
     {#if product.price !== undefined}
       <p class="product-price mb-3">{product.price.toFixed(2)} RON</p>
     {/if}
-
     <div class="d-grid gap-2">
-      <a href="/produse/{product.id}" class="btn btn-primary">
-        <i class="bi bi-eye"></i> Vezi detalii
-      </a>
+      <a href="/produse/{product.id}" class="btn btn-primary"
+        ><i class="bi bi-eye"></i> Vezi detalii</a
+      >
     </div>
   </div>
 </div>
@@ -61,17 +56,17 @@
     object-fit: cover;
   }
   .product-name {
-    color: var(--desaga-brown);
+    color: #5e5240;
     font-weight: bold;
   }
   .product-price {
-    color: var(--desaga-green);
+    color: #066423;
     font-weight: bold;
     font-size: 1.3rem;
   }
   .product-category {
-    background-color: var(--desaga-cream);
-    color: var(--desaga-brown);
+    background-color: #ffffff;
+    color: #5e5240;
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.85rem;

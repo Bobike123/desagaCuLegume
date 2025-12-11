@@ -30,16 +30,15 @@
 		src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
 	></script>
 </svelte:head>
-
 <Navigation />
-<main class="min-vh-100">
+<main class="min-vh-100 bg-white">
 	<slot />
 </main>
 <Footer />
 
 <style>
 	:global(body) {
-		background-color: var(--desaga-cream);
+		background-color: #ffffff;
 		color: var(--desaga-text);
 	}
 

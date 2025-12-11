@@ -17,9 +17,7 @@
   }
 
   function hide() {
-    if (modal) {
-      modal.hide();
-    }
+    if (modal) modal.hide();
   }
 
   export { show, hide };
@@ -34,7 +32,7 @@
 >
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header bg-brown text-white">
+      <div class="modal-header bg-primary text-white">
         <h1 class="modal-title fs-5" id="{id}Label">{title}</h1>
         <button
           type="button"
@@ -43,32 +41,26 @@
           aria-label="Close"
         ></button>
       </div>
-
-      <div class="modal-body">
-        <slot />
-      </div>
-
+      <div class="modal-body"><slot /></div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          {cancelText}
-        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+          >{cancelText}</button
+        >
         <button
           type="button"
           class={`btn ${isDestructive ? "btn-danger" : "btn-primary"}`}
           on:click={() => {
             onConfirm();
             hide();
-          }}
+          }}>{confirmText}</button
         >
-          {confirmText}
-        </button>
       </div>
     </div>
   </div>
 </div>
 
 <style>
-  .bg-brown {
-    background-color: var(--desaga-brown) !important;
+  .bg-primary {
+    background-color: #066423 !important;
   }
 </style>

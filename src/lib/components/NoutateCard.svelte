@@ -24,21 +24,14 @@
     alt={noutate.title}
     class="news-image card-img-top"
   />
-
   <div class="card-body d-flex flex-column">
     <h5 class="news-title card-title">{noutate.title}</h5>
-
     <p class="news-excerpt card-text grow">{noutate.excerpt}</p>
-
     <div class="d-flex justify-content-between align-items-center mt-3">
-      <small class="news-meta text-secondary">
-        <i class="bi bi-calendar"></i>
-        {formatDate(noutate.created_at)}
-      </small>
-
-      <a href="/noutati/{noutate.id}" class="btn btn-sm btn-primary">
-        Citeste
-      </a>
+      <small class="news-meta text-secondary"
+        ><i class="bi bi-calendar"></i> {formatDate(noutate.created_at)}</small
+      >
+      <a href="/noutati/{noutate.id}" class="btn btn-sm btn-primary">Citeste</a>
     </div>
   </div>
 </div>
@@ -56,15 +49,15 @@
     object-fit: cover;
   }
   .news-title {
-    color: var(--desaga-brown);
+    color: #5e5240;
     font-weight: bold;
   }
   .news-excerpt {
-    color: var(--desaga-text);
+    color: #333333;
     font-size: 0.95rem;
   }
   .news-meta {
-    color: var(--desaga-text);
+    color: #333333;
     font-size: 0.85rem;
   }
 </style>

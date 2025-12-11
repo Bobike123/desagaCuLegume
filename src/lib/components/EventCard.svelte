@@ -44,12 +44,9 @@
     alt={event.title}
     class="event-image card-img-top"
   />
-
   <div class="card-body d-flex flex-column">
     <h5 class="event-title card-title">{event.title}</h5>
-
     <p class="card-text text-secondary grow">{event.description}</p>
-
     <div class="d-flex justify-content-between align-items-center mt-3">
       <div>
         <p class="event-date mb-1">
@@ -60,14 +57,13 @@
           <i class="bi bi-geo-alt"></i>
           {event.location}
         </p>
-        <span class="event-type badge bg-brown"
+        <span class="event-type badge bg-primary"
           >{getEventTypeLabel(event.event_type)}</span
         >
       </div>
-
-      <a href={`/evenimente/${event.id}`} class="btn btn-sm btn-primary">
-        Vezi detalii
-      </a>
+      <a href={`/evenimente/${event.id}`} class="btn btn-sm btn-primary"
+        >Vezi detalii</a
+      >
     </div>
   </div>
 </div>
@@ -85,26 +81,23 @@
     object-fit: cover;
   }
   .event-title {
-    color: var(--desaga-brown);
+    color: #5e5240;
     font-weight: bold;
   }
   .event-date {
-    color: var(--desaga-green);
+    color: #066423;
     font-weight: bold;
     font-size: 0.85rem;
   }
   .event-location {
-    color: var(--desaga-text);
+    color: #333333;
     font-size: 0.85rem;
   }
   .event-type {
-    background-color: var(--desaga-brown) !important;
+    background-color: #066423 !important;
     color: white;
     font-size: 0.75rem;
     padding: 0.25em 0.5em;
     border-radius: 0.25rem;
-  }
-  .bg-brown {
-    background-color: var(--desaga-brown) !important;
   }
 </style>

@@ -1,22 +1,22 @@
 @import 'bootstrap/dist/css/bootstrap.min.css';
 @import 'bootstrap-icons/font/bootstrap-icons.min.css';
+
 :root {
   --bs-primary: #066423;
   --bs-secondary: #5E5240;
   --bs-success: #28a745;
-  --bs-info: #17a2b8;
+  --bs-info: #2e832dff;
   --bs-warning: #ffc107;
   --bs-danger: #dc3545;
-  --bs-light: #F5F5F0;
+  --bs-light: #ffffff;
   --bs-dark: #333333;
-  --bs-body-bg: #F5F5F0;
+  --bs-body-bg: #ffffff;
   --bs-body-color: #333333;
   --bs-border-color: #CCCCCC;
-  
-  /* DeSaga specific */
+
   --desaga-green: #066423;
   --desaga-brown: #5E5240;
-  --desaga-cream: #F5F5F0;
+  --desaga-cream: #ffffff;
   --desaga-text: #333333;
   --desaga-border: #CCCCCC;
 }
