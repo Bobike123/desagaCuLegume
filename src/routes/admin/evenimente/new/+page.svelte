@@ -15,8 +15,8 @@
   let imageFile: File | null = null;
   let imagePreview = "";
 
-  function handleImageChange(e: Event) {
-    const target = e.target as HTMLInputElement;
+  function handleImageChange(ev: Event) {
+    const target = ev.target as HTMLInputElement;
     const file = target.files?.[0];
     if (file) {
       imageFile = file;
@@ -53,7 +53,7 @@
         }
       }
 
-      const res = await fetch("/api/evenimente", {
+      const res = await fetch("/api/events", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

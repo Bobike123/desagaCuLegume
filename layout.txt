@@ -1,0 +1,115 @@
+desaga-website/
+├── src/
+│   ├── lib/
+│   │   ├── components/
+│   │   │   ├── Navigation.svelte
+│   │   │   ├── Footer.svelte
+│   │   │   ├── Hero.svelte
+│   │   │   ├── ProductCard.svelte
+│   │   │   ├── NoutateCard.svelte
+│   │   │   ├── EventCard.svelte
+│   │   │   ├── AdminNav.svelte
+│   │   │   └── Modal.svelte
+│   │   ├── stores/
+│   │   │   ├── auth.ts (user, isAdmin)
+│   │   │   ├── products.ts
+│   │   │   └── noutati.ts
+│   │   ├── api/
+│   │   │   ├── supabase.ts (connection)
+│   │   │   └── helpers.ts
+│   │   └── styles/
+│   │       └── global.css
+│   ├── routes/
+│   │   ├── +page.svelte (Home)
+│   │   ├── +layout.svelte (Root layout)
+│   │   ├── despre-noi/
+│   │   │   └── +page.svelte
+│   │   ├── produse/
+│   │   │   ├── +page.svelte (All products)
+│   │   │   ├── [id]/
+│   │   │   │   └── +page.svelte (Product detail)
+│   │   │   ├── de-sezon/
+│   │   │   │   └── +page.svelte
+│   │   │   ├── la-borcan/
+│   │   │   │   └── +page.svelte
+│   │   │   ├── colaboratori/
+│   │   │   │   └── +page.svelte
+│   │   │   └── horeca/
+│   │   │       └── +page.svelte
+│   │   ├── noutati/
+│   │   │   ├── +page.svelte (All news)
+│   │   │   ├── [id]/
+│   │   │   │   └── +page.svelte (News detail)
+│   │   │   └── +page.server.ts
+│   │   ├── evenimente/
+│   │   │   ├── +page.svelte
+│   │   │   └── [id]/
+│   │   │       └── +page.svelte
+│   │   ├── contact/
+│   │   │   └── +page.svelte
+│   │   ├── admin/
+│   │   │   ├── +layout.svelte (Protected layout)
+│   │   │   ├── login/
+│   │   │   │   ├── +page.svelte
+│   │   │   │   └── +page.server.ts
+│   │   │   ├── dashboard/
+│   │   │   │   └── +page.svelte
+│   │   │   ├── produse/
+│   │   │   │   ├── +page.svelte (Manage products)
+│   │   │   │   ├── [id]/
+│   │   │   │   │   ├── +page.svelte (Edit product)
+│   │   │   │   │   └── +page.server.ts
+│   │   │   │   └── new/
+│   │   │   │       ├── +page.svelte (Create product)
+│   │   │   │       └── +page.server.ts
+│   │   │   ├── noutati/
+│   │   │   │   ├── +page.svelte (Manage news)
+│   │   │   │   ├── [id]/
+│   │   │   │   │   ├── +page.svelte (Edit news)
+│   │   │   │   │   └── +page.server.ts
+│   │   │   │   └── new/
+│   │   │   │       ├── +page.svelte (Create news)
+│   │   │   │       └── +page.server.ts
+│   │   │   ├── evenimente/
+│   │   │   │   ├── +page.svelte (Manage events)
+│   │   │   │   ├── [id]/
+│   │   │   │   │   ├── +page.svelte (Edit event)
+│   │   │   │   │   └── +page.server.ts
+│   │   │   │   └── new/
+│   │   │   │       ├── +page.svelte (Create event)
+│   │   │   │       └── +page.server.ts
+│   │   │   └── logout/
+│   │   │       └── +page.server.ts
+│   │   └── api/
+│   │       ├── auth/
+│   │       │   ├── login/
+│   │       │   │   └── +server.ts
+│   │       │   ├── logout/
+│   │       │   │   └── +server.ts
+│   │       │   └── register/
+│   │       │       └── +server.ts
+│   │       ├── products/
+│   │       │   ├── +server.ts (GET all)
+│   │       │   ├── [id]/
+│   │       │   │   └── +server.ts (GET/PUT/DELETE)
+│   │       │   └── upload/
+│   │       │       └── +server.ts
+│   │       ├── noutati/
+│   │       │   ├── +server.ts
+│   │       │   └── [id]/
+│   │       │       └── +server.ts
+│   │       └── evenimente/
+│   │           ├── +server.ts
+│   │           └── [id]/
+│   │               └── +server.ts
+│   └── app.html
+├── static/
+│   ├── images/
+│   └── favicon.png
+├── .env.local (local development)
+├── .env.example
+├── svelte.config.js
+├── vite.config.ts
+├── tailwind.config.js
+├── package.json
+└── README.md

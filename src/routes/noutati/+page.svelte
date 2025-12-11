@@ -1,22 +1,16 @@
-<script>
-  import Hero from '$lib/components/Hero.svelte';
-  import NoutateCard from '$lib/components/NoutateCard.svelte';
-  import { noutati } from '$lib/stores/noutati';
-  import { fetchNoutati } from '$lib/stores/noutati';
-  import { onMount } from 'svelte';
+<script lang="ts">
+  import Hero from "$lib/components/Hero.svelte";
+  import NoutateCard from "$lib/components/NoutateCard.svelte";
+
+  export let data;
 
   let currentPage = 1;
   const itemsPerPage = 6;
-  let totalPages = 0;
 
-  onMount(async () => {
-    await fetchNoutati();
-    totalPages = Math.ceil($noutati.length / itemsPerPage);
-  });
-
-  $: paginatedNoutati = $noutati.slice(
+  $: totalPages = Math.ceil(data.noutati.length / itemsPerPage);
+  $: paginatedNoutati = data.noutati.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 </script>
 
@@ -37,7 +31,7 @@
       <i class="bi bi-newspaper"></i> Ultimele noutăți din DeSaga
     </h2>
 
-    {#if $noutati.length > 0}
+    {#if data.noutati.length > 0}
       <div class="row g-4 mb-5">
         {#each paginatedNoutati as item (item.id)}
           <div class="col-md-6 col-lg-4">
@@ -67,7 +61,9 @@
               </li>
             {/each}
 
-            <li class="page-item {currentPage === totalPages ? 'disabled' : ''}">
+            <li
+              class="page-item {currentPage === totalPages ? 'disabled' : ''}"
+            >
               <button
                 class="page-link"
                 on:click={() => currentPage < totalPages && currentPage++}

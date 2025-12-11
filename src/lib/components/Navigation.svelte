@@ -1,6 +1,28 @@
 <script>
     import { page } from "$app/stores";
+    import { onMount } from "svelte";
+    
+    let dropdownElement;
+
+    onMount(() => {
+        // Initialize Bootstrap dropdown if available
+        if (typeof window !== "undefined" && window.bootstrap) {
+            const dropdowns = document.querySelectorAll(
+                '[data-bs-toggle="dropdown"]',
+            );
+            dropdowns.forEach((dropdown) => {
+                new window.bootstrap.Dropdown(dropdown);
+            });
+        }
+    });
 </script>
+
+<svelte:head>
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"
+    ></script>
+</svelte:head>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-brown sticky-top">
     <div class="container">
@@ -54,9 +76,13 @@
                             Despre Noi
                         </a>
                     </li>
-                    <li class="nav-item dropdown">
+                    <li class="nav-item dropdown" bind:this={dropdownElement}>
                         <a
-                            class="nav-link dropdown-toggle"
+                            class="nav-link dropdown-toggle {$page.url.pathname.startsWith(
+                                '/produse',
+                            )
+                                ? 'active'
+                                : ''}"
                             href="/produse"
                             role="button"
                             data-bs-toggle="dropdown"
@@ -66,38 +92,32 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li>
-                                <a class="dropdown-item" href="/produse">
-                                    Toate produsele
-                                </a>
+                                <a class="dropdown-item" href="/produse"
+                                    >Toate produsele</a
+                                >
                             </li>
                             <li>
                                 <a
                                     class="dropdown-item"
-                                    href="/produse/de-sezon"
+                                    href="/produse/de-sezon">De Sezon</a
                                 >
-                                    De Sezon
-                                </a>
                             </li>
                             <li>
                                 <a
                                     class="dropdown-item"
-                                    href="/produse/la-borcan"
+                                    href="/produse/la-borcan">La Borcan</a
                                 >
-                                    La Borcan
-                                </a>
                             </li>
                             <li>
                                 <a
                                     class="dropdown-item"
-                                    href="/produse/colaboratori"
+                                    href="/produse/colaboratori">Colaboratori</a
                                 >
-                                    Colaboratori
-                                </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="/produse/horeca">
-                                    HORECA
-                                </a>
+                                <a class="dropdown-item" href="/produse/horeca"
+                                    >HORECA</a
+                                >
                             </li>
                         </ul>
                     </li>
@@ -183,5 +203,38 @@
     .dropdown-item:hover {
         background-color: rgba(118, 236, 30, 0.2);
         color: var(--desaga-green);
+    }
+
+    /* Mobile styles - black text in offcanvas */
+    .offcanvas-body .nav-link {
+        color: #333 !important;
+    }
+
+    .offcanvas-body .dropdown-item {
+        color: #333 !important;
+    }
+
+    .offcanvas-body .nav-link:hover,
+    .offcanvas-body .dropdown-item:hover {
+        color: var(--desaga-green) !important;
+    }
+
+    .offcanvas-body .nav-link.active {
+        color: var(--desaga-green) !important;
+    }
+
+    /* Desktop styles */
+    @media (min-width: 992px) {
+        .nav-link {
+            color: white !important;
+        }
+
+        .dropdown-item {
+            color: white !important;
+        }
+
+        .dropdown-item:hover {
+            color: var(--desaga-green) !important;
+        }
     }
 </style>

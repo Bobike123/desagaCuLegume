@@ -1,106 +1,70 @@
-// src/lib/stores/events.ts
-import { writable } from "svelte/store";
-
-export type EventType = "piata" | "festival" | "atelier";
+// src/lib/server/events.ts
+import { supabaseServer } from '$lib/api/supabase';
+export const supabaseAdmin = supabaseServer();
 
 export interface Event {
-    id: string;
+    id: string;  // remove the ?
     title: string;
     description: string;
-    date: string; // ISO string
     location: string;
-    event_type: EventType;
+    date: string | Date;
     image_url: string;
+    event_type: string;
+    created_at?: string | Date;
+    published: boolean;
 }
 
-export const events = writable<Event[]>([]);
-export const loading = writable(false);
-export const error = writable("");
 
-export async function fetchEvents() {
-    loading.set(true);
-    try {
-        const res = await fetch("/api/evenimente");
-        if (!res.ok) throw new Error("Failed to fetch events");
-        const data: Event[] = await res.json();
-        events.set(data);
-    } catch (err: any) {
-        error.set(err.message);
-    } finally {
-        loading.set(false);
-    }
+export async function getAllEvents() {
+    const { data, error } = await supabaseAdmin
+        .from('events')
+        .select('*')
+        .order('date', { ascending: true });
+
+    if (error) throw new Error(error.message);
+    return data as Event[];
 }
 
-export async function fetchEventById(id: string) {
-    loading.set(true);
-    try {
-        const res = await fetch(`/api/evenimente/${id}`);
-        if (!res.ok) throw new Error("Failed to fetch event");
-        const data: Event = await res.json();
-        return data;
-    } catch (err: any) {
-        error.set(err.message);
-        return null;
-    } finally {
-        loading.set(false);
-    }
+export async function getEventById(id: string) {
+    const { data, error } = await supabaseAdmin
+        .from('events')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (error) throw new Error(error.message);
+    return data as Event;
 }
 
-export async function createEvent(event: Event) {
-    loading.set(true);
-    try {
-        const res = await fetch("/api/evenimente", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(event),
-        });
-        if (!res.ok) throw new Error("Failed to create event");
-        const newEvent: Event = await res.json();
-        events.update((list) => [...list, newEvent]);
-        return newEvent;
-    } catch (err: any) {
-        error.set(err.message);
-        return null;
-    } finally {
-        loading.set(false);
-    }
+export async function createEvent(event: Omit<Event, 'id' | 'created_at'>) {
+    const { data, error } = await supabaseAdmin
+        .from('events')
+        .insert(event)
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    return data as Event;
 }
 
-export async function updateEvent(id: string, event: Event) {
-    loading.set(true);
-    try {
-        const res = await fetch(`/api/evenimente/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(event),
-        });
-        if (!res.ok) throw new Error("Failed to update event");
-        const updatedEvent: Event = await res.json();
-        events.update((list) =>
-            list.map((e) => (e.id === id ? updatedEvent : e))
-        );
-        return updatedEvent;
-    } catch (err: any) {
-        error.set(err.message);
-        return null;
-    } finally {
-        loading.set(false);
-    }
+export async function updateEvent(id: string, event: Partial<Event>) {
+    const { data, error } = await supabaseAdmin
+        .from('events')
+        .update(event)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    return data as Event;
 }
 
 export async function deleteEvent(id: string) {
-    loading.set(true);
-    try {
-        const res = await fetch(`/api/evenimente/${id}`, {
-            method: "DELETE",
-        });
-        if (!res.ok) throw new Error("Failed to delete event");
-        events.update((list) => list.filter((e) => e.id !== id));
-        return true;
-    } catch (err: any) {
-        error.set(err.message);
-        return false;
-    } finally {
-        loading.set(false);
-    }
+    const { error } = await supabaseAdmin
+        .from('events')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    return true;
 }

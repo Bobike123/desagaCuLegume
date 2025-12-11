@@ -1,9 +1,14 @@
-import type { Session } from '@supabase/supabase-js';
+import { type SupabaseClient, type Session, type User } from '@supabase/supabase-js';
 
 declare global {
 	namespace App {
 		interface Locals {
-			user: Session['user'] | null;
+			supabase: SupabaseClient;
+			getSession(): Promise<Session | null>;
+			session: Session | null;
+			user: User | null;
+		}
+		interface PageData {
 			session: Session | null;
 		}
 	}

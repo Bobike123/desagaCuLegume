@@ -1,22 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-import { supabaseServer } from '$lib/api/supabase';
 import { validateRequired, handleApiError } from '$lib/helpers';
-
-interface Noutate {
-  id: string;
-  title: string;
-  content: string;
-  image_url: string;
-  date: string;
-  published: boolean;
-}
 
 // GET all noutati
 export async function GET(event: RequestEvent) {
   try {
-    const supabase = supabaseServer();
-    const { data, error } = await supabase
+    const { data, error } = await event.locals.supabase
       .from('noutati')
       .select('*')
       .eq('published', true)
@@ -34,7 +23,7 @@ export async function GET(event: RequestEvent) {
 // POST create new noutate
 export async function POST(event: RequestEvent) {
   try {
-    // Check authentication
+    // Check authentication using event.locals.user
     if (!event.locals.user) {
       return json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -48,8 +37,8 @@ export async function POST(event: RequestEvent) {
       return json({ error: `Missing fields: ${missing.join(', ')}` }, { status: 400 });
     }
 
-    const supabase = supabaseServer();
-    const { data, error } = await supabase
+    // Use event.locals.supabase
+    const { data, error } = await event.locals.supabase
       .from('noutati')
       .insert([
         {

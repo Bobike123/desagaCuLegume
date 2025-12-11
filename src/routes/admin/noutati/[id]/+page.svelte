@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { createEventDispatcher } from "svelte";
-  import type { Noutate } from "../../../../lib/stores/noutati";
+  import type { Noutate } from "$lib/stores/noutati";
 
   const dispatch = createEventDispatcher();
 

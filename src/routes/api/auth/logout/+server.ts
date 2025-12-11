@@ -1,22 +1,22 @@
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-import { supabaseServer } from '$lib/api/supabase';
+import { logout } from '$lib/stores/auth';
 import { handleApiError } from '$lib/helpers';
 
-export async function POST({ locals }: RequestEvent) {
+export async function POST(event: RequestEvent) {
   try {
-    const supabase = supabaseServer(); // Call without arguments
+    const token = event.cookies.get('auth-token');
 
-    // Sign out user
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      return json({ error: error.message }, { status: 400 });
+    if (token) {
+      await logout(); // removed argument
     }
 
+    // Clear auth token cookie
+    event.cookies.delete('auth-token', { path: '/' });
+
     // Clear locals
-    locals.user = null;
-    locals.session = null;
+    event.locals.user = null;
+    event.locals.session = null;
 
     return json({
       success: true,

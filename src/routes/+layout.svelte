@@ -1,12 +1,12 @@
 <script>
 	import Navigation from "$lib/components/Navigation.svelte";
 	import Footer from "$lib/components/Footer.svelte";
-	import { initAuth } from "$lib/stores/auth";
+	import { auth } from "$lib/stores/auth";
 	import "$lib/styles/global.css";
 	import { onMount } from "svelte";
 
 	onMount(() => {
-		initAuth();
+		auth.initAuth();
 	});
 </script>
 

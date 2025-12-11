@@ -14,7 +14,7 @@ export async function GET(event: RequestEvent) {
 
     const supabase = supabaseServer();
     const { data, error } = await supabase
-      .from('gebeurtenisse')
+      .from('events')
       .select('*')
       .eq('id', id)
       .single();
@@ -49,7 +49,7 @@ export async function PATCH(event: RequestEvent) {
     const supabase = supabaseServer();
 
     const { data, error } = await supabase
-      .from('gebeurtenisse')
+      .from('events')
       .update(body)
       .eq('id', id)
       .select()
@@ -78,7 +78,7 @@ export async function DELETE(event: RequestEvent) {
 
     const supabase = supabaseServer();
     const { error } = await supabase
-      .from('evenimente')
+      .from('events')
       .delete()
       .eq('id', id);
 

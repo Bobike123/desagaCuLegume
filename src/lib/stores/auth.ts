@@ -1,46 +1,101 @@
-import { writable, type Writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import type { User } from '@supabase/supabase-js';
-import { supabase } from '$lib/api/supabase';
 
-// Stores
-export const user: Writable<User | null> = writable<User | null>(null);
-export const isAdmin: Writable<boolean> = writable(false);
-export const isLoading: Writable<boolean> = writable(true);
-export const error: Writable<string> = writable('');
-
-// Initialize authentication
-export async function initAuth() {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (session?.user) {
-      user.set(session.user);
-
-      // Check admin status
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-
-      isAdmin.set(userData?.role === 'admin');
-    }
-  } catch (err) {
-    console.error('Auth init error:', err);
-    error.set('Authentication error');
-  } finally {
-    isLoading.set(false);
-  }
+export interface AuthState {
+  user: User | null;
+  isAdmin: boolean;
+  loading: boolean;
+  error: string | null;
 }
 
-// Logout function
-export async function logout() {
+const initialState: AuthState = {
+  user: null,
+  isAdmin: false,
+  loading: true,
+  error: null,
+};
+
+function createAuthStore() {
+  const { subscribe, set, update } = writable<AuthState>(initialState);
+
+  return {
+    subscribe,
+
+    async initAuth() {
+      try {
+        const response = await fetch('/api/auth/session');
+        if (!response.ok) {
+          update(state => ({ ...state, loading: false, error: 'Failed to fetch session' }));
+          return;
+        }
+
+        const data = await response.json();
+        set({
+          user: data.user,
+          isAdmin: data.isAdmin,
+          loading: false,
+          error: null,
+        });
+      } catch (err) {
+        set({
+          user: null,
+          isAdmin: false,
+          loading: false,
+          error: err instanceof Error ? err.message : 'Auth check failed',
+        });
+      }
+    },
+
+    async logout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        set(initialState);
+      } catch (err) {
+        update(state => ({
+          ...state,
+          error: err instanceof Error ? err.message : 'Logout failed',
+        }));
+      }
+    },
+
+    reset() {
+      set(initialState);
+    },
+
+    // Helper functions to update parts of the state
+    setUser(user: User | null) {
+      update(state => ({ ...state, user }));
+    },
+
+    setAdmin(isAdmin: boolean) {
+      update(state => ({ ...state, isAdmin }));
+    },
+  };
+}
+
+export const auth = createAuthStore();
+export const { initAuth, logout, setUser, setAdmin } = auth;
+
+// Derived stores for read-only access
+export const user = derived(auth, ($auth) => $auth.user);
+export const isAdmin = derived(auth, ($auth) => $auth.isAdmin);
+
+// Consistent return type for getSession
+export async function getSession(token: string): Promise<{ user: User | null; isAdmin: boolean; error: string | null }> {
   try {
-    await supabase.auth.signOut();
-    user.set(null);
-    isAdmin.set(false);
+    const response = await fetch('/api/auth/session', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      return { user: null, isAdmin: false, error: 'Invalid session' };
+    }
+
+    const data = await response.json();
+    return { user: data.user, isAdmin: data.isAdmin, error: null };
   } catch (err) {
-    console.error('Logout error:', err);
-    error.set('Logout failed');
+    return { user: null, isAdmin: false, error: 'Session fetch failed' };
   }
 }

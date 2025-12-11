@@ -1,33 +1,41 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import NoutateCard from "$lib/components/NoutateCard.svelte";
-  import { noutati, fetchNoutati, type Noutate } from "$lib/stores/noutati";
+  import { getAllNoutati, type Noutate } from "$lib/stores/noutati";
   import { onMount } from "svelte";
 
   let currentNoutate: Noutate | null = null;
   let relatedNoutati: Noutate[] = [];
 
-  const formatDate = (date: string | Date): string =>
-    new Date(date).toLocaleDateString("ro-RO", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatDate = (d: string | Date | undefined): string =>
+    d
+      ? new Date(d).toLocaleDateString("ro-RO", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "";
 
   onMount(async () => {
-    await fetchNoutati();
+    const list: Noutate[] = await getAllNoutati();
 
-    // Ensure created_at is always a Date object locally
-    const n = $noutati.find((n) => n.id === $page.params.id);
-    if (n) {
-      currentNoutate = { ...n, created_at: new Date(n.created_at) };
-      relatedNoutati = $noutati
-        .filter((r) => r.id !== currentNoutate?.id)
-        .slice(0, 3)
-        .map((r) => ({ ...r, created_at: new Date(r.created_at) }));
-    }
+    const found = list.find((x: Noutate) => x.id === $page.params.id);
+    if (!found) return;
+
+    currentNoutate = {
+      ...found,
+      created_at: found.created_at ? new Date(found.created_at) : new Date(),
+    };
+
+    relatedNoutati = list
+      .filter((x: Noutate) => x.id !== found.id)
+      .slice(0, 3)
+      .map((x: Noutate) => ({
+        ...x,
+        created_at: x.created_at ? new Date(x.created_at) : new Date(),
+      }));
   });
 </script>
 
@@ -39,12 +47,8 @@
   {#if currentNoutate}
     <nav aria-label="breadcrumb" class="mb-4">
       <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-          <a href="/">Acasă</a>
-        </li>
-        <li class="breadcrumb-item">
-          <a href="/noutati">Noutăți</a>
-        </li>
+        <li class="breadcrumb-item"><a href="/">Acasă</a></li>
+        <li class="breadcrumb-item"><a href="/noutati">Noutăți</a></li>
         <li class="breadcrumb-item active" aria-current="page">
           {currentNoutate.title}
         </li>
@@ -57,14 +61,13 @@
           <h1 class="h1 text-brown fw-bold mb-3">{currentNoutate.title}</h1>
 
           <div class="d-flex flex-wrap gap-3 mb-4 text-secondary">
-            <span>
-              <i class="bi bi-calendar"></i>
-              {formatDate(currentNoutate.created_at)}
-            </span>
+            <span
+              ><i class="bi bi-calendar"></i>
+              {formatDate(currentNoutate.created_at)}</span
+            >
+
             {#if currentNoutate.author_id}
-              <span>
-                <i class="bi bi-person"></i> Admin DeSaga
-              </span>
+              <span><i class="bi bi-person"></i> Admin DeSaga</span>
             {/if}
           </div>
 
@@ -93,7 +96,6 @@
           </a>
         </div>
 
-        <!-- Share Section -->
         <div class="card bg-light border-0 p-4">
           <h5 class="card-title text-brown fw-bold mb-3">
             <i class="bi bi-share"></i> Împarte această noutate
@@ -106,6 +108,7 @@
             >
               <i class="bi bi-facebook"></i> Facebook
             </a>
+
             <button
               class="btn btn-sm btn-secondary"
               on:click={() => {
@@ -119,7 +122,6 @@
         </div>
       </div>
 
-      <!-- Sidebar -->
       <div class="col-lg-4">
         <aside>
           <div class="card border-0 shadow-sm mb-4">
@@ -127,13 +129,16 @@
               <h5 class="card-title text-brown fw-bold mb-3">
                 <i class="bi bi-info-circle"></i> Despre articol
               </h5>
+
               <p class="card-text text-secondary">
                 Articol publicat pe {formatDate(currentNoutate.created_at)}
               </p>
+
               <p class="card-text small">
                 Rămâi conectat cu ultimele noutăți din DeSaga cu Legume prin
                 abonare la newsletter-ul nostru.
               </p>
+
               <a href="/contact" class="btn btn-primary btn-sm w-100">
                 <i class="bi bi-envelope"></i> Contact
               </a>
@@ -157,10 +162,10 @@
       <h4 class="alert-heading">
         <i class="bi bi-exclamation-triangle"></i> Noutate nu găsită
       </h4>
+
       <p>
-        Articolul pe care îl cauți nu există. <a href="/noutati"
-          >Înapoi la noutăți</a
-        >
+        Articolul pe care îl cauți nu există.
+        <a href="/noutati">Înapoi la noutăți</a>
       </p>
     </div>
   {/if}

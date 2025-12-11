@@ -1,6 +1,5 @@
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-import { supabaseServer } from '$lib/api/supabase';
 import { isValidEmail, validateRequired, handleApiError } from '$lib/helpers';
 
 export async function POST(event: RequestEvent) {
@@ -19,10 +18,8 @@ export async function POST(event: RequestEvent) {
       return json({ error: 'Invalid email format' }, { status: 400 });
     }
 
-    const supabase = supabaseServer();
-
-    // Sign in user
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Use event.locals.supabase from hooks
+    const { data, error } = await event.locals.supabase.auth.signInWithPassword({
       email,
       password
     });
@@ -35,7 +32,16 @@ export async function POST(event: RequestEvent) {
       return json({ error: 'No session created' }, { status: 400 });
     }
 
-    // Set session cookie (optional - depends on your auth flow)
+    // Set auth token in HTTP-only cookie
+    event.cookies.set('auth-token', data.session.access_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    });
+
+    // Set locals
     event.locals.session = data.session;
     event.locals.user = data.user;
 
@@ -45,7 +51,7 @@ export async function POST(event: RequestEvent) {
       session: data.session
     }, { status: 200 });
   } catch (err) {
-    const errorData = handleApiError(err, 'Login failed');
-    return json({ error: errorData.error }, { status: errorData.status });
+    console.error('Login error:', err);
+    return json({ error: 'Login failed' }, { status: 500 });
   }
 }

@@ -18,7 +18,7 @@ export async function GET(event: RequestEvent) {
   try {
     const supabase = supabaseServer();
     const { data, error } = await supabase
-      .from('evenimente')
+      .from('events')
       .select('*')
       .order('date', { ascending: true });
 
@@ -26,7 +26,7 @@ export async function GET(event: RequestEvent) {
 
     return json(data || [], { status: 200 });
   } catch (err) {
-    const errorData = handleApiError(err, 'Failed to fetch evenimente');
+    const errorData = handleApiError(err, 'Failed to fetch events');
     return json({ error: errorData.error }, { status: errorData.status });
   }
 }
@@ -51,7 +51,7 @@ export async function POST(event: RequestEvent) {
 
     const supabase = supabaseServer();
     const { data, error } = await supabase
-      .from('evenimente')
+      .from('events')
       .insert([
         {
           title,

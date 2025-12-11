@@ -1,12 +1,15 @@
 <script lang="ts">
-    import { supabase } from "$lib/api/supabase";
     import { goto } from "$app/navigation";
-    import { isAdmin, user } from "$lib/stores/auth";
+    import { setUser, setAdmin } from "$lib/stores/auth";
 
     let email = "";
     let password = "";
     let error = "";
     let loading = false;
+
+    // Access VITE-prefixed env variables
+    const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
     async function handleLogin(e: Event) {
         e.preventDefault();
@@ -14,34 +17,12 @@
         error = "";
 
         try {
-            const { data: authData, error: signInError } =
-                await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
-
-            if (signInError) {
-                error = "Email sau parolă incorectă";
-                throw signInError;
-            }
-
-            if (authData.user) {
-                // Check if user is admin
-                const { data: userData, error: userError } = await supabase
-                    .from("users")
-                    .select("role")
-                    .eq("id", authData.user.id)
-                    .single();
-
-                if (userError || userData?.role !== "admin") {
-                    await supabase.auth.signOut();
-                    error = "Acces neautorizat";
-                    return;
-                }
-
-                isAdmin.set(true);
-                user.set(authData.user);
+            if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+                setAdmin(true);
+                setUser({ email } as any);
                 goto("/admin/dashboard");
+            } else {
+                error = "Email sau parolă incorectă";
             }
         } catch (err) {
             error = "A apărut o eroare. Încearcă din nou!";
@@ -92,7 +73,7 @@
                             type="email"
                             class="form-control form-control-lg"
                             id="email"
-                            placeholder="admin@desaga.ro"
+                            placeholder="your@email.com"
                             bind:value={email}
                             required
                             disabled={loading}

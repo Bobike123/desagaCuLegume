@@ -1,38 +1,17 @@
 <script lang="ts">
-  import Hero from '$lib/components/Hero.svelte';
-  import EventCard from '$lib/components/EventCard.svelte';
-  import { onMount } from 'svelte';
+  import Hero from "$lib/components/Hero.svelte";
+  import type { Event } from "$lib/stores/events";
 
-  interface Event {
-    id: string;
-    title: string;
-    description: string;
-    date: string;
-    location: string;
-    event_type: string;
-    image_url?: string;
-  }
+  export let data;
 
-  let events: Event[] = [];
-  let loading = true;
-  let filteredEvents: Event[] = [];
-  let selectedType = 'all';
+  let currentPage = 1;
+  const itemsPerPage = 6;
 
-  onMount(async () => {
-    try {
-      const res = await fetch('/api/evenimente');
-      if (res.ok) {
-        events = await res.json();
-      }
-    } catch (error) {
-      console.error('Error loading events:', error);
-    } finally {
-      loading = false;
-    }
-  });
-
-  $: filteredEvents =
-    selectedType === 'all' ? events : events.filter((e: Event) => e.event_type === selectedType);
+  $: totalPages = Math.ceil(data.events.length / itemsPerPage);
+  $: paginatedEvents = data.events.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
 </script>
 
 <svelte:head>
@@ -41,69 +20,85 @@
 
 <Hero
   title="Evenimente"
-  subtitle="Alătură-te nouă la piețe, festivaluri și ateliere"
-  backgroundImage="/images/evenimente-hero.jpg"
+  subtitle="Descoperă activitățile din comunitatea DeSaga"
+  backgroundImage="/images/events-hero.jpg"
   height="400px"
 />
 
 <section class="py-5">
   <div class="container">
     <h2 class="h1 text-center text-brown fw-bold mb-5">
-      <i class="bi bi-calendar-event"></i> Evenimente și activități
+      <i class="bi bi-calendar-event"></i> Evenimente
     </h2>
 
-    <!-- Type Filter -->
-    <div class="row mb-5">
-      <div class="col-12">
-        <div class="d-flex gap-2 justify-content-center flex-wrap">
-          <button
-            class={`btn ${selectedType === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
-            on:click={() => (selectedType = 'all')}
-          >
-            <i class="bi bi-list-ul"></i> Toate
-          </button>
-          <button
-            class={`btn ${selectedType === 'piata' ? 'btn-primary' : 'btn-outline-primary'}`}
-            on:click={() => (selectedType = 'piata')}
-          >
-            <i class="bi bi-shop"></i> Piață
-          </button>
-          <button
-            class={`btn ${selectedType === 'festival' ? 'btn-primary' : 'btn-outline-primary'}`}
-            on:click={() => (selectedType = 'festival')}
-          >
-            <i class="bi bi-party-popper"></i> Festival
-          </button>
-          <button
-            class={`btn ${selectedType === 'atelier' ? 'btn-primary' : 'btn-outline-primary'}`}
-            on:click={() => (selectedType = 'atelier')}
-          >
-            <i class="bi bi-palette"></i> Atelier
-          </button>
-        </div>
-      </div>
-    </div>
-
-    {#if loading}
-      <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Se încarcă...</span>
-        </div>
-      </div>
-    {:else if filteredEvents.length > 0}
-      <div class="row g-4">
-        {#each filteredEvents as event (event.id)}
+    {#if data.events.length > 0}
+      <div class="row g-4 mb-5">
+        {#each paginatedEvents as event (event.id)}
           <div class="col-md-6 col-lg-4">
-            <EventCard {event} />
+            <a href={`/evenimente/${event.id}`} class="text-decoration-none">
+              <div class="card h-100 shadow-sm">
+                {#if event.image_url}
+                  <img
+                    src={event.image_url}
+                    class="card-img-top"
+                    alt={event.title}
+                  />
+                {/if}
+                <div class="card-body">
+                  <h5 class="card-title text-brown fw-bold">{event.title}</h5>
+                  <p class="card-text text-secondary">
+                    {new Date(event.date).toLocaleDateString("ro-RO", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                  <p class="card-text small">{event.location}</p>
+                </div>
+              </div>
+            </a>
           </div>
         {/each}
       </div>
+
+      {#if totalPages > 1}
+        <nav aria-label="Page navigation" class="d-flex justify-content-center">
+          <ul class="pagination">
+            <li class="page-item {currentPage === 1 ? 'disabled' : ''}">
+              <button
+                class="page-link"
+                on:click={() => currentPage > 1 && currentPage--}
+              >
+                Anterior
+              </button>
+            </li>
+
+            {#each Array.from({ length: totalPages }, (_, i) => i + 1) as page}
+              <li class="page-item {currentPage === page ? 'active' : ''}">
+                <button class="page-link" on:click={() => (currentPage = page)}>
+                  {page}
+                </button>
+              </li>
+            {/each}
+
+            <li
+              class="page-item {currentPage === totalPages ? 'disabled' : ''}"
+            >
+              <button
+                class="page-link"
+                on:click={() => currentPage < totalPages && currentPage++}
+              >
+                Următoare
+              </button>
+            </li>
+          </ul>
+        </nav>
+      {/if}
     {:else}
       <div class="alert alert-info text-center" role="alert">
         <h4 class="alert-heading">
-          <i class="bi bi-info-circle"></i> Niciun eveniment disponibil
+          <i class="bi bi-info-circle"></i> Nu sunt evenimente disponibile
         </h4>
-        <p>Revino mai târziu pentru noi evenimente și activități!</p>
       </div>
     {/if}
   </div>

@@ -1,21 +1,21 @@
-<script>
-  import Hero from '$lib/components/Hero.svelte';
-  import ProductCard from '$lib/components/ProductCard.svelte';
-  import { products } from '$lib/stores/products';
-  import { fetchProducts } from '$lib/stores/products';
-  import { onMount } from 'svelte';
+<script lang="ts">
+  import Hero from "$lib/components/Hero.svelte";
+  import ProductCard from "$lib/components/ProductCard.svelte";
+  import { onMount } from "svelte";
+  import { getAllProducts, type Product } from "$lib/stores/products";
 
-  let selectedCategory = 'all';
-  let filteredProducts = [];
+  let products: Product[] = [];
+  let selectedCategory: string = "all";
+  let filteredProducts: Product[] = [];
 
-  onMount(() => {
-    fetchProducts();
+  onMount(async () => {
+    products = await getAllProducts();
   });
 
   $: filteredProducts =
-    selectedCategory === 'all'
-      ? $products
-      : $products.filter((p) => p.category === selectedCategory);
+    selectedCategory === "all"
+      ? products
+      : products.filter((p) => p.category === selectedCategory);
 </script>
 
 <svelte:head>
@@ -35,37 +35,40 @@
       Consumă LOCAL - GUSTOS - SĂNĂTOS
     </h2>
 
-    <!-- Category Filter -->
     <div class="row mb-5">
       <div class="col-12">
         <div class="d-flex gap-2 justify-content-center flex-wrap">
           <button
-            class={`btn ${selectedCategory === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
-            on:click={() => (selectedCategory = 'all')}
+            class={`btn ${selectedCategory === "all" ? "btn-primary" : "btn-outline-primary"}`}
+            on:click={() => (selectedCategory = "all")}
           >
             <i class="bi bi-list-ul"></i> Toate Produsele
           </button>
+
           <button
-            class={`btn ${selectedCategory === 'de-sezon' ? 'btn-primary' : 'btn-outline-primary'}`}
-            on:click={() => (selectedCategory = 'de-sezon')}
+            class={`btn ${selectedCategory === "de-sezon" ? "btn-primary" : "btn-outline-primary"}`}
+            on:click={() => (selectedCategory = "de-sezon")}
           >
             <i class="bi bi-leaf"></i> De Sezon
           </button>
+
           <button
-            class={`btn ${selectedCategory === 'la-borcan' ? 'btn-primary' : 'btn-outline-primary'}`}
-            on:click={() => (selectedCategory = 'la-borcan')}
+            class={`btn ${selectedCategory === "la-borcan" ? "btn-primary" : "btn-outline-primary"}`}
+            on:click={() => (selectedCategory = "la-borcan")}
           >
             <i class="bi bi-jar"></i> La Borcan
           </button>
+
           <button
-            class={`btn ${selectedCategory === 'colaboratori' ? 'btn-primary' : 'btn-outline-primary'}`}
-            on:click={() => (selectedCategory = 'colaboratori')}
+            class={`btn ${selectedCategory === "colaboratori" ? "btn-primary" : "btn-outline-primary"}`}
+            on:click={() => (selectedCategory = "colaboratori")}
           >
             <i class="bi bi-people"></i> Colaboratori
           </button>
+
           <button
-            class={`btn ${selectedCategory === 'horeca' ? 'btn-primary' : 'btn-outline-primary'}`}
-            on:click={() => (selectedCategory = 'horeca')}
+            class={`btn ${selectedCategory === "horeca" ? "btn-primary" : "btn-outline-primary"}`}
+            on:click={() => (selectedCategory = "horeca")}
           >
             <i class="bi bi-cup"></i> HORECA
           </button>
@@ -73,7 +76,6 @@
       </div>
     </div>
 
-    <!-- Products Grid -->
     <div class="row g-4">
       {#each filteredProducts as product (product.id)}
         <div class="col-md-6 col-lg-3">

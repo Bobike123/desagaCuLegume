@@ -3,29 +3,19 @@
   import ProductCard from "$lib/components/ProductCard.svelte";
   import NoutateCard from "$lib/components/NoutateCard.svelte";
   import EventCard from "$lib/components/EventCard.svelte";
-  import { products, fetchProducts, type Product } from "$lib/stores/products";
-  import { noutati, fetchNoutati, type Noutate } from "$lib/stores/noutati";
+  import { getAllProducts, type Product } from "$lib/stores/products";
+  import { getAllNoutati, type Noutate } from "$lib/stores/noutati";
+  import { getAllEvents, type Event } from "$lib/stores/events";
   import { onMount } from "svelte";
 
-  interface Event {
-    id: string;
-    title: string;
-    date: string;
-    location: string;
-    description: string;
-    image_url: string;
-    event_type: string;
-  }
-
+  let products: Product[] = [];
+  let noutati: Noutate[] = [];
   let events: Event[] = [];
 
   onMount(async () => {
-    await fetchProducts();
-    await fetchNoutati();
-    const res = await fetch("/api/esdeveniments");
-    if (res.ok) {
-      events = await res.json();
-    }
+    products = await getAllProducts();
+    noutati = await getAllNoutati();
+    events = await getAllEvents();
   });
 </script>
 
@@ -139,7 +129,7 @@
     </h2>
 
     <div class="row g-4">
-      {#each $products.slice(0, 8) as product (product.id)}
+      {#each products.slice(0, 8) as product (product.id)}
         <div class="col-md-6 col-lg-3">
           <ProductCard {product} />
         </div>
@@ -162,7 +152,7 @@
     </h2>
 
     <div class="row g-4">
-      {#each $noutati.slice(0, 3) as item (item.id)}
+      {#each noutati.slice(0, 3) as item (item.id)}
         <div class="col-md-4">
           <NoutateCard noutate={item} />
         </div>
@@ -185,9 +175,9 @@
     </h2>
 
     <div class="row g-4">
-      {#each events.slice(0, 3) as event (event.id)}
+      {#each events.slice(0, 3) as item (item.id)}
         <div class="col-md-4">
-          <EventCard {event} />
+          <EventCard event={item} />
         </div>
       {/each}
     </div>
@@ -227,15 +217,12 @@
   .text-brown {
     color: var(--desaga-brown) !important;
   }
-
   .text-green {
     color: var(--desaga-green) !important;
   }
-
   .bg-brown {
     background-color: var(--desaga-brown) !important;
   }
-
   .bg-light {
     background-color: var(--desaga-cream) !important;
   }

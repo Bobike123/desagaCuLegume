@@ -1,16 +1,16 @@
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
   import ProductCard from "$lib/components/ProductCard.svelte";
-  import { products } from "$lib/stores/products";
-  import { fetchProducts } from "$lib/stores/products";
-  import type { Product } from "$lib/stores/products";
+  import { getAllProducts, type Product } from "$lib/stores/products";
   import { onMount } from "svelte";
 
   let filteredProducts: Product[] = [];
 
   onMount(async () => {
-    await fetchProducts();
-    filteredProducts = $products.filter((p) => p.category === "colaboratori");
+    const allProducts = await getAllProducts();
+    filteredProducts = allProducts.filter(
+      (p: Product) => p.category === "colaboratori",
+    );
   });
 </script>
 

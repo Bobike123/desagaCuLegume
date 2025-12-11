@@ -25,7 +25,7 @@
       const [productsRes, noutatiRes, evenimenteRes] = await Promise.all([
         fetch("/api/products"),
         fetch("/api/noutati"),
-        fetch("/api/evenimente"),
+        fetch("/api/events"),
       ]);
 
       if (productsRes.ok) {
@@ -65,7 +65,6 @@
   </div>
 </div>
 
-<!-- Stats Cards -->
 <div class="row g-4 mb-5">
   <div class="col-md-3">
     <div class="card border-0 shadow-sm">
@@ -110,7 +109,6 @@
   </div>
 </div>
 
-<!-- Quick Actions -->
 <div class="row g-4 mb-5">
   <div class="col-md-6">
     <h3 class="h5 text-brown fw-bold mb-3">
@@ -168,7 +166,11 @@
             <div>
               <h6 class="mb-0">{item.title}</h6>
               <small class="text-secondary">
-                {new Date(item.created_at).toLocaleDateString("ro-RO")}
+                {item.created_at
+                  ? new Date(
+                      item.created_at as string | Date,
+                    ).toLocaleDateString("ro-RO")
+                  : "N/A"}
               </small>
             </div>
             <span

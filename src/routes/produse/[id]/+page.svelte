@@ -1,19 +1,20 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import ProductCard from "$lib/components/ProductCard.svelte";
-  import { products, fetchProducts, type Product } from "$lib/stores/products";
+  import { getAllProducts, type Product } from "$lib/stores/products";
   import { onMount } from "svelte";
 
   let product: Product | null = null;
   let relatedProducts: Product[] = [];
+  let allProducts: Product[] = [];
 
   onMount(async () => {
-    await fetchProducts();
+    allProducts = await getAllProducts();
 
-    const found = $products.find((p) => p.id === $page.params.id);
+    const found = allProducts.find((p) => p.id === $page.params.id);
     if (found) {
       product = found;
-      relatedProducts = $products
+      relatedProducts = allProducts
         .filter((p) => p.category === found.category && p.id !== found.id)
         .slice(0, 4);
     }
@@ -21,7 +22,7 @@
 </script>
 
 <svelte:head>
-  <title>{product?.title || "Produs"} - DeSaga cu Legume</title>
+  <title>{product?.name || "Produs"} - DeSaga cu Legume</title>
 </svelte:head>
 
 <div class="container py-5">
@@ -31,7 +32,7 @@
         <li class="breadcrumb-item"><a href="/">Acasă</a></li>
         <li class="breadcrumb-item"><a href="/produse">Produse</a></li>
         <li class="breadcrumb-item active" aria-current="page">
-          {product.title}
+          {product.name}
         </li>
       </ol>
     </nav>
@@ -40,13 +41,13 @@
       <div class="col-lg-6">
         <img
           src={product.image_url}
-          alt={product.title}
+          alt={product.name}
           class="img-fluid rounded shadow"
         />
       </div>
 
       <div class="col-lg-6">
-        <h1 class="h1 text-brown fw-bold mb-3">{product.title}</h1>
+        <h1 class="h1 text-brown fw-bold mb-3">{product.name}</h1>
 
         {#if product.category}
           <div class="mb-3">
