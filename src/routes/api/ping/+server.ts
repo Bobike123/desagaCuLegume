@@ -1,6 +1,5 @@
 import { json } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import { ADMIN_EMAIL, ADMIN_PASSWORD } from '$env/static/private';
 
 export function GET() {
     return json({

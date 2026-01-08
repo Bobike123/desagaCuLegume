@@ -4,8 +4,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { validateRequired, handleApiError } from '$lib/helpers';
 
 export const load: PageServerLoad = async ({ locals }) => {
-    if (!locals.user) throw redirect(303, '/admin/login');
-    return { session: locals.session };
+//admin logic restriction
 };
 
 export const actions: Actions = {

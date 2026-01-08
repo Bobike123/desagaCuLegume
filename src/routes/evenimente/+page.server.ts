@@ -1,17 +1,7 @@
-import { getAllEvents } from '$lib/stores/events';
+import type { PageServerLoad } from "./$types";
 
-export async function load() {
-    try {
-        const events = await getAllEvents();
-        const published = events.filter((e) => e.published === true);
-
-        return {
-            events: published
-        };
-    } catch (err) {
-        console.error('Error loading events:', err);
-        return {
-            events: []
-        };
-    }
-}
+export const load: PageServerLoad = async ({ fetch }) => {
+    const res = await fetch("/api/evenimente"); // public: published only
+    const events = res.ok ? await res.json() : [];
+    return { events };
+};

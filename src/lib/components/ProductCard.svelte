@@ -6,7 +6,7 @@
     title: "",
     description: "",
     price: 0,
-    image_url: "/images/placeholder.jpg",
+    image_url: "",
     category: "de-sezon",
   };
 </script>

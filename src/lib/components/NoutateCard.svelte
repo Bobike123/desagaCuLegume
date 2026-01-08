@@ -6,7 +6,7 @@
     title: "",
     excerpt: "",
     content: "",
-    image_url: "/images/placeholder.jpg",
+    image_url: "",
     created_at: new Date(),
     author_id: "",
     published: true,

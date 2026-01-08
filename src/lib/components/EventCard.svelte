@@ -13,7 +13,7 @@
     id: "",
     title: "",
     description: "",
-    image_url: "/images/placeholder.jpg",
+    image_url: "",
     date: new Date(),
     location: "",
     event_type: "festival",
@@ -40,7 +40,7 @@
 
 <div class="event-card card h-100">
   <img
-    src={event.image_url || "/images/placeholder.jpg"}
+    src={event.image_url || ""}
     alt={event.title}
     class="event-image card-img-top"
   />

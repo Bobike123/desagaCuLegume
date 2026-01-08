@@ -5,28 +5,24 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
 export async function POST({ request, cookies }) {
-  const body = await request.json().catch(() => ({}));
-  const email = String(body.email ?? '');
-  const password = String(body.password ?? '');
+  const { username, password } = await request.json();
 
-  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-    return json(
-      { error: 'Admin env not configured', debug: { hasEmail: !!ADMIN_EMAIL, hasPassword: !!ADMIN_PASSWORD } },
-      { status: 500 }
-    );
+  // simple single-admin auth
+  if (
+    username !== ADMIN_EMAIL ||
+    password !== ADMIN_PASSWORD
+  ) {
+    return json({ error: "Credențiale invalide" }, { status: 401 });
   }
 
-  if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-    return json({ error: 'Invalid credentials' }, { status: 401 });
-  }
-
-  cookies.set('admin', '1', {
-    path: '/',
+  // set admin cookie
+  cookies.set("admin", "1", {
+    path: "/",
     httpOnly: true,
-    sameSite: 'lax',
-    secure: false,
-    maxAge: 60 * 60 * 24 * 7
+    sameSite: "strict",
+    secure: false, // true in production
+    maxAge: 60 * 60 * 24 // 1 day
   });
 
-  return json({ success: true }, { status: 200 });
+  return json({ success: true });
 }

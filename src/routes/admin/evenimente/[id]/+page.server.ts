@@ -1,9 +1,19 @@
-import { redirect } from '@sveltejs/kit';
+// src/routes/admin/evenimente/[id]/+page.server.ts
+import { redirect, error as kitError } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
 
-export async function load({ locals }) {
-  if (!locals.user) {
-    throw redirect(302, '/admin/login');
-  }
+const TABLE = 'events'
 
-  return {};
-}
+export const load: PageServerLoad = async ({ locals, params }) => {
+  if (!locals.isAdmin) throw redirect(303, '/admin/login');
+
+  const { data, error } = await locals.supabase
+    .from(TABLE)
+    .select('*')
+    .eq('id', params.id)
+    .single();
+
+  if (error) throw kitError(404, 'Eveniment inexistent');
+
+  return { item: data };
+};

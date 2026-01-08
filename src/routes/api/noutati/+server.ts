@@ -1,62 +1,52 @@
-import { json } from '@sveltejs/kit';
-import type { RequestEvent } from '@sveltejs/kit';
-import { validateRequired, handleApiError } from '$lib/helpers';
+// src/routes/api/noutati/+server.ts
+import { json } from "@sveltejs/kit";
+import { createClient } from "@supabase/supabase-js";
+import { PUBLIC_SUPABASE_URL } from "$env/static/public";
+import { SUPABASE_SERVICE_ROLE_KEY } from "$env/static/private";
 
-// GET all noutati
-export async function GET(event: RequestEvent) {
+function supabaseAdmin() {
+  return createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+export async function GET({ locals }) {
   try {
-    const { data, error } = await event.locals.supabase
-      .from('noutati')
-      .select('*')
-      .eq('published', true)
-      .order('created_at', { ascending: false });
+    // Public: only published
+    // Admin: all rows (bypass RLS via service role)
+    if (locals.isAdmin) {
+      const sb = supabaseAdmin();
+      const { data, error } = await sb
+        .from("noutati")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return json(data ?? []);
+    }
+
+    const { data, error } = await locals.supabase
+      .from("noutati")
+      .select("*")
+      .eq("published", true)
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
-
-    return json(data || [], { status: 200 });
-  } catch (err) {
-    const errorData = handleApiError(err, 'Failed to fetch noutati');
-    return json({ error: errorData.error }, { status: errorData.status });
+    return json(data ?? []);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    return json({ error: msg }, { status: 400 });
   }
 }
 
-// POST create new noutate
-export async function POST(event: RequestEvent) {
-  try {
-    // Check authentication using event.locals.user
-    if (!event.locals.user) {
-      return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function POST({ locals, request }) {
+  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
 
-    const body = await event.request.json();
-    const { title, content, image_url } = body;
+  const payload = await request.json();
 
-    // Validate required fields
-    const missing = validateRequired({ title, content }, ['title', 'content']);
-    if (missing.length > 0) {
-      return json({ error: `Missing fields: ${missing.join(', ')}` }, { status: 400 });
-    }
+  const sb = supabaseAdmin();
+  const { data, error } = await sb.from("noutati").insert([payload]).select("*").single();
 
-    // Use event.locals.supabase
-    const { data, error } = await event.locals.supabase
-      .from('noutati')
-      .insert([
-        {
-          title,
-          content,
-          image_url: image_url || null,
-          date: new Date().toISOString(),
-          published: false
-        }
-      ])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return json(data, { status: 201 });
-  } catch (err) {
-    const errorData = handleApiError(err, 'Failed to create noutate');
-    return json({ error: errorData.error }, { status: errorData.status });
-  }
+  if (error) return json({ error: error.message }, { status: 400 });
+  return json({ item: data }, { status: 201 });
 }

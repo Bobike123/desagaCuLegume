@@ -1,34 +1,44 @@
-import { json } from '@sveltejs/kit';
+import { json } from "@sveltejs/kit";
 
-export async function GET({ locals }) {
-  const supabase = locals.supabase;
+export async function GET({ locals, url }) {
+  const isAdminRequest =
+    url.searchParams.get("admin") === "true" && locals.isAdmin;
 
-  try {
-    const { data, error } = await supabase
-      .from('events')
-      .select('*')
-      .order('created_at', { ascending: false });
+  const q = locals.supabase
+    .from("events")
+    .select("*")
+    .order("date", { ascending: true });
 
-    if (error) throw error;
-    return json(data ?? []);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error';
-    return json({ error: msg }, { status: 400 });
-  }
+  // Public site: only published
+  if (!isAdminRequest) q.eq("published", true);
+
+  const { data, error } = await q;
+  if (error) return json({ error: error.message }, { status: 400 });
+
+  return json(data ?? []);
 }
 
-export async function POST({ request, locals }) {
-  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+export async function POST({ locals, request }) {
+  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = locals.supabase;
-  const payload = await request.json();
+  const payload = await request.json().catch(() => ({}));
 
-  try {
-    const { data, error } = await supabase.from('evenimente').insert([payload]).select('*');
-    if (error) throw error;
-    return json(data, { status: 201 });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error';
-    return json({ error: msg }, { status: 400 });
-  }
+  const row = {
+    title: payload.title ?? "",
+    description: payload.description ?? "",
+    date: payload.date ?? null,
+    location: payload.location ?? "",
+    event_type: payload.event_type ?? "festival",
+    image_url: payload.image_url ?? null,
+    published: Boolean(payload.published ?? false),
+  };
+
+  const { data, error } = await locals.supabase
+    .from("events")
+    .insert([row])
+    .select("*")
+    .single();
+
+  if (error) return json({ error: error.message }, { status: 400 });
+  return json({ item: data }, { status: 201 });
 }

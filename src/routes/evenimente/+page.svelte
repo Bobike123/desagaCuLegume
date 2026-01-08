@@ -1,16 +1,28 @@
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
-  import type { Event } from "$lib/stores/events";
 
-  export let data;
+  type EventItem = {
+    id: string;
+    title: string;
+    description: string | null;
+    date: string | null;
+    location: string | null;
+    event_type: string | null;
+    image_url: string | null;
+    published: boolean | null;
+    created_at: string | null;
+  };
+
+  export let data: { events: EventItem[] };
 
   let currentPage = 1;
-  const itemsPerPage = 6;
+  const pageSize = 9;
 
-  $: totalPages = Math.ceil(data.events.length / itemsPerPage);
-  $: paginatedEvents = data.events.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
+  $: allEvents = data?.events ?? [];
+  $: totalPages = Math.max(1, Math.ceil(allEvents.length / pageSize));
+  $: paginatedEvents = allEvents.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
   );
 </script>
 
@@ -21,7 +33,7 @@
 <Hero
   title="Evenimente"
   subtitle="Descoperă activitățile din comunitatea DeSaga"
-  backgroundImage=""
+  backgroundImage="/images/events-hero.jpg"
   height="400px"
 />
 
@@ -31,7 +43,7 @@
       <i class="bi bi-calendar-event"></i> Evenimente
     </h2>
 
-    {#if data.events.length > 0}
+    {#if allEvents.length > 0}
       <div class="row g-4 mb-5">
         {#each paginatedEvents as event (event.id)}
           <div class="col-md-6 col-lg-4">
@@ -46,14 +58,20 @@
                 {/if}
                 <div class="card-body">
                   <h5 class="card-title text-brown fw-bold">{event.title}</h5>
-                  <p class="card-text text-secondary">
-                    {new Date(event.date).toLocaleDateString("ro-RO", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+
+                  <p class="card-text text-secondary mb-2">
+                    {#if event.date}
+                      {new Date(event.date).toLocaleDateString("ro-RO", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    {:else}
+                      N/A
+                    {/if}
                   </p>
-                  <p class="card-text small">{event.location}</p>
+
+                  <p class="card-text small mb-0">{event.location ?? ""}</p>
                 </div>
               </div>
             </a>
@@ -67,7 +85,7 @@
             <li class="page-item {currentPage === 1 ? 'disabled' : ''}">
               <button
                 class="page-link"
-                on:click={() => currentPage > 1 && currentPage--}
+                on:click={() => currentPage > 1 && (currentPage -= 1)}
               >
                 Anterior
               </button>
@@ -86,7 +104,7 @@
             >
               <button
                 class="page-link"
-                on:click={() => currentPage < totalPages && currentPage++}
+                on:click={() => currentPage < totalPages && (currentPage += 1)}
               >
                 Următoare
               </button>
@@ -99,6 +117,9 @@
         <h4 class="alert-heading">
           <i class="bi bi-info-circle"></i> Nu sunt evenimente disponibile
         </h4>
+        <div class="small text-secondary">
+          Publică cel puțin un eveniment (published = true).
+        </div>
       </div>
     {/if}
   </div>

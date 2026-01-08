@@ -1,36 +1,40 @@
-import { json } from '@sveltejs/kit';
+// src/routes/api/products/+server.ts
+import { json } from "@sveltejs/kit";
+import { createClient } from "@supabase/supabase-js";
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from "$env/static/public";
+import { SUPABASE_SERVICE_ROLE_KEY } from "$env/static/private";
 
-export async function GET({ url, locals }) {
-  const supabase = locals.supabase;
-  const category = url.searchParams.get('category');
+function supabaseAdmin() {
+  return createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
+export async function GET({ locals, url }) {
   try {
-    let query = supabase.from('products').select('*').eq('in_stock', true);
-    if (category) query = query.eq('category', category);
+    const category = url.searchParams.get("category");
 
-    const { data, error } = await query;
+    let q = locals.supabase.from("products").select("*").order("created_at", { ascending: false });
+    if (category) q = q.eq("category", category);
+
+    const { data, error } = await q;
     if (error) throw error;
 
     return json(data ?? []);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return json({ error: message }, { status: 400 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    return json({ error: msg }, { status: 400 });
   }
 }
 
-export async function POST({ request, locals }) {
-  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+export async function POST({ locals, request }) {
+  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = locals.supabase;
   const payload = await request.json();
 
-  try {
-    const { data, error } = await supabase.from('products').insert([payload]).select('*');
-    if (error) throw error;
+  const sb = supabaseAdmin();
+  const { data, error } = await sb.from("products").insert([payload]).select("*").single();
 
-    return json(data, { status: 201 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return json({ error: message }, { status: 400 });
-  }
+  if (error) return json({ error: error.message }, { status: 400 });
+  return json({ item: data }, { status: 201 });
 }

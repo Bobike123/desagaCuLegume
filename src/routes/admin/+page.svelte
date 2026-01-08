@@ -1,3 +1,4 @@
+<!-- Admin edit eveniment (varianta cu $lib/stores/events) -->
 <script lang="ts">
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
@@ -24,9 +25,25 @@
     let submitting = false;
     let deletingFlag = false;
     let error = "";
+    let loading = true;
+
     let imageFile: File | null = null;
     let imagePreview = "";
-    let loading = true;
+
+    let toast = "";
+    let toastType: "success" | "danger" | "info" = "info";
+    function showToast(msg: string, type: typeof toastType = "info") {
+        toast = msg;
+        toastType = type;
+        setTimeout(() => (toast = ""), 2500);
+    }
+
+    function toDatetimeLocal(value: string | null) {
+        if (!value) return "";
+        const d = new Date(value);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
 
     onMount(async () => {
         const id = $page.params.id;
@@ -39,8 +56,11 @@
         const data = await getEventById(id);
         if (data) {
             event = data;
-            formData = { ...data };
-            imagePreview = data.image_url;
+            formData = {
+                ...data,
+                date: toDatetimeLocal(data.date as any),
+            } as any;
+            imagePreview = data.image_url ?? "";
         } else {
             error = "Eveniment nu găsit";
         }
@@ -76,32 +96,40 @@
             let imageUrl = formData.image_url;
 
             if (imageFile) {
-                const formDataObj = new FormData();
-                formDataObj.append("file", imageFile);
+                const fd = new FormData();
+                fd.append("file", imageFile);
 
                 const uploadRes = await fetch("/api/products/upload", {
                     method: "POST",
-                    body: formDataObj,
+                    body: fd,
                 });
-
                 if (uploadRes.ok) {
-                    const { url } = await uploadRes.json();
-                    imageUrl = url;
+                    const { url } = await uploadRes
+                        .json()
+                        .catch(() => ({ url: "" }));
+                    if (url) imageUrl = url;
                 }
             }
 
-            const updated = await updateEvent(id, {
+            const payload = {
                 ...formData,
+                date: formData.date
+                    ? new Date(formData.date as any).toISOString()
+                    : null,
                 image_url: imageUrl,
-            });
+            } as any;
+
+            const updated = await updateEvent(id, payload);
             if (updated) {
+                showToast("Salvat", "success");
                 goto("/admin/evenimente");
             } else {
                 error = "Eroare la actualizare";
+                showToast(error, "danger");
             }
         } catch (err: unknown) {
             error = (err as Error).message || "Eroare necunoscută";
-            console.error(err);
+            showToast(error, "danger");
         } finally {
             submitting = false;
         }
@@ -118,12 +146,17 @@
 
         deletingFlag = true;
         try {
-            const success = await deleteEvent(id);
-            if (success) goto("/admin/evenimente");
-            else error = "Eroare la ștergere";
-        } catch (err: unknown) {
+            const ok = await deleteEvent(id);
+            if (ok) {
+                showToast("Eveniment șters", "success");
+                goto("/admin/evenimente");
+            } else {
+                error = "Eroare la ștergere";
+                showToast(error, "danger");
+            }
+        } catch {
             error = "Eroare la ștergere";
-            console.error(err);
+            showToast(error, "danger");
         } finally {
             deletingFlag = false;
         }
@@ -134,89 +167,124 @@
     <title>Editare Eveniment - Admin DeSaga</title>
 </svelte:head>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <h1 class="h2 text-brown fw-bold m-0">
-                <i class="bi bi-pencil"></i> Editare Eveniment
+<div class="page">
+    <header class="page__header">
+        <div>
+            <h1 class="page__title">
+                <span class="page__icon" aria-hidden="true"
+                    ><i class="bi bi-pencil-square"></i></span
+                >
+                Editare eveniment
             </h1>
+            <p class="page__subtitle">{event ? `ID: ${event.id}` : " "}</p>
+        </div>
+
+        <div class="page__actions">
+            <a
+                href="/admin/evenimente"
+                class="btn btn-outline-secondary page__btn"
+            >
+                <i class="bi bi-arrow-left"></i>
+                <span>Înapoi</span>
+            </a>
             <button
-                class="btn btn-danger"
+                class="btn btn-outline-danger page__btn"
                 on:click={handleDelete}
                 disabled={loading || deletingFlag}
             >
-                <i class="bi bi-trash"></i> Șterge
+                {#if deletingFlag}
+                    <span
+                        class="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                    ></span>
+                    Se șterge…
+                {:else}
+                    <i class="bi bi-trash"></i>
+                    <span>Șterge</span>
+                {/if}
             </button>
         </div>
-    </div>
-</div>
+    </header>
 
-{#if error}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle"></i>
-        {error}
-        <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="alert"
-            aria-label="Close"
-        ></button>
-    </div>
-{/if}
-
-{#if loading}
-    <div class="text-center py-5">
-        <div class="spinner-border" role="status">
-            <span class="visually-hidden">Se încarcă...</span>
+    {#if toast}
+        <div
+            class={`alert alert-${toastType} d-flex align-items-center gap-2 shadow-sm mb-3`}
+            role="alert"
+        >
+            <i class="bi bi-info-circle"></i>
+            <div>{toast}</div>
         </div>
-    </div>
-{:else if event}
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <form on:submit={handleSubmit}>
-                        <div class="mb-3">
-                            <label
-                                for="title"
-                                class="form-label text-brown fw-bold"
-                                >Titlu *</label
-                            >
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="title"
-                                bind:value={formData.title}
-                                required
-                                disabled={submitting}
-                            />
-                        </div>
+    {/if}
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label
-                                    for="date"
-                                    class="form-label text-brown fw-bold"
+    {#if error}
+        <div
+            class="alert alert-danger d-flex align-items-center gap-2 shadow-sm mb-3"
+            role="alert"
+        >
+            <i class="bi bi-exclamation-triangle"></i>
+            <div>{error}</div>
+        </div>
+    {/if}
+
+    {#if loading}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body py-5 text-center">
+                <div
+                    class="spinner-border"
+                    role="status"
+                    aria-label="Se încarcă"
+                ></div>
+                <div class="mt-3 text-muted">Se încarcă evenimentul…</div>
+            </div>
+        </div>
+    {:else if event}
+        <form class="grid" on:submit={handleSubmit}>
+            <section class="panel">
+                <div class="panel__head">
+                    <h2 class="panel__title">
+                        <i class="bi bi-sliders"></i>
+                        Detalii eveniment
+                    </h2>
+                    <span class="panel__hint">Titlu + dată + locație</span>
+                </div>
+
+                <div class="panel__body">
+                    <div class="field">
+                        <label class="field__label" for="title">Titlu *</label>
+                        <input
+                            id="title"
+                            class="form-control field__control"
+                            bind:value={formData.title}
+                            required
+                            disabled={submitting}
+                        />
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="field">
+                                <label class="field__label" for="date"
                                     >Data și ora *</label
                                 >
                                 <input
-                                    type="datetime-local"
-                                    class="form-control"
                                     id="date"
+                                    type="datetime-local"
+                                    class="form-control field__control"
                                     bind:value={formData.date}
                                     required
                                     disabled={submitting}
                                 />
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label
-                                    for="type"
-                                    class="form-label text-brown fw-bold"
-                                    >Tip Eveniment *</label
+                        </div>
+                        <div class="col-md-6">
+                            <div class="field">
+                                <label class="field__label" for="type"
+                                    >Tip eveniment *</label
                                 >
                                 <select
-                                    class="form-select"
                                     id="type"
+                                    class="form-select field__control"
                                     bind:value={formData.event_type}
                                     required
                                     disabled={submitting}
@@ -227,108 +295,339 @@
                                 </select>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label
-                                for="location"
-                                class="form-label text-brown fw-bold"
-                                >Locație *</label
-                            >
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="location"
-                                bind:value={formData.location}
-                                required
-                                disabled={submitting}
-                            />
-                        </div>
+                    <div class="field">
+                        <label class="field__label" for="location"
+                            >Locație *</label
+                        >
+                        <input
+                            id="location"
+                            class="form-control field__control"
+                            bind:value={formData.location}
+                            required
+                            disabled={submitting}
+                        />
+                    </div>
 
-                        <div class="mb-3">
-                            <label
-                                for="description"
-                                class="form-label text-brown fw-bold"
-                                >Descriere *</label
-                            >
-                            <textarea
-                                class="form-control"
-                                id="description"
-                                rows="5"
-                                bind:value={formData.description}
-                                required
-                                disabled={submitting}
-                            ></textarea>
-                        </div>
+                    <div class="field">
+                        <label class="field__label" for="description"
+                            >Descriere *</label
+                        >
+                        <textarea
+                            id="description"
+                            class="form-control field__control"
+                            rows="8"
+                            bind:value={formData.description}
+                            required
+                            disabled={submitting}
+                        ></textarea>
+                    </div>
 
-                        <div class="mb-3">
-                            <label
-                                for="image"
-                                class="form-label text-brown fw-bold"
-                                >Imagine</label
-                            >
-                            <input
-                                type="file"
-                                class="form-control"
-                                id="image"
-                                accept="image/*"
-                                on:change={handleImageChange}
-                                disabled={submitting}
-                            />
-                            {#if imagePreview}
-                                <div class="mt-3">
-                                    <img
-                                        src={imagePreview}
-                                        alt="Preview"
-                                        class="img-fluid rounded"
-                                        style="max-height: 200px;"
-                                    />
-                                </div>
+                    <div class="panel__footInline">
+                        <button
+                            type="submit"
+                            class="btn btn-primary btn-lg"
+                            disabled={submitting}
+                        >
+                            {#if submitting}
+                                <span
+                                    class="spinner-border spinner-border-sm me-2"
+                                    role="status"
+                                    aria-hidden="true"
+                                ></span>
+                                Se salvează…
+                            {:else}
+                                <i class="bi bi-check-circle"></i>
+                                Salvează
                             {/if}
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button
-                                type="submit"
-                                class="btn btn-primary btn-lg"
-                                disabled={submitting}
-                            >
-                                {#if submitting}
-                                    <span
-                                        class="spinner-border spinner-border-sm me-2"
-                                        role="status"
-                                        aria-hidden="true"
-                                    ></span>
-                                    Se salvează...
-                                {:else}
-                                    <i class="bi bi-check-circle"></i> Salvează Modificări
-                                {/if}
-                            </button>
-                            <a
-                                href="/admin/evenimente"
-                                class="btn btn-outline-secondary"
-                            >
-                                <i class="bi bi-arrow-left"></i> Anulează
-                            </a>
-                        </div>
-                    </form>
+                        </button>
+                    </div>
                 </div>
+            </section>
+
+            <aside class="side">
+                <div class="cardlike">
+                    <div class="cardlike__head">
+                        <div class="cardlike__title">
+                            <i class="bi bi-image"></i>
+                            Imagine
+                        </div>
+                        <div class="cardlike__sub">Upload + preview</div>
+                    </div>
+
+                    <div class="cardlike__body">
+                        <input
+                            type="file"
+                            class="form-control"
+                            accept="image/*"
+                            on:change={handleImageChange}
+                            disabled={submitting}
+                        />
+
+                        {#if imagePreview}
+                            <div class="preview">
+                                <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    class="preview__img"
+                                />
+                            </div>
+                        {:else}
+                            <div class="preview preview--empty">
+                                <div class="preview__empty">
+                                    <i class="bi bi-card-image"></i>
+                                    <div>Fără imagine</div>
+                                </div>
+                            </div>
+                        {/if}
+
+                        <div class="mt-3">
+                            <!-- svelte-ignore a11y_label_has_associated_control -->
+                            <label class="field__label">Image URL</label>
+                            <input
+                                class="form-control"
+                                bind:value={formData.image_url}
+                                disabled={submitting}
+                                placeholder=""
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cardlike">
+                    <div class="cardlike__head">
+                        <div class="cardlike__title">
+                            <i class="bi bi-megaphone"></i>
+                            Status
+                        </div>
+                        <div class="cardlike__sub">Public / Draft</div>
+                    </div>
+
+                    <div class="cardlike__body">
+                        <div class="form-check form-switch">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                bind:checked={formData.published}
+                                id="pub_store"
+                                disabled={submitting}
+                            />
+                            <label
+                                class="form-check-label fw-bold"
+                                for="pub_store"
+                                >{formData.published
+                                    ? "Public"
+                                    : "Draft"}</label
+                            >
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </form>
+    {:else}
+        <div class="empty">
+            <div class="empty__icon">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="empty__text">
+                <div class="fw-bold">Eveniment nu găsit</div>
+                <div class="text-muted">Nu există date pentru ID-ul cerut.</div>
             </div>
         </div>
-    </div>
-{:else}
-    <div class="alert alert-danger">
-        <i class="bi bi-exclamation-triangle"></i> Eveniment nu găsit
-    </div>
-{/if}
+    {/if}
+</div>
 
 <style>
-    .text-brown {
-        color: var(--desaga-brown) !important;
+    .page {
+        padding: 10px 0 22px;
+    }
+
+    .page__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin: 6px 0 14px;
+    }
+    .page__title {
+        margin: 0;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        color: var(--desaga-brown);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.6rem;
+        line-height: 1.2;
+    }
+    .page__icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: rgba(0, 0, 0, 0.04);
+    }
+    .page__subtitle {
+        margin: 6px 0 0;
+        color: rgba(0, 0, 0, 0.55);
+    }
+    .page__actions {
+        display: flex;
+        gap: 10px;
+    }
+    .page__btn {
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 14px;
+        align-items: start;
+    }
+
+    .panel {
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+    .panel__head {
+        padding: 14px 14px 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        background: rgba(0, 0, 0, 0.015);
+    }
+    .panel__title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 900;
+        color: var(--desaga-brown);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .panel__hint {
+        color: rgba(0, 0, 0, 0.55);
+        font-weight: 600;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+    .panel__body {
+        padding: 14px;
+    }
+    .panel__footInline {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+
+    .field {
+        margin-bottom: 12px;
+    }
+    .field__label {
+        display: block;
+        font-weight: 800;
+        color: rgba(0, 0, 0, 0.78);
+        margin-bottom: 6px;
+    }
+
+    .cardlike {
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        margin-bottom: 14px;
+    }
+    .cardlike__head {
+        padding: 12px 12px 10px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        background: rgba(0, 0, 0, 0.015);
+    }
+    .cardlike__title {
+        font-weight: 900;
+        color: var(--desaga-brown);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .cardlike__sub {
+        margin-top: 4px;
+        color: rgba(0, 0, 0, 0.55);
+        font-size: 0.9rem;
+    }
+    .cardlike__body {
+        padding: 12px;
+    }
+
+    .preview {
+        margin-top: 12px;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(0, 0, 0, 0.02);
+    }
+    .preview__img {
+        width: 100%;
+        display: block;
+        max-height: 240px;
+        object-fit: cover;
+    }
+    .preview--empty {
+        display: grid;
+        place-items: center;
+        padding: 22px 12px;
+    }
+    .preview__empty {
+        color: rgba(0, 0, 0, 0.55);
+        display: grid;
+        gap: 6px;
+        justify-items: center;
+    }
+
+    .empty {
+        border: 1px dashed rgba(0, 0, 0, 0.18);
+        border-radius: 16px;
+        padding: 18px 14px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.015);
+    }
+    .empty__icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: rgba(0, 0, 0, 0.04);
+        color: rgba(0, 0, 0, 0.55);
+        flex: 0 0 auto;
     }
 
     .form-control:focus,
-    .form-select:focus {
+    .form-select:focus,
+    textarea:focus {
         border-color: var(--desaga-green);
         box-shadow: 0 0 0 0.2rem rgba(118, 236, 30, 0.25);
+    }
+
+    @media (max-width: 992px) {
+        .grid {
+            grid-template-columns: 1fr;
+        }
+        .panel__hint {
+            display: none;
+        }
     }
 </style>

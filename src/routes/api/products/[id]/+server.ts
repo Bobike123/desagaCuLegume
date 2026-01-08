@@ -1,54 +1,54 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+// src/routes/api/products/[id]/+server.ts
+import { json } from "@sveltejs/kit";
+import { createClient } from "@supabase/supabase-js";
+import { PUBLIC_SUPABASE_URL } from "$env/static/public";
+import { SUPABASE_SERVICE_ROLE_KEY } from "$env/static/private";
 
-export const GET: RequestHandler = async ({ params, locals }) => {
-  const supabase = locals.supabase;
+function supabaseAdmin() {
+  return createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
+export async function GET({ locals, params }) {
   try {
-    const { data, error } = await supabase.from('products').select('*').eq('id', params.id).single();
-    if (error) throw error;
-
-    return json(data);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return json({ error: message }, { status: 400 });
-  }
-};
-
-export const PUT: RequestHandler = async ({ params, request, locals }) => {
-  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
-
-  const supabase = locals.supabase;
-  const payload = await request.json();
-
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .update(payload)
-      .eq('id', params.id)
-      .select('*')
+    const { data, error } = await locals.supabase
+      .from("products")
+      .select("*")
+      .eq("id", params.id)
       .single();
 
     if (error) throw error;
-    return json(data);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return json({ error: message }, { status: 400 });
+    return json({ item: data });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    return json({ error: msg }, { status: 400 });
   }
-};
+}
 
-export const DELETE: RequestHandler = async ({ params, locals }) => {
-  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+export async function PUT({ locals, params, request }) {
+  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = locals.supabase;
+  const payload = await request.json();
 
-  try {
-    const { error } = await supabase.from('products').delete().eq('id', params.id);
-    if (error) throw error;
+  const sb = supabaseAdmin();
+  const { data, error } = await sb
+    .from("products")
+    .update(payload)
+    .eq("id", params.id)
+    .select("*")
+    .single();
 
-    return json({ success: true });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return json({ error: message }, { status: 400 });
-  }
-};
+  if (error) return json({ error: error.message }, { status: 400 });
+  return json({ item: data }, { status: 200 });
+}
+
+export async function DELETE({ locals, params }) {
+  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
+
+  const sb = supabaseAdmin();
+  const { error } = await sb.from("products").delete().eq("id", params.id);
+
+  if (error) return json({ error: error.message }, { status: 400 });
+  return json({ success: true }, { status: 200 });
+}

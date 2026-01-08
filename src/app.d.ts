@@ -11,6 +11,10 @@ declare global {
 			isAdmin: boolean;
 		}
 	}
+
+	interface Window {
+		bootstrap?: any;
+	}
 }
 
 export { };

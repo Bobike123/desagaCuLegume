@@ -1,56 +1,49 @@
-import { json } from '@sveltejs/kit';
+import { json } from "@sveltejs/kit";
 
-export async function GET({ params, locals }) {
-  const supabase = locals.supabase;
+export async function GET({ locals, params, url }) {
+  const isAdminRequest =
+    url.searchParams.get("admin") === "true" && locals.isAdmin;
 
-  try {
-    const { data, error } = await supabase
-      .from('evenimente')
-      .select('*')
-      .eq('id', params.id)
-      .single();
+  const q = locals.supabase.from("events").select("*").eq("id", params.id).single();
 
-    if (error) throw error;
-    return json(data);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error';
-    return json({ error: msg }, { status: 400 });
-  }
+  if (!isAdminRequest) q.eq("published", true);
+
+  const { data, error } = await q;
+  if (error) return json({ error: error.message }, { status: 400 });
+
+  return json({ item: data }, { status: 200 });
 }
 
-export async function PATCH({ params, request, locals }) {
-  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+export async function PATCH({ locals, params, request }) {
+  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = locals.supabase;
-  const payload = await request.json();
+  const body = await request.json().catch(() => ({}));
 
-  try {
-    const { data, error } = await supabase
-      .from('events')
-      .update(payload)
-      .eq('id', params.id)
-      .select('*')
-      .single();
+  const patch: Record<string, unknown> = {};
+  if ("title" in body) patch.title = body.title ?? "";
+  if ("description" in body) patch.description = body.description ?? "";
+  if ("date" in body) patch.date = body.date ?? null;
+  if ("location" in body) patch.location = body.location ?? "";
+  if ("event_type" in body) patch.event_type = body.event_type ?? "festival";
+  if ("image_url" in body) patch.image_url = body.image_url ?? null;
+  if ("published" in body) patch.published = Boolean(body.published);
 
-    if (error) throw error;
-    return json(data);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error';
-    return json({ error: msg }, { status: 400 });
-  }
+  const { data, error } = await locals.supabase
+    .from("events")
+    .update(patch)
+    .eq("id", params.id)
+    .select("*")
+    .single();
+
+  if (error) return json({ error: error.message }, { status: 400 });
+  return json({ item: data }, { status: 200 });
 }
 
-export async function DELETE({ params, locals }) {
-  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+export async function DELETE({ locals, params }) {
+  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = locals.supabase;
+  const { error } = await locals.supabase.from("events").delete().eq("id", params.id);
+  if (error) return json({ error: error.message }, { status: 400 });
 
-  try {
-    const { error } = await supabase.from('evenimente').delete().eq('id', params.id);
-    if (error) throw error;
-    return json({ success: true });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error';
-    return json({ error: msg }, { status: 400 });
-  }
+  return json({ success: true }, { status: 200 });
 }

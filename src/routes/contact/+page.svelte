@@ -1,6 +1,5 @@
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
-  import { onMount } from "svelte";
 
   let formData = {
     name: "",
@@ -28,16 +27,25 @@
         body: JSON.stringify(formData),
       });
 
-      if (res.ok) {
-        submitted = true;
-        formData = { name: "", email: "", phone: "", subject: "", message: "" };
+      const result = await res.json();
 
-        setTimeout(() => {
-          submitted = false;
-        }, 5000);
-      } else {
-        error = "A apărut o eroare. Încearcă din nou!";
+      if (!res.ok) {
+        error = result?.error || "A apărut o eroare. Încearcă din nou!";
+        return;
       }
+
+      submitted = true;
+      formData = {
+        name: "",
+        email: "",
+        phone: "",
+        subject: "",
+        message: "",
+      };
+
+      setTimeout(() => {
+        submitted = false;
+      }, 5000);
     } catch (err) {
       error = "Eroare de conexiune. Încearcă din nou!";
       console.error(err);
@@ -111,46 +119,6 @@
             </p>
           </div>
         </div>
-
-        <div class="card border-0 shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title text-green fw-bold mb-3">
-              <i class="bi bi-share"></i> Social Media
-            </h5>
-            <div class="d-flex gap-3">
-              <a
-                href="https://facebook.com/desagaculegume"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Follow us on Facebook"
-                class="text-white text-decoration-none"
-                title="Facebook"
-              >
-                <i class="bi bi-facebook"></i>
-              </a>
-              <a
-                href="https://instagram.com/desagaculegume"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Follow us on Instagram"
-                class="text-white text-decoration-none"
-                title="Instagram"
-              >
-                <i class="bi bi-instagram"></i>
-              </a>
-              <a
-                href="https://youtube.com/@desagaculegume"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Subscribe on YouTube"
-                class="text-white text-decoration-none"
-                title="YouTube"
-              >
-                <i class="bi bi-youtube"></i>
-              </a>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Contact Form -->
@@ -160,96 +128,71 @@
         </h2>
 
         {#if submitted}
-          <div
-            class="alert alert-success alert-dismissible fade show"
-            role="alert"
-          >
+          <div class="alert alert-success" role="alert">
             <i class="bi bi-check-circle"></i>
-            <strong>Mesaj trimis cu succes!</strong> Vă mulțumim pentru mesaj.
-            Vom reveni în curând cu un răspuns.
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="alert"
-              aria-label="Close"
-            ></button>
+            <strong>Mesaj trimis cu succes!</strong> Vom reveni în curând.
           </div>
         {/if}
 
         {#if error}
-          <div
-            class="alert alert-danger alert-dismissible fade show"
-            role="alert"
-          >
+          <div class="alert alert-danger" role="alert">
             <i class="bi bi-exclamation-triangle"></i>
-            <strong>Eroare!</strong>
+            <strong>Eroare:</strong>
             {error}
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="alert"
-              aria-label="Close"
-            ></button>
           </div>
         {/if}
 
         <form on:submit={handleSubmit} class="card border-0 shadow-sm p-4">
           <div class="mb-3">
-            <label for="name" class="form-label text-brown fw-bold">Nume</label>
+            <!-- svelte-ignore a11y_label_has_associated_control -->
+            <label class="form-label text-brown fw-bold">Nume</label>
             <input
               type="text"
               class="form-control"
-              id="name"
               bind:value={formData.name}
               required
             />
           </div>
 
           <div class="mb-3">
-            <label for="email" class="form-label text-brown fw-bold"
-              >Email</label
-            >
+            <!-- svelte-ignore a11y_label_has_associated_control -->
+            <label class="form-label text-brown fw-bold">Email</label>
             <input
               type="email"
               class="form-control"
-              id="email"
               bind:value={formData.email}
               required
             />
           </div>
 
           <div class="mb-3">
-            <label for="phone" class="form-label text-brown fw-bold"
-              >Telefon (opțional)</label
-            >
+            <!-- svelte-ignore a11y_label_has_associated_control -->
+            <label class="form-label text-brown fw-bold">
+              Telefon (opțional)
+            </label>
             <input
               type="tel"
               class="form-control"
-              id="phone"
               bind:value={formData.phone}
             />
           </div>
 
           <div class="mb-3">
-            <label for="subject" class="form-label text-brown fw-bold"
-              >Subiect</label
-            >
+            <!-- svelte-ignore a11y_label_has_associated_control -->
+            <label class="form-label text-brown fw-bold">Subiect</label>
             <input
               type="text"
               class="form-control"
-              id="subject"
               bind:value={formData.subject}
               required
             />
           </div>
 
           <div class="mb-3">
-            <label for="message" class="form-label text-brown fw-bold"
-              >Mesaj</label
-            >
+            <!-- svelte-ignore a11y_label_has_associated_control -->
+            <label class="form-label text-brown fw-bold">Mesaj</label>
             <textarea
               class="form-control"
-              id="message"
               rows="5"
               bind:value={formData.message}
               required
@@ -263,21 +206,12 @@
               disabled={submitting}
             >
               {#if submitting}
-                <span
-                  class="spinner-border spinner-border-sm me-2"
-                  role="status"
-                  aria-hidden="true"
-                ></span>
-                Se trimite...
+                Se trimite…
               {:else}
                 <i class="bi bi-send"></i> Trimite mesajul
               {/if}
             </button>
           </div>
-
-          <p class="text-secondary small text-center mt-3">
-            Răspundem în general în 24 de ore.
-          </p>
         </form>
       </div>
     </div>
@@ -291,10 +225,5 @@
 
   .text-green {
     color: var(--desaga-green) !important;
-  }
-
-  .form-control:focus {
-    border-color: var(--desaga-green);
-    box-shadow: 0 0 0 0.2rem rgba(118, 236, 30, 0.25);
   }
 </style>
