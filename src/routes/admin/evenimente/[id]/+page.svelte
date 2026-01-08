@@ -29,7 +29,7 @@
     if (!id) return;
     loading = true;
     try {
-      const res = await fetch(`/api/events/${id}`);
+      const res = await fetch(`/api/evenimente/${id}`);
       if (!res.ok) throw new Error("Failed to load event");
       event = await res.json();
       if (event) {
@@ -80,7 +80,7 @@
       });
       if (imageFile) body.append("image", imageFile);
 
-      const res = await fetch(id ? `/api/events/${id}` : "/api/events", {
+      const res = await fetch(id ? `/api/evenimente/${id}` : "/api/evenimente", {
         method: id ? "PUT" : "POST",
         body,
       });
@@ -100,7 +100,7 @@
     if (!id) return;
     deleting = true;
     try {
-      const res = await fetch(`/api/events/${id}`, {
+      const res = await fetch(`/api/evenimente/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete event");

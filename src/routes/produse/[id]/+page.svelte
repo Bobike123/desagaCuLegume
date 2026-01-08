@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import ProductCard from "$lib/components/ProductCard.svelte";
-  import { getAllProducts, type Product } from "$lib/stores/products";
+  import { productsStore, type Product } from "$lib/stores/products";
   import { onMount } from "svelte";
 
   let product: Product | null = null;
@@ -9,7 +9,7 @@
   let allProducts: Product[] = [];
 
   onMount(async () => {
-    allProducts = await getAllProducts();
+    allProducts = await productsStore.loadAll();
 
     const found = allProducts.find((p) => p.id === $page.params.id);
     if (found) {

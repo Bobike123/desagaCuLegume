@@ -1,68 +1,59 @@
-// src/lib/server/noutati.ts
-import { supabaseServer } from '$lib/api/supabase';
-export const supabaseAdmin = supabaseServer()
+// src/lib/stores/noutati.ts
+import { writable } from 'svelte/store';
 
-export interface Noutate {
-  id?: string;
+export interface NewsItem {
+  id: string;
   title: string;
-  excerpt: string;
-  content: string;
-  image_url: string;
-  created_at?: string | Date;
-  author_id: string;
-  published: boolean;
+  content?: string;
+  excerpt?: string;
+  image_url?: string;
+  published?: boolean;
+  author_id?: string;     // page expects it
+  created_at?: string;    // keep as string (ISO)
+  updated_at?: string;
+  
 }
 
-export async function getAllNoutati() {
-  const { data, error } = await supabaseAdmin
-    .from('noutati')
-    .select('*')
-    .order('created_at', { ascending: false });
+export type Noutate = NewsItem;
 
-  if (error) throw new Error(error.message);
-  return data as Noutate[];
+type NewsState = {
+  items: NewsItem[];
+  loading: boolean;
+  error: string | null;
+};
+
+const state = writable<NewsState>({ items: [], loading: false, error: null });
+
+export const noutatiStore = {
+  subscribe: state.subscribe,
+
+  async loadAll() {
+    state.update((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const res = await fetch('/api/noutati');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Failed to load news');
+      state.set({ items: data ?? [], loading: false, error: null });
+      return data as NewsItem[];
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      state.set({ items: [], loading: false, error: msg });
+      return [];
+    }
+  },
+
+  async getById(id: string) {
+    const res = await fetch(`/api/noutati/${id}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error ?? 'Failed to load news item');
+    return data as NewsItem;
+  }
+};
+
+export async function getAllNoutati() {
+  return noutatiStore.loadAll();
 }
 
 export async function getNoutateById(id: string) {
-  const { data, error } = await supabaseAdmin
-    .from('noutati')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Noutate;
-}
-
-export async function createNoutate(noutate: Omit<Noutate, 'id' | 'created_at'>) {
-  const { data, error } = await supabaseAdmin
-    .from('noutati')
-    .insert(noutate)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Noutate;
-}
-
-export async function updateNoutate(id: string, noutate: Partial<Noutate>) {
-  const { data, error } = await supabaseAdmin
-    .from('noutati')
-    .update(noutate)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Noutate;
-}
-
-export async function deleteNoutate(id: string) {
-  const { error } = await supabaseAdmin
-    .from('noutati')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw new Error(error.message);
-  return true;
+  return noutatiStore.getById(id);
 }

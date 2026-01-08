@@ -53,7 +53,7 @@
         }
       }
 
-      const res = await fetch("/api/events", {
+      const res = await fetch("/api/evenimente", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

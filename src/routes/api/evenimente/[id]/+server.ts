@@ -1,92 +1,56 @@
 import { json } from '@sveltejs/kit';
-import type { RequestEvent } from '@sveltejs/kit';
-import { supabaseServer } from '$lib/api/supabase';
-import { isValidUUID, handleApiError } from '$lib/helpers';
 
-// GET single event
-export async function GET(event: RequestEvent) {
+export async function GET({ params, locals }) {
+  const supabase = locals.supabase;
+
   try {
-    const { id } = event.params;
-
-    if (!isValidUUID(id)) {
-      return json({ error: 'Invalid event ID' }, { status: 400 });
-    }
-
-    const supabase = supabaseServer();
     const { data, error } = await supabase
-      .from('events')
+      .from('evenimente')
       .select('*')
-      .eq('id', id)
+      .eq('id', params.id)
       .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return json({ error: 'Event not found' }, { status: 404 });
-      }
-      throw error;
-    }
-
-    return json(data, { status: 200 });
-  } catch (err) {
-    const errorData = handleApiError(err, 'Failed to fetch event');
-    return json({ error: errorData.error }, { status: errorData.status });
+    if (error) throw error;
+    return json(data);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown error';
+    return json({ error: msg }, { status: 400 });
   }
 }
 
-// PATCH update event
-export async function PATCH(event: RequestEvent) {
+export async function PATCH({ params, request, locals }) {
+  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
+  const supabase = locals.supabase;
+  const payload = await request.json();
+
   try {
-    if (!event.locals.user) {
-      return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id } = event.params;
-    if (!isValidUUID(id)) {
-      return json({ error: 'Invalid event ID' }, { status: 400 });
-    }
-
-    const body = await event.request.json();
-    const supabase = supabaseServer();
-
     const { data, error } = await supabase
       .from('events')
-      .update(body)
-      .eq('id', id)
-      .select()
+      .update(payload)
+      .eq('id', params.id)
+      .select('*')
       .single();
 
     if (error) throw error;
-
-    return json(data, { status: 200 });
-  } catch (err) {
-    const errorData = handleApiError(err, 'Failed to update event');
-    return json({ error: errorData.error }, { status: errorData.status });
+    return json(data);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown error';
+    return json({ error: msg }, { status: 400 });
   }
 }
 
-// DELETE event
-export async function DELETE(event: RequestEvent) {
+export async function DELETE({ params, locals }) {
+  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
+  const supabase = locals.supabase;
+
   try {
-    if (!event.locals.user) {
-      return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id } = event.params;
-    if (!isValidUUID(id)) {
-      return json({ error: 'Invalid event ID' }, { status: 400 });
-    }
-
-    const supabase = supabaseServer();
-    const { error } = await supabase
-      .from('events')
-      .delete()
-      .eq('id', id);
-
+    const { error } = await supabase.from('evenimente').delete().eq('id', params.id);
     if (error) throw error;
-
-    return json({ success: true }, { status: 200 });
-  } catch (err) {
-    const errorData = handleApiError(err, 'Failed to delete event');
-    return json({ error: errorData.error }, { status: errorData.status });
+    return json({ success: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown error';
+    return json({ error: msg }, { status: 400 });
   }
 }

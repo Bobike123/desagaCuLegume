@@ -1,70 +1,81 @@
-// src/lib/server/events.ts
-import { supabaseServer } from '$lib/api/supabase';
-export const supabaseAdmin = supabaseServer();
+// src/lib/stores/events.ts
+import { writable } from 'svelte/store';
 
-export interface Event {
-    id: string;  // remove the ?
+export interface EventItem {
+    id: string;
     title: string;
     description: string;
+    date: string;            // ISO string
     location: string;
-    date: string | Date;
-    image_url: string;
+    image_url: string | null;
     event_type: string;
-    created_at?: string | Date;
     published: boolean;
+    created_at?: string;
+    updated_at?: string;
+    published_at?: string | null;
 }
 
+export type Event = EventItem;
 
+type EventsState = {
+    items: EventItem[];
+    loading: boolean;
+    error: string | null;
+};
+
+const state = writable<EventsState>({ items: [], loading: false, error: null });
+
+export const eventsStore = {
+    subscribe: state.subscribe,
+
+    async loadAll(admin = false) {
+        state.update((s) => ({ ...s, loading: true, error: null }));
+        try {
+            const qs = admin ? '?admin=true' : '';
+            const res = await fetch(`/api/evenimente${qs}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error ?? 'Failed to load events');
+
+            state.set({ items: data ?? [], loading: false, error: null });
+            return data as EventItem[];
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : 'Unknown error';
+            state.set({ items: [], loading: false, error: msg });
+            return [];
+        }
+    },
+
+    async getById(id: string) {
+        const res = await fetch(`/api/evenimente/${id}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error ?? 'Failed to load event');
+        return data as EventItem;
+    }
+};
+
+// Legacy reads
 export async function getAllEvents() {
-    const { data, error } = await supabaseAdmin
-        .from('events')
-        .select('*')
-        .order('date', { ascending: true });
-
-    if (error) throw new Error(error.message);
-    return data as Event[];
+    return eventsStore.loadAll(false);
 }
-
 export async function getEventById(id: string) {
-    const { data, error } = await supabaseAdmin
-        .from('events')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-    if (error) throw new Error(error.message);
-    return data as Event;
+    return eventsStore.getById(id);
 }
 
-export async function createEvent(event: Omit<Event, 'id' | 'created_at'>) {
-    const { data, error } = await supabaseAdmin
-        .from('events')
-        .insert(event)
-        .select()
-        .single();
-
-    if (error) throw new Error(error.message);
-    return data as Event;
-}
-
-export async function updateEvent(id: string, event: Partial<Event>) {
-    const { data, error } = await supabaseAdmin
-        .from('events')
-        .update(event)
-        .eq('id', id)
-        .select()
-        .single();
-
-    if (error) throw new Error(error.message);
-    return data as Event;
+// Admin writes (what your admin page imports)
+export async function updateEvent(id: string, patch: Partial<EventItem>) {
+    const res = await fetch(`/api/evenimente/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error ?? 'Failed to update event');
+    return data as EventItem;
 }
 
 export async function deleteEvent(id: string) {
-    const { error } = await supabaseAdmin
-        .from('events')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw new Error(error.message);
-    return true;
+    const res = await fetch(`/api/evenimente/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error ?? 'Failed to delete event');
+    return data as { success: true };
 }

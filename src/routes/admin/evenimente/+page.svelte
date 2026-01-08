@@ -16,7 +16,7 @@
 
   onMount(async () => {
     try {
-      const res = await fetch("/api/events?admin=true");
+      const res = await fetch("/api/evenimente?admin=true");
       if (res.ok) {
         events = await res.json();
       }
@@ -36,7 +36,7 @@
     if (!confirm("Ești sigur?")) return;
 
     try {
-      const res = await fetch(`/api/events/${id}`, {
+      const res = await fetch(`/api/evenimente/${id}`, {
         method: "DELETE",
       });
 

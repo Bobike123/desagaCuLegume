@@ -1,24 +1,8 @@
-import { supabaseServer } from '$lib/api/supabase';
+// src/routes/noutati/+page.server.ts
+import type { PageServerLoad } from './$types';
 
-export async function load() {
-  const supabase = supabaseServer();
-
-  try {
-    const { data: noutati, error } = await supabase
-      .from('noutati')
-      .select('*')
-      .eq('published', true)
-      .order('published_at', { ascending: false });
-
-    if (error) throw error;
-
-    return {
-      noutati: noutati || []
-    };
-  } catch (err) {
-    console.error('Error loading noutati:', err);
-    return {
-      noutati: []
-    };
-  }
-}
+export const load: PageServerLoad = async ({ fetch }) => {
+  const res = await fetch('/api/noutati');
+  const data = await res.json();
+  return { noutati: res.ok ? data : [] };
+};

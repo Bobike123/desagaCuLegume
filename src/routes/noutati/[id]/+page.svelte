@@ -1,187 +1,99 @@
+<!-- src/routes/noutati/[id]/+page.svelte -->
 <script lang="ts">
   import { page } from "$app/stores";
-  import NoutateCard from "$lib/components/NoutateCard.svelte";
-  import { getAllNoutati, type Noutate } from "$lib/stores/noutati";
   import { onMount } from "svelte";
+  import {
+    getAllNoutati,
+    type NewsItem,
+    type Noutate,
+  } from "$lib/stores/noutati";
 
-  let currentNoutate: Noutate | null = null;
-  let relatedNoutati: Noutate[] = [];
+  // Backward compat: some files use Noutate, some use NewsItem
+  type Item = NewsItem | Noutate;
 
-  const formatDate = (d: string | Date | undefined): string =>
-    d
-      ? new Date(d).toLocaleDateString("ro-RO", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "";
+  let noutate: Item | null = null;
+  let related: Item[] = [];
+  let all: Item[] = [];
+  let error = "";
+
+  function toIsoString(value: unknown): string | undefined {
+    if (!value) return undefined;
+    if (typeof value === "string") return value;
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
+  }
 
   onMount(async () => {
-    const list: Noutate[] = await getAllNoutati();
+    try {
+      const id = $page.params.id;
 
-    const found = list.find((x: Noutate) => x.id === $page.params.id);
-    if (!found) return;
+      const raw = await getAllNoutati();
 
-    currentNoutate = {
-      ...found,
-      created_at: found.created_at ? new Date(found.created_at) : new Date(),
-    };
-
-    relatedNoutati = list
-      .filter((x: Noutate) => x.id !== found.id)
-      .slice(0, 3)
-      .map((x: Noutate) => ({
+      // normalize created_at to string so TS matches NewsItem
+      all = raw.map((x: any) => ({
         ...x,
-        created_at: x.created_at ? new Date(x.created_at) : new Date(),
-      }));
+        created_at: toIsoString(x.created_at),
+        updated_at: toIsoString(x.updated_at),
+      })) as Item[];
+
+      const found = all.find((x: any) => x.id === id);
+      if (!found) {
+        error = "Noutate not found";
+        return;
+      }
+
+      noutate = found;
+
+      // simple related: latest 4 excluding current
+      related = all.filter((x: any) => x.id !== id).slice(0, 4);
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Unknown error";
+    }
   });
 </script>
 
 <svelte:head>
-  <title>{currentNoutate?.title || "Noutate"} - DeSaga cu Legume</title>
+  <title>{noutate?.title ?? "Noutate"} - DeSaga cu Legume</title>
 </svelte:head>
 
-<div class="container py-5">
-  {#if currentNoutate}
-    <nav aria-label="breadcrumb" class="mb-4">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/">Acasă</a></li>
-        <li class="breadcrumb-item"><a href="/noutati">Noutăți</a></li>
-        <li class="breadcrumb-item active" aria-current="page">
-          {currentNoutate.title}
-        </li>
-      </ol>
-    </nav>
+{#if error}
+  <div class="alert alert-danger">{error}</div>
+{:else if !noutate}
+  <div class="text-center py-5">Se încarcă...</div>
+{:else}
+  <div class="container py-5">
+    <h1 class="h2 fw-bold mb-3">{noutate.title}</h1>
 
-    <article class="row">
-      <div class="col-lg-8">
-        <header class="mb-4">
-          <h1 class="h1 text-brown fw-bold mb-3">{currentNoutate.title}</h1>
-
-          <div class="d-flex flex-wrap gap-3 mb-4 text-secondary">
-            <span
-              ><i class="bi bi-calendar"></i>
-              {formatDate(currentNoutate.created_at)}</span
-            >
-
-            {#if currentNoutate.author_id}
-              <span><i class="bi bi-person"></i> Admin DeSaga</span>
-            {/if}
-          </div>
-
-          {#if currentNoutate.image_url}
-            <img
-              src={currentNoutate.image_url}
-              alt={currentNoutate.title}
-              class="img-fluid rounded shadow mb-4"
-            />
-          {/if}
-        </header>
-
-        <div class="content mb-5">
-          {#if currentNoutate.excerpt}
-            <p class="lead text-secondary mb-4">{currentNoutate.excerpt}</p>
-          {/if}
-
-          <div class="text-dark lh-lg">
-            {currentNoutate.content}
-          </div>
-        </div>
-
-        <div class="d-flex gap-2 mb-5">
-          <a href="/noutati" class="btn btn-outline-primary">
-            <i class="bi bi-arrow-left"></i> Înapoi la noutăți
-          </a>
-        </div>
-
-        <div class="card bg-light border-0 p-4">
-          <h5 class="card-title text-brown fw-bold mb-3">
-            <i class="bi bi-share"></i> Împarte această noutate
-          </h5>
-          <div class="d-flex gap-2">
-            <a
-              href="https://www.facebook.com/sharer/sharer.php?u=window.location.href"
-              target="_blank"
-              class="btn btn-sm btn-primary"
-            >
-              <i class="bi bi-facebook"></i> Facebook
-            </a>
-
-            <button
-              class="btn btn-sm btn-secondary"
-              on:click={() => {
-                navigator.clipboard.writeText(window.location.href);
-                alert("Link copiat!");
-              }}
-            >
-              <i class="bi bi-link-45deg"></i> Copiază linkul
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-4">
-        <aside>
-          <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body">
-              <h5 class="card-title text-brown fw-bold mb-3">
-                <i class="bi bi-info-circle"></i> Despre articol
-              </h5>
-
-              <p class="card-text text-secondary">
-                Articol publicat pe {formatDate(currentNoutate.created_at)}
-              </p>
-
-              <p class="card-text small">
-                Rămâi conectat cu ultimele noutăți din DeSaga cu Legume prin
-                abonare la newsletter-ul nostru.
-              </p>
-
-              <a href="/contact" class="btn btn-primary btn-sm w-100">
-                <i class="bi bi-envelope"></i> Contact
-              </a>
-            </div>
-          </div>
-
-          {#if relatedNoutati.length > 0}
-            <h5 class="text-brown fw-bold mb-3">
-              <i class="bi bi-arrow-left-right"></i> Noutăți similare
-            </h5>
-
-            {#each relatedNoutati as item (item.id)}
-              <NoutateCard noutate={item} />
-            {/each}
-          {/if}
-        </aside>
-      </div>
-    </article>
-  {:else}
-    <div class="alert alert-danger" role="alert">
-      <h4 class="alert-heading">
-        <i class="bi bi-exclamation-triangle"></i> Noutate nu găsită
-      </h4>
-
-      <p>
-        Articolul pe care îl cauți nu există.
-        <a href="/noutati">Înapoi la noutăți</a>
+    {#if noutate.created_at}
+      <p class="text-secondary small mb-4">
+        {new Date(noutate.created_at).toLocaleDateString("ro-RO")}
       </p>
-    </div>
-  {/if}
-</div>
+    {/if}
 
-<style>
-  .text-brown {
-    color: var(--desaga-brown) !important;
-  }
+    {#if noutate.image_url}
+      <img
+        src={noutate.image_url}
+        alt={noutate.title}
+        class="img-fluid rounded mb-4"
+      />
+    {/if}
 
-  .content {
-    font-size: 1.1rem;
-    line-height: 1.8;
-  }
+    {#if noutate.excerpt}
+      <p class="lead">{noutate.excerpt}</p>
+    {/if}
 
-  .breadcrumb {
-    background-color: var(--desaga-cream);
-  }
-</style>
+    {#if noutate.content}
+      <div class="mt-4" style="white-space: pre-wrap;">{noutate.content}</div>
+    {/if}
+
+    {#if related.length > 0}
+      <hr class="my-5" />
+      <h2 class="h4 fw-bold mb-3">Alte noutăți</h2>
+      <ul>
+        {#each related as r (r.id)}
+          <li><a href={`/noutati/${r.id}`}>{r.title}</a></li>
+        {/each}
+      </ul>
+    {/if}
+  </div>
+{/if}

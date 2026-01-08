@@ -9,7 +9,7 @@ export async function GET(event: RequestEvent) {
       .from('noutati')
       .select('*')
       .eq('published', true)
-      .order('date', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
 

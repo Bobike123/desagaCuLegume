@@ -1,57 +1,32 @@
+// src/routes/api/auth/login/+server.ts
 import { json } from '@sveltejs/kit';
-import type { RequestEvent } from '@sveltejs/kit';
-import { isValidEmail, validateRequired, handleApiError } from '$lib/helpers';
 
-export async function POST(event: RequestEvent) {
-  try {
-    const body = await event.request.json();
-    const { email, password } = body;
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
-    // Validate required fields
-    const missing = validateRequired({ email, password }, ['email', 'password']);
-    if (missing.length > 0) {
-      return json({ error: `Missing fields: ${missing.join(', ')}` }, { status: 400 });
-    }
+export async function POST({ request, cookies }) {
+  const body = await request.json().catch(() => ({}));
+  const email = String(body.email ?? '');
+  const password = String(body.password ?? '');
 
-    // Validate email format
-    if (!isValidEmail(email)) {
-      return json({ error: 'Invalid email format' }, { status: 400 });
-    }
-
-    // Use event.locals.supabase from hooks
-    const { data, error } = await event.locals.supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      return json({ error: error.message }, { status: 401 });
-    }
-
-    if (!data.session) {
-      return json({ error: 'No session created' }, { status: 400 });
-    }
-
-    // Set auth token in HTTP-only cookie
-    event.cookies.set('auth-token', data.session.access_token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    });
-
-    // Set locals
-    event.locals.session = data.session;
-    event.locals.user = data.user;
-
-    return json({
-      success: true,
-      user: data.user,
-      session: data.session
-    }, { status: 200 });
-  } catch (err) {
-    console.error('Login error:', err);
-    return json({ error: 'Login failed' }, { status: 500 });
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    return json(
+      { error: 'Admin env not configured', debug: { hasEmail: !!ADMIN_EMAIL, hasPassword: !!ADMIN_PASSWORD } },
+      { status: 500 }
+    );
   }
+
+  if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+    return json({ error: 'Invalid credentials' }, { status: 401 });
+  }
+
+  cookies.set('admin', '1', {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: false,
+    maxAge: 60 * 60 * 24 * 7
+  });
+
+  return json({ success: true }, { status: 200 });
 }

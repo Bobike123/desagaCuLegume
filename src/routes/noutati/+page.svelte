@@ -21,7 +21,7 @@
 <Hero
   title="Noutăți și Momente"
   subtitle="Urmărește ultimele știri din DeSaga"
-  backgroundImage="/images/noutati-hero.jpg"
+  backgroundImage=""
   height="400px"
 />
 

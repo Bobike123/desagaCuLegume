@@ -1,52 +1,47 @@
+// src/routes/admin/noutati/new/+page.server.ts
 import { redirect } from '@sveltejs/kit';
-import type { PageServerLoad, Actions } from './$types';
-import { supabaseServer } from '$lib/api/supabase';
+import type { Actions, PageServerLoad } from './$types';
 import { validateRequired, handleApiError } from '$lib/helpers';
 
-export const load: PageServerLoad = async (event) => {
-    if (!event.locals.user) {
-        throw redirect(303, '/admin/login');
-    }
-    return {};
+export const load: PageServerLoad = async ({ locals }) => {
+    if (!locals.user) throw redirect(303, '/admin/login');
+    return { session: locals.session };
 };
 
 export const actions: Actions = {
-    default: async (event) => {
+    default: async ({ locals, request }) => {
         try {
-            if (!event.locals.user) {
-                return {
-                    success: false,
-                    error: 'Unauthorized'
-                };
+            if (!locals.user) {
+                return { success: false, error: 'Unauthorized' };
             }
 
-            const formData = await event.request.formData();
-            const title = formData.get('title') as string;
-            const content = formData.get('content') as string;
-            const imageUrl = formData.get('imageUrl') as string;
+            const formData = await request.formData();
+            const title = formData.get('title') as string | null;
+            const content = formData.get('content') as string | null;
+            const imageUrl = formData.get('imageUrl') as string | null;
 
-            const missing = validateRequired({ title, content }, ['title', 'content']);
+            const missing = validateRequired(
+                { title: title ?? '', content: content ?? '' },
+                ['title', 'content']
+            );
             if (missing.length > 0) {
-                return {
-                    success: false,
-                    error: `Missing fields: ${missing.join(', ')}`
-                };
+                return { success: false, error: `Missing fields: ${missing.join(', ')} ` };
             }
 
-            const supabase = supabaseServer(event.locals.session?.access_token || '');
+            const supabase = locals.supabase;
 
             const { data, error } = await supabase
                 .from('noutati')
                 .insert([
                     {
-                        title,
-                        content,
+                        title: title!,
+                        content: content!,
                         image_url: imageUrl || null,
                         date: new Date().toISOString(),
                         published: false
                     }
                 ])
-                .select()
+                .select('*')
                 .single();
 
             if (error) throw error;
@@ -58,10 +53,8 @@ export const actions: Actions = {
             };
         } catch (err) {
             const errorData = handleApiError(err, 'Failed to create noutate');
-            return {
-                success: false,
-                error: errorData.error
-            };
+            return { success: false, error: errorData.error };
         }
     }
 };
+

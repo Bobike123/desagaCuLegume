@@ -1,4 +1,6 @@
+<!-- src/routes/admin/dashboard/+page.svelte -->
 <script lang="ts">
+  import { goto } from "$app/navigation";
   import { user } from "$lib/stores/auth";
   import type { Noutate } from "$lib/stores/noutati";
   import { onMount } from "svelte";
@@ -8,6 +10,8 @@
     totalNews: number;
     totalEvents: number;
     inStock: number;
+    totalMessages: number;
+    unreadMessages: number;
   }
 
   let stats: Stats = {
@@ -15,18 +19,23 @@
     totalNews: 0,
     totalEvents: 0,
     inStock: 0,
+    totalMessages: 0,
+    unreadMessages: 0,
   };
 
   let recentNews: Noutate[] = [];
   let loading = true;
 
-  onMount(async () => {
+  async function loadDashboard() {
+    loading = true;
     try {
-      const [productsRes, noutatiRes, evenimenteRes] = await Promise.all([
-        fetch("/api/products"),
-        fetch("/api/noutati"),
-        fetch("/api/events"),
-      ]);
+      const [productsRes, noutatiRes, evenimenteRes, messagesRes] =
+        await Promise.all([
+          fetch("/api/products"),
+          fetch("/api/noutati"),
+          fetch("/api/evenimente"),
+          fetch("/api/messages"),
+        ]);
 
       if (productsRes.ok) {
         const products: { in_stock: boolean }[] = await productsRes.json();
@@ -44,12 +53,25 @@
         const events: unknown[] = await evenimenteRes.json();
         stats.totalEvents = events.length;
       }
+
+      if (messagesRes.ok) {
+        const payload: { items: { read?: boolean }[] } =
+          await messagesRes.json();
+        stats.totalMessages = payload.items.length;
+        stats.unreadMessages = payload.items.filter((m) => !m.read).length;
+      }
     } catch (error) {
       console.error("Error loading dashboard:", error);
     } finally {
       loading = false;
     }
-  });
+  }
+
+  onMount(loadDashboard);
+
+  function open(path: string) {
+    goto(path);
+  }
 </script>
 
 <svelte:head>
@@ -67,45 +89,73 @@
 
 <div class="row g-4 mb-5">
   <div class="col-md-3">
-    <div class="card border-0 shadow-sm">
+    <button
+      type="button"
+      class="card border-0 shadow-sm w-100 dashboard-card"
+      on:click={() => open("/admin/produse")}
+      disabled={loading}
+      aria-label="Mergi la Produse"
+    >
       <div class="card-body text-center">
         <i class="bi bi-box text-green" style="font-size: 2rem;"></i>
         <h6 class="card-title text-secondary mt-3">Produse</h6>
         <p class="h3 fw-bold text-brown mb-0">{stats.totalProducts}</p>
         <small class="text-success">{stats.inStock} în stoc</small>
       </div>
-    </div>
+    </button>
   </div>
 
   <div class="col-md-3">
-    <div class="card border-0 shadow-sm">
+    <button
+      type="button"
+      class="card border-0 shadow-sm w-100 dashboard-card"
+      on:click={() => open("/admin/noutati")}
+      disabled={loading}
+      aria-label="Mergi la Noutăți"
+    >
       <div class="card-body text-center">
         <i class="bi bi-newspaper text-green" style="font-size: 2rem;"></i>
         <h6 class="card-title text-secondary mt-3">Noutăți</h6>
         <p class="h3 fw-bold text-brown mb-0">{stats.totalNews}</p>
       </div>
-    </div>
+    </button>
   </div>
 
   <div class="col-md-3">
-    <div class="card border-0 shadow-sm">
+    <button
+      type="button"
+      class="card border-0 shadow-sm w-100 dashboard-card"
+      on:click={() => open("/admin/evenimente")}
+      disabled={loading}
+      aria-label="Mergi la Evenimente"
+    >
       <div class="card-body text-center">
         <i class="bi bi-calendar-event text-green" style="font-size: 2rem;"></i>
         <h6 class="card-title text-secondary mt-3">Evenimente</h6>
         <p class="h3 fw-bold text-brown mb-0">{stats.totalEvents}</p>
       </div>
-    </div>
+    </button>
   </div>
 
   <div class="col-md-3">
-    <div class="card border-0 shadow-sm">
+    <button
+      type="button"
+      class="card border-0 shadow-sm w-100 dashboard-card"
+      on:click={() => open("/admin/messages")}
+      disabled={loading}
+      aria-label="Mergi la Mesaje"
+    >
       <div class="card-body text-center">
-        <i class="bi bi-graph-up text-green" style="font-size: 2rem;"></i>
-        <h6 class="card-title text-secondary mt-3">Vizite</h6>
-        <p class="h3 fw-bold text-brown mb-0">--</p>
-        <small class="text-muted">Curând...</small>
+        <i class="bi bi-chat-dots text-green" style="font-size: 2rem;"></i>
+        <h6 class="card-title text-secondary mt-3">Mesaje</h6>
+        <p class="h3 fw-bold text-brown mb-0">{stats.totalMessages}</p>
+        <small class={stats.unreadMessages > 0 ? "text-danger" : "text-muted"}>
+          {stats.unreadMessages > 0
+            ? `${stats.unreadMessages} necitite`
+            : "Nimic nou"}
+        </small>
       </div>
-    </div>
+    </button>
   </div>
 </div>
 
@@ -146,6 +196,19 @@
         <div>
           <h6 class="mb-0">Adaugă eveniment</h6>
           <small class="text-secondary">Crează un nou eveniment</small>
+        </div>
+      </a>
+
+      <a
+        href="/admin/messages"
+        class="list-group-item list-group-item-action d-flex gap-3 align-items-center"
+      >
+        <i class="bi bi-inbox text-green"></i>
+        <div>
+          <h6 class="mb-0">Mesaje</h6>
+          <small class="text-secondary"
+            >Vezi mesajele din formularul de contact</small
+          >
         </div>
       </a>
     </div>
@@ -196,5 +259,16 @@
 
   .text-green {
     color: var(--desaga-green) !important;
+  }
+
+  .dashboard-card {
+    cursor: pointer;
+    text-align: left;
+    background: white;
+    border-radius: 14px;
+  }
+
+  .dashboard-card:hover {
+    transform: translateY(-1px);
   }
 </style>
