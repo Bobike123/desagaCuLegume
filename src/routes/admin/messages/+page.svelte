@@ -89,7 +89,7 @@
                 return;
             }
             items = items.map((m) => (m.id === id ? { ...m, read } : m));
-            showToast(read ? "Marcat citit" : "Marcat necitit", "success");
+            showToast(read ? "Marcat vazut" : "Marcat necitit", "success");
         } catch {
             showToast("Eroare la actualizare", "danger");
         }
@@ -271,7 +271,7 @@
                                         on:click={() =>
                                             toggleRead(m.id, !m.read)}
                                     >
-                                        {m.read ? "Necitit" : "Citit"}
+                                        {m.read ? "Vazut" : "Necitit"}
                                     </button>
 
                                     <button

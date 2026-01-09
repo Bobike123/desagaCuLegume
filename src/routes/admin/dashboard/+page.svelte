@@ -269,7 +269,7 @@
           <span class="badge text-bg-light border">…</span>
         {:else if stats.unreadMessages > 0}
           <span class="badge text-bg-danger"
-            >{stats.unreadMessages} necitite</span
+            >{stats.unreadMessages} necitit</span
           >
         {:else}
           <span class="badge text-bg-success">Nimic nou</span>

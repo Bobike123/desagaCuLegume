@@ -232,7 +232,7 @@
                     class={`btn btn-sm ${p.in_stock ? "btn-outline-secondary" : "btn-success"} me-2`}
                     on:click={() => toggleStock(p.id, !!p.in_stock)}
                   >
-                    {p.in_stock ? "Scoate" : "Pune"}
+                    {p.in_stock ? "Scoate Din Stoc" : "Pune In stoc"}
                   </button>
 
                   <a
