@@ -247,8 +247,7 @@
         border: 1px solid rgba(0, 0, 0, 0.06);
     }
 
-    .form-control:focus,
-    .form-select:focus {
+    .form-control:focus {
         border-color: var(--desaga-green);
         box-shadow: 0 0 0 0.2rem rgba(118, 236, 30, 0.25);
     }

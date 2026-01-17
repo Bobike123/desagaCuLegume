@@ -236,7 +236,9 @@
                       togglePublished(event.id, event.published ?? false)}
                     title="Publicare"
                   >
-                    {event.published ? "Draft" : "Publică"}
+                    {event.published
+                      ? "Retrage evenimentul"
+                      : "Publică evenimentul"}
                   </button>
 
                   <a

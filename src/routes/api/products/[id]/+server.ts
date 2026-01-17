@@ -52,3 +52,26 @@ export async function DELETE({ locals, params }) {
   if (error) return json({ error: error.message }, { status: 400 });
   return json({ success: true }, { status: 200 });
 }
+
+export async function PATCH({ locals, params, request }) {
+  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
+
+  const payload = await request.json();
+
+  // Optional hardening: allow only certain fields
+  const allowed = ["in_stock", "name", "category", "price"];
+  const safePayload = Object.fromEntries(
+    Object.entries(payload).filter(([k]) => allowed.includes(k)),
+  );
+
+  const sb = supabaseAdmin();
+  const { data, error } = await sb
+    .from("products")
+    .update(safePayload)
+    .eq("id", params.id)
+    .select("*")
+    .single();
+
+  if (error) return json({ error: error.message }, { status: 400 });
+  return json({ item: data }, { status: 200 });
+}

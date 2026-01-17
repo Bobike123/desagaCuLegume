@@ -24,12 +24,25 @@
     setTimeout(() => (toast = ""), 2500);
   }
 
+  async function readJsonSafely(res: Response) {
+    const text = await res.text().catch(() => "");
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { error: text };
+    }
+  }
+
   async function loadItems() {
     loading = true;
     error = "";
     try {
-      const res = await fetch("/api/products?admin=true");
-      const data = await res.json().catch(() => null);
+      const res = await fetch("/api/products?admin=true", {
+        credentials: "include",
+      });
+
+      const data = await readJsonSafely(res);
 
       if (!res.ok) {
         error = (data as any)?.error ?? "Eroare la încărcarea produselor";
@@ -43,10 +56,14 @@
         price:
           typeof x.price === "number"
             ? x.price
-            : x.price
+            : x.price != null
               ? Number(x.price)
               : null,
-        in_stock: Boolean(x.in_stock),
+        in_stock:
+          x.in_stock === true ||
+          x.in_stock === 1 ||
+          x.in_stock === "true" ||
+          x.in_stock === "1",
         created_at: String(x.created_at ?? new Date().toISOString()),
       }));
     } catch (e) {
@@ -67,15 +84,21 @@
     const next = !current;
 
     try {
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await fetch(`/api/products/${id}?admin=true`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "include",
         body: JSON.stringify({ in_stock: next }),
       });
 
-      const data = await res.json().catch(() => null);
+      const data = await readJsonSafely(res);
+
       if (!res.ok) {
-        const msg = (data as any)?.error ?? "Eroare la actualizare";
+        const msg =
+          (data as any)?.error ?? `Eroare la actualizare (${res.status})`;
         error = msg;
         showToast(msg, "danger");
         return;
@@ -83,8 +106,10 @@
 
       items = items.map((x) => (x.id === id ? { ...x, in_stock: next } : x));
       showToast(next ? "Pus în stoc" : "Scos din stoc", "success");
-    } catch {
-      showToast("Eroare la actualizare", "danger");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Eroare la actualizare";
+      error = msg;
+      showToast(msg, "danger");
     }
   }
 
@@ -93,11 +118,17 @@
 
     error = "";
     try {
-      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
-      const data = await res.json().catch(() => null);
+      const res = await fetch(`/api/products/${id}?admin=true`, {
+        method: "DELETE",
+        headers: { Accept: "application/json" },
+        credentials: "include",
+      });
+
+      const data = await readJsonSafely(res);
 
       if (!res.ok) {
-        const msg = (data as any)?.error ?? "Eroare la ștergere";
+        const msg =
+          (data as any)?.error ?? `Eroare la ștergere (${res.status})`;
         error = msg;
         showToast(msg, "danger");
         return;
@@ -105,8 +136,10 @@
 
       items = items.filter((x) => x.id !== id);
       showToast("Produs șters", "success");
-    } catch {
-      showToast("Eroare la ștergere", "danger");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Eroare la ștergere";
+      error = msg;
+      showToast(msg, "danger");
     }
   }
 </script>
@@ -119,9 +152,9 @@
   <header class="page__header">
     <div>
       <h1 class="page__title">
-        <span class="page__icon" aria-hidden="true"
-          ><i class="bi bi-box"></i></span
-        >
+        <span class="page__icon" aria-hidden="true">
+          <i class="bi bi-box"></i>
+        </span>
         Produse
       </h1>
       <p class="page__subtitle">Listă, căutare, stoc, editare, ștergere</p>
@@ -211,17 +244,19 @@
                   </div>
                 </td>
 
-                <td class="d-none d-md-table-cell muted">{p.category ?? "-"}</td
-                >
+                <td class="d-none d-md-table-cell muted">
+                  {p.category ?? "-"}
+                </td>
 
                 <td class="muted">
-                  {p.price ?? "-"}
-                  {p.price !== null ? "RON" : ""}
+                  {p.price ?? "-"}{p.price !== null ? " RON" : ""}
                 </td>
 
                 <td>
                   <span
-                    class={`badge ${p.in_stock ? "text-bg-success" : "text-bg-secondary"}`}
+                    class={`badge ${
+                      p.in_stock ? "text-bg-success" : "text-bg-secondary"
+                    }`}
                   >
                     {p.in_stock ? "În stoc" : "Stoc epuizat"}
                   </span>
@@ -229,10 +264,12 @@
 
                 <td class="text-end text-nowrap">
                   <button
-                    class={`btn btn-sm ${p.in_stock ? "btn-outline-secondary" : "btn-success"} me-2`}
+                    class={`btn btn-sm ${
+                      p.in_stock ? "btn-outline-secondary" : "btn-success"
+                    } me-2`}
                     on:click={() => toggleStock(p.id, !!p.in_stock)}
                   >
-                    {p.in_stock ? "Scoate Din Stoc" : "Pune In stoc"}
+                    {p.in_stock ? "Scoate din stoc" : "Pune în stoc"}
                   </button>
 
                   <a

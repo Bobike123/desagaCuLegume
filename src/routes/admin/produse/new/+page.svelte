@@ -2,14 +2,23 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
 
+  type ProductCategory = "de-sezon" | "la-borcan" | "colaboratori" | "horeca";
+
   type NewProduct = {
     name: string;
     description: string;
-    category: string;
+    category: ProductCategory;
     price: number;
     image_url: string;
     in_stock: boolean;
   };
+
+  const CATEGORY_OPTIONS: Array<{ value: ProductCategory; label: string }> = [
+    { value: "de-sezon", label: "🌱 De Sezon" },
+    { value: "la-borcan", label: "🫙 La Borcan" },
+    { value: "colaboratori", label: "🤝 Colaboratori" },
+    { value: "horeca", label: "🍽️ HORECA" },
+  ];
 
   let formData: NewProduct = {
     name: "",
@@ -61,6 +70,7 @@
       method: "POST",
       body: fd,
     });
+
     if (!uploadRes.ok) {
       const j = await uploadRes.json().catch(() => ({}));
       throw new Error(j?.error ?? "Eroare la upload imagine");
@@ -178,12 +188,16 @@
           <div class="col-md-6">
             <div class="field">
               <label class="field__label">Categorie *</label>
-              <input
-                class="form-control field__control"
+              <select
+                class="form-select field__control"
                 bind:value={formData.category}
                 required
                 disabled={submitting}
-              />
+              >
+                {#each CATEGORY_OPTIONS as opt}
+                  <option value={opt.value}>{opt.label}</option>
+                {/each}
+              </select>
             </div>
           </div>
 

@@ -229,10 +229,10 @@
 
                 <td class="text-end text-nowrap">
                   <button
-                    class={`btn btn-sm ${n.published ? "btn-outline-secondary" : "btn-success"} me-2`}
+                    class={`btn btn-sm ${n.published ? "btn-success" : "btn-outline-secondary"} me-2`}
                     on:click={() => togglePublished(n.id, !!n.published)}
                   >
-                    {n.published ? "Retrage" : "Publică"}
+                    {n.published ? "Publica Noutatea" : "Retrage Noutatea"}
                   </button>
 
                   <a

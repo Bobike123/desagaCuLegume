@@ -1,5 +1,7 @@
 <!-- src/routes/admin/evenimente/[id]/+page.svelte -->
+
 <script lang="ts">
+
   import { goto } from "$app/navigation";
 
   type EventItem = {
