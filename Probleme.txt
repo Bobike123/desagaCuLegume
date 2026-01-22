@@ -1,0 +1,3 @@
+BUG** cand selectez produs care nu e in stock se blocheaza site ul de tot si imi apare doar eroarea Produs nu găsit
+Produsul pe care îl cauți nu există. Înapoi la produse (adica pagina de eroare de la produs) = isi revine daca ii dau refresh 
+

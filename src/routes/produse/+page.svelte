@@ -15,7 +15,9 @@
   $: filteredProducts =
     selectedCategory === "all"
       ? products
-      : products.filter((p) => p.category === selectedCategory);
+      : products.filter(
+          (p) => p.category === selectedCategory && p.in_stock == true,
+        );
 </script>
 
 <svelte:head>

@@ -333,6 +333,70 @@
 </div>
 
 <style>
+    /* Mobile polish for the green top info bar */
+    @media (max-width: 991.98px) {
+        .topbar .container {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            gap: 10px !important;
+        }
+
+        /* Stack the two groups (left info + right info) */
+        .topbar .container {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+
+        .topbar .container > div {
+            justify-content: flex-start !important;
+            gap: 10px !important;
+        }
+
+        /* Make each item full-width so it wraps nicely */
+        .topbar .container span,
+        .topbar .container a {
+            display: flex !important;
+            align-items: flex-start;
+            width: 100%;
+            line-height: 1.25;
+            white-space: normal;
+        }
+
+        /* Reduce icon/text spacing slightly */
+        .topbar .container .gap-2 {
+            gap: 8px !important;
+        }
+
+        /* Optional: subtle separators between items inside each group */
+        .topbar .container > div {
+            padding: 8px 10px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+    }
+
+    /* Extra-small: make socials compact (icon-only) */
+    @media (max-width: 420px) {
+        .topbar a {
+            justify-content: flex-start;
+        }
+
+        .topbar a i {
+            font-size: 1.05rem;
+        }
+
+        /* hide "Facebook/Instagram" text but keep accessible name from link context */
+        .topbar a {
+            gap: 10px !important;
+        }
+        .topbar a:not(:has(img)) {
+            font-size: 0; /* collapses text */
+        }
+        .topbar a i {
+            font-size: 1.1rem; /* restore icon size */
+        }
+    }
+
     /* Active underline for desktop */
     .nav-link.active {
         color: #066423 !important;
