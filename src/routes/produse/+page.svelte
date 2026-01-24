@@ -12,12 +12,11 @@
     products = await getAllProducts();
   });
 
-  $: filteredProducts =
-    selectedCategory === "all"
-      ? products
-      : products.filter(
-          (p) => p.category === selectedCategory && p.in_stock == true,
-        );
+  $: filteredProducts = products.filter(
+    (p) =>
+      p.in_stock === true &&
+      (selectedCategory === "all" || p.category === selectedCategory),
+  );
 </script>
 
 <svelte:head>
@@ -27,7 +26,7 @@
 <Hero
   title="Produse"
   subtitle="Din Fermă direct la Rulota DeSaga"
-  backgroundImage="/images/produse-hero.jpg"
+  backgroundImage=""
   height="400px"
 />
 

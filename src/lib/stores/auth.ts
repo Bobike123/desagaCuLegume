@@ -1,3 +1,5 @@
+// FILE: src/lib/stores/auth.ts
+
 import { writable, derived } from 'svelte/store';
 import type { User } from '@supabase/supabase-js';
 
@@ -12,7 +14,7 @@ const initialState: AuthState = {
   user: null,
   isAdmin: false,
   loading: true,
-  error: null,
+  error: null
 };
 
 function createAuthStore() {
@@ -25,7 +27,11 @@ function createAuthStore() {
       try {
         const response = await fetch('/api/auth/session');
         if (!response.ok) {
-          update(state => ({ ...state, loading: false, error: 'Failed to fetch session' }));
+          update((state) => ({
+            ...state,
+            loading: false,
+            error: 'Failed to fetch session'
+          }));
           return;
         }
 
@@ -34,14 +40,14 @@ function createAuthStore() {
           user: data.user,
           isAdmin: data.isAdmin,
           loading: false,
-          error: null,
+          error: null
         });
-      } catch (err) {
+      } catch (error) {
         set({
           user: null,
           isAdmin: false,
           loading: false,
-          error: err instanceof Error ? err.message : 'Auth check failed',
+          error: error instanceof Error ? error.message : 'Auth check failed'
         });
       }
     },
@@ -50,10 +56,10 @@ function createAuthStore() {
       try {
         await fetch('/api/auth/logout', { method: 'POST' });
         set(initialState);
-      } catch (err) {
-        update(state => ({
+      } catch (error) {
+        update((state) => ({
           ...state,
-          error: err instanceof Error ? err.message : 'Logout failed',
+          error: error instanceof Error ? error.message : 'Logout failed'
         }));
       }
     },
@@ -62,31 +68,31 @@ function createAuthStore() {
       set(initialState);
     },
 
-    // Helper functions to update parts of the state
     setUser(user: User | null) {
-      update(state => ({ ...state, user }));
+      update((state) => ({ ...state, user }));
     },
 
     setAdmin(isAdmin: boolean) {
-      update(state => ({ ...state, isAdmin }));
-    },
+      update((state) => ({ ...state, isAdmin }));
+    }
   };
 }
 
 export const auth = createAuthStore();
+
 export const { initAuth, logout, setUser, setAdmin } = auth;
 
-// Derived stores for read-only access
 export const user = derived(auth, ($auth) => $auth.user);
 export const isAdmin = derived(auth, ($auth) => $auth.isAdmin);
 
-// Consistent return type for getSession
-export async function getSession(token: string): Promise<{ user: User | null; isAdmin: boolean; error: string | null }> {
+export async function getSession(token: string): Promise<{
+  user: User | null;
+  isAdmin: boolean;
+  error: string | null;
+}> {
   try {
     const response = await fetch('/api/auth/session', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     if (!response.ok) {
@@ -95,7 +101,7 @@ export async function getSession(token: string): Promise<{ user: User | null; is
 
     const data = await response.json();
     return { user: data.user, isAdmin: data.isAdmin, error: null };
-  } catch (err) {
+  } catch (error) {
     return { user: null, isAdmin: false, error: 'Session fetch failed' };
   }
 }

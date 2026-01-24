@@ -1,5 +1,6 @@
-// src/lib/stores/products.ts
-import { writable } from 'svelte/store';
+// FILE: src/lib/stores/products.ts
+
+import { writable } from "svelte/store";
 
 export interface Product {
   id: string;
@@ -19,24 +20,47 @@ type ProductsState = {
   error: string | null;
 };
 
-const state = writable<ProductsState>({ items: [], loading: false, error: null });
+const store = writable<ProductsState>({
+  items: [],
+  loading: false,
+  error: null,
+});
+
+function toBool(v: unknown): boolean {
+  return v === true || v === 1 || v === "true" || v === "1";
+}
+
+function normalizeProduct(raw: any): Product {
+  return {
+    id: raw?.id != null ? String(raw.id) : "",
+    name: raw?.name ?? "",
+    description: raw?.description ?? "",
+    category: raw?.category ?? "de-sezon",
+    price: typeof raw?.price === "number" ? raw.price : Number(raw?.price ?? 0),
+    image_url: raw?.image_url ?? "",
+    in_stock: toBool(raw?.in_stock),
+    created_at: raw?.created_at ?? undefined,
+    updated_at: raw?.updated_at ?? undefined,
+  };
+}
 
 export const productsStore = {
-  subscribe: state.subscribe,
+  subscribe: store.subscribe,
 
   async loadAll(category?: string | null) {
-    state.update((s) => ({ ...s, loading: true, error: null }));
+    store.update((s) => ({ ...s, loading: true, error: null }));
     try {
-      const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+      const qs = category ? `?category=${encodeURIComponent(category)}` : "";
       const res = await fetch(`/api/products${qs}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? 'Failed to load products');
+      if (!res.ok) throw new Error(data?.error ?? "Failed to load products");
 
-      state.set({ items: data ?? [], loading: false, error: null });
-      return data as Product[];
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Unknown error';
-      state.set({ items: [], loading: false, error: msg });
+      const normalized = (Array.isArray(data) ? data : []).map(normalizeProduct);
+      store.set({ items: normalized, loading: false, error: null });
+      return normalized;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      store.set({ items: [], loading: false, error: msg });
       return [];
     }
   },
@@ -44,9 +68,12 @@ export const productsStore = {
   async getById(id: string) {
     const res = await fetch(`/api/products/${id}`);
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.error ?? 'Failed to load product');
-    return data as Product;
-  }
+    if (!res.ok) throw new Error(data?.error ?? "Failed to load product");
+
+    // API returns { item: ... } in this project
+    const raw = data && typeof data === "object" && "item" in data ? (data as any).item : data;
+    return normalizeProduct(raw) as Product;
+  },
 };
 
 // Legacy exports used across your pages

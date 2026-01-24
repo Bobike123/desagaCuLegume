@@ -1,7 +1,8 @@
+<!-- FILE: src/lib/components/ProductCard.svelte -->
+
 <script lang="ts">
   import type { Product } from "$lib/stores/products";
 
-  // Canonical empty Product that matches the interface (no missing fields).
   const EMPTY_PRODUCT: Product = {
     id: "",
     name: "",
@@ -16,13 +17,19 @@
 
   export let product: Product = EMPTY_PRODUCT;
 
-  // Defensive display values (prevents runtime issues if API returns bad/null data).
+  function inStock(v: unknown) {
+    return v === true || v === 1 || v === "true" || v === "1";
+  }
+
+  $: id = product?.id != null ? String(product.id) : "";
   $: name = product?.name ?? "";
   $: imageUrl = product?.image_url || "/placeholder.png";
   $: price =
     typeof product?.price === "number"
       ? product.price
       : Number(product?.price ?? 0);
+
+  $: isAvailable = inStock((product as any)?.in_stock);
 
   $: categoryLabel =
     product?.category === "de-sezon"
@@ -36,8 +43,15 @@
 
 <div class="product-card card">
   <img src={imageUrl} alt={name} class="product-image card-img-top" />
+
   <div class="card-body">
-    <h5 class="product-name card-title">{name}</h5>
+    <div class="d-flex align-items-start justify-content-between gap-2">
+      <h5 class="product-name card-title mb-1">{name}</h5>
+
+      {#if !isAvailable}
+        <span class="badge text-bg-warning">Stoc epuizat</span>
+      {/if}
+    </div>
 
     <p class="product-category badge">{categoryLabel}</p>
 
@@ -48,9 +62,15 @@
     <p class="product-price mb-3">{price.toFixed(2)} RON</p>
 
     <div class="d-grid gap-2">
-      <a href={`/produse/${product.id}`} class="btn btn-primary">
-        <i class="bi bi-eye"></i> Vezi detalii
-      </a>
+      {#if isAvailable && id}
+        <a href={`/produse/${id}`} class="btn btn-primary">
+          <i class="bi bi-eye"></i> Vezi detalii
+        </a>
+      {:else}
+        <button class="btn btn-secondary" disabled>
+          <i class="bi bi-x-circle"></i> Indisponibil
+        </button>
+      {/if}
     </div>
   </div>
 </div>

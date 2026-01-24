@@ -1,3 +1,5 @@
+// FILE: src/lib/stores/noutati.ts
+
 // src/lib/stores/noutati.ts
 import { writable } from 'svelte/store';
 
@@ -9,35 +11,38 @@ export interface NewsItem {
   image_url?: string;
   published?: boolean;
   author_id?: string;     // page expects it
-  created_at?: string;    // keep as string (ISO)
+  created_at?: string;    // keep as string
   updated_at?: string;
-  
 }
 
 export type Noutate = NewsItem;
 
-type NewsState = {
+type NoutatiState = {
   items: NewsItem[];
   loading: boolean;
   error: string | null;
 };
 
-const state = writable<NewsState>({ items: [], loading: false, error: null });
+const store = writable<NoutatiState>({
+  items: [],
+  loading: false,
+  error: null
+});
 
 export const noutatiStore = {
-  subscribe: state.subscribe,
+  subscribe: store.subscribe,
 
   async loadAll() {
-    state.update((s) => ({ ...s, loading: true, error: null }));
+    store.update((s) => ({ ...s, loading: true, error: null }));
     try {
       const res = await fetch('/api/noutati');
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Failed to load news');
-      state.set({ items: data ?? [], loading: false, error: null });
+      store.set({ items: data ?? [], loading: false, error: null });
       return data as NewsItem[];
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Unknown error';
-      state.set({ items: [], loading: false, error: msg });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      store.set({ items: [], loading: false, error: msg });
       return [];
     }
   },

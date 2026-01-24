@@ -1,24 +1,65 @@
+<!-- FILE: src/routes/produse/[id]/+page.svelte -->
+
 <script lang="ts">
   import { page } from "$app/stores";
   import ProductCard from "$lib/components/ProductCard.svelte";
   import { productsStore, type Product } from "$lib/stores/products";
-  import { onMount } from "svelte";
+  import { onDestroy } from "svelte";
 
   let product: Product | null = null;
   let relatedProducts: Product[] = [];
   let allProducts: Product[] = [];
 
-  onMount(async () => {
-    allProducts = await productsStore.loadAll();
+  let loading = true;
+  let error: string | null = null;
 
-    const found = allProducts.find((p) => p.id === $page.params.id);
-    if (found) {
-      product = found;
-      relatedProducts = allProducts
-        .filter((p) => p.category === found.category && p.id !== found.id)
-        .slice(0, 4);
-    }
+  let alive = true;
+  onDestroy(() => {
+    alive = false;
   });
+
+  let token = 0;
+
+  $: productId = $page.params.id;
+
+  $: if (productId) {
+    void loadProduct(productId);
+  }
+
+  async function loadProduct(id: string) {
+    const t = ++token;
+    loading = true;
+    error = null;
+    product = null;
+    relatedProducts = [];
+
+    try {
+      // ALWAYS fetch by id (fixes numeric/string id mismatch and avoids "Produs nu găsit" for existing items)
+      const p = await productsStore.getById(id);
+      if (!alive || t !== token) return;
+
+      product = p;
+
+      // Related products: load list, then match by category; show only in-stock
+      allProducts = await productsStore.loadAll();
+      if (!alive || t !== token) return;
+
+      relatedProducts = allProducts
+        .filter(
+          (x) =>
+            x.category === p.category &&
+            String(x.id) !== String(p.id) &&
+            x.in_stock === true,
+        )
+        .slice(0, 4);
+    } catch (e) {
+      if (!alive || t !== token) return;
+      error = e instanceof Error ? e.message : "Eroare necunoscută";
+    } finally {
+      if (!alive || t !== token) return;
+      loading = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -26,7 +67,14 @@
 </svelte:head>
 
 <div class="container py-5">
-  {#if product}
+  {#if loading}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body py-5 text-center">
+        <div class="spinner-border" role="status" aria-label="Se încarcă"></div>
+        <div class="mt-3 text-muted">Se încarcă produsul…</div>
+      </div>
+    </div>
+  {:else if product}
     <nav aria-label="breadcrumb" class="mb-4">
       <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="/">Acasă</a></li>
@@ -36,6 +84,19 @@
         </li>
       </ol>
     </nav>
+
+    {#if product.in_stock === false}
+      <div
+        class="alert alert-warning d-flex align-items-center gap-2"
+        role="alert"
+      >
+        <i class="bi bi-exclamation-circle"></i>
+        <div>
+          <strong>Stoc epuizat.</strong> Produsul există, dar nu este disponibil
+          momentan.
+        </div>
+      </div>
+    {/if}
 
     <div class="row g-5">
       <div class="col-lg-6">
@@ -104,10 +165,15 @@
       <h4 class="alert-heading">
         <i class="bi bi-exclamation-triangle"></i> Produs nu găsit
       </h4>
-      <p>
-        Produsul pe care îl cauți nu există. <a href="/produse"
-          >Înapoi la produse</a
-        >
+
+      {#if error}
+        <p class="mb-2">{error}</p>
+      {:else}
+        <p class="mb-2">Produsul pe care îl cauți nu există.</p>
+      {/if}
+
+      <p class="mb-0">
+        <a href="/produse">Înapoi la produse</a>
       </p>
     </div>
   {/if}

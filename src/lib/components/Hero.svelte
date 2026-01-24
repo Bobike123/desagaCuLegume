@@ -1,7 +1,7 @@
 <script>
   export let title = "DeSaga cu Legume";
   export let subtitle = "Local • Gustos • Sănătos";
-  export let backgroundImage = "/images/hero.jpg";
+  export let backgroundImage = "";
   export let height = "400px";
 </script>
 

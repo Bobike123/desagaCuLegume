@@ -33,7 +33,7 @@
 <Hero
   title="Evenimente"
   subtitle="Descoperă activitățile din comunitatea DeSaga"
-  backgroundImage="/images/events-hero.jpg"
+  backgroundImage=""
   height="400px"
 />
 

@@ -62,7 +62,7 @@
 <Hero
   title="Contact"
   subtitle="Alătură-te nouă sau cere informații"
-  backgroundImage="/images/contact-hero.jpg"
+  backgroundImage=""
   height="400px"
 />
 

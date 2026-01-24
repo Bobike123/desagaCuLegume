@@ -9,7 +9,7 @@
 <Hero
   title="Despre Noi"
   subtitle="Haideți să ne cunoaștem"
-  backgroundImage="/images/ferma.jpg"
+  backgroundImage=""
   height="400px"
 />
 
@@ -18,7 +18,7 @@
     <div class="row">
       <div class="col-lg-8 mx-auto">
         <div class="card border-0 shadow-sm">
-          <img src="/images/ferma-solarii.jpg" alt="Solarii DeSaga" class="card-img-top" />
+          <img src="" alt="Solarii DeSaga" class="card-img-top" />
 
           <div class="card-body p-5">
             <h2 class="h2 text-brown fw-bold mb-4">

@@ -1,3 +1,5 @@
+<!-- FILE: src/routes/produse/la-borcan/+page.svelte -->
+
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
   import ProductCard from "$lib/components/ProductCard.svelte";
@@ -6,10 +8,14 @@
 
   let filteredProducts: Product[] = [];
 
+  function inStock(v: unknown) {
+    return v === true || v === 1 || v === "true" || v === "1";
+  }
+
   onMount(async () => {
     const allProducts = await getAllProducts();
     filteredProducts = allProducts.filter(
-      (p: Product) => p.category === "la-borcan",
+      (p: any) => p.category === "la-borcan" && inStock(p.in_stock),
     );
   });
 </script>
@@ -21,7 +27,7 @@
 <Hero
   title="Produse la Borcan"
   subtitle="Legume și fructe conservate cu grijă"
-  backgroundImage="/images/borcan-hero.jpg"
+  backgroundImage=""
   height="400px"
 />
 
@@ -50,7 +56,6 @@
       </div>
     </div>
 
-    <!-- Products Grid -->
     <h3 class="h3 text-brown fw-bold mb-4 text-center">
       Produse disponibile acum
     </h3>

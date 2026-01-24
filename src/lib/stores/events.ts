@@ -1,3 +1,5 @@
+// FILE: src/lib/stores/events.ts
+
 // src/lib/stores/events.ts
 import { writable } from 'svelte/store';
 
@@ -23,24 +25,27 @@ type EventsState = {
     error: string | null;
 };
 
-const state = writable<EventsState>({ items: [], loading: false, error: null });
+const store = writable<EventsState>({
+    items: [],
+    loading: false,
+    error: null
+});
 
 export const eventsStore = {
-    subscribe: state.subscribe,
+    subscribe: store.subscribe,
 
     async loadAll(admin = false) {
-        state.update((s) => ({ ...s, loading: true, error: null }));
+        store.update((s) => ({ ...s, loading: true, error: null }));
         try {
             const qs = admin ? '?admin=true' : '';
             const res = await fetch(`/api/evenimente${qs}`);
             const data = await res.json();
             if (!res.ok) throw new Error(data?.error ?? 'Failed to load events');
-
-            state.set({ items: data ?? [], loading: false, error: null });
+            store.set({ items: data ?? [], loading: false, error: null });
             return data as EventItem[];
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : 'Unknown error';
-            state.set({ items: [], loading: false, error: msg });
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            store.set({ items: [], loading: false, error: msg });
             return [];
         }
     },
@@ -50,32 +55,40 @@ export const eventsStore = {
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error ?? 'Failed to load event');
         return data as EventItem;
+    },
+
+    async update(id: string, patch: Partial<EventItem>) {
+        const res = await fetch(`/api/evenimente/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error ?? 'Failed to update event');
+        return data as EventItem;
+    },
+
+    async remove(id: string) {
+        const res = await fetch(`/api/evenimente/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error ?? 'Failed to delete event');
+        return data as { success: true };
     }
 };
 
-// Legacy reads
-export async function getAllEvents() {
-    return eventsStore.loadAll(false);
+// Legacy exports used across your pages
+export async function getAllEvents(admin = false) {
+    return eventsStore.loadAll(admin);
 }
+
 export async function getEventById(id: string) {
     return eventsStore.getById(id);
 }
 
-// Admin writes (what your admin page imports)
 export async function updateEvent(id: string, patch: Partial<EventItem>) {
-    const res = await fetch(`/api/evenimente/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch)
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error ?? 'Failed to update event');
-    return data as EventItem;
+    return eventsStore.update(id, patch);
 }
 
 export async function deleteEvent(id: string) {
-    const res = await fetch(`/api/evenimente/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error ?? 'Failed to delete event');
-    return data as { success: true };
+    return eventsStore.remove(id);
 }

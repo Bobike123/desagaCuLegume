@@ -26,7 +26,7 @@
 <Hero
   title="DeSaga cu Legume"
   subtitle="Local • Gustos • Sănătos"
-  backgroundImage="images/hero.jpg"
+  backgroundImage=""
   height="500px"
 />
 
@@ -35,7 +35,7 @@
   <div class="container">
     <div class="row align-items-center">
       <div class="col-md-6 mb-4">
-        <img src="images/local.jpg" alt="Local" class="img-fluid rounded" />
+        <img src="" alt="Local" class="img-fluid rounded" />
       </div>
       <div class="col-md-6">
         <h2 class="h1 text-brown fw-bold mb-4">
@@ -68,7 +68,7 @@
   <div class="container">
     <div class="row align-items-center">
       <div class="col-md-6 order-md-2 mb-4">
-        <img src="images/gustos.jpg" alt="Gustos" class="img-fluid rounded" />
+        <img src="" alt="Gustos" class="img-fluid rounded" />
       </div>
       <div class="col-md-6 order-md-1">
         <h2 class="h1 text-brown fw-bold mb-4">
@@ -96,7 +96,7 @@
   <div class="container">
     <div class="row align-items-center">
       <div class="col-md-6 mb-4">
-        <img src="images/sanatos.jpg" alt="Sănătos" class="img-fluid rounded" />
+        <img src="" alt="Sănătos" class="img-fluid rounded" />
       </div>
       <div class="col-md-6">
         <h2 class="h1 text-brown fw-bold mb-4">
@@ -177,7 +177,9 @@
     <div class="row g-4">
       {#each events.slice(0, 3) as item (item.id)}
         <div class="col-md-4">
-          <EventCard event={item} />
+          <EventCard
+            event={{ ...item, image_url: item.image_url ?? undefined }}
+          />
         </div>
       {/each}
     </div>
