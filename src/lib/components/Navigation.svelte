@@ -117,7 +117,7 @@
     <div class="container">
         <a class="navbar-brand fw-bold fs-4 d-flex align-items-center" href="/">
             <img
-                src="https://github.com/Bobike123/desagaCuLegume/blob/main/src/assets/logo.png"
+                src="src/assets/logo.png"
                 alt="DeSaga Logo"
                 height="32"
                 class="me-2"

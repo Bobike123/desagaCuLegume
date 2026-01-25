@@ -1,11 +1,14 @@
-import type { RequestEvent } from '@sveltejs/kit';
+// FILE: src/lib/helpers.ts
+
+import type { RequestEvent } from "@sveltejs/kit";
 
 export const isAuthenticated = (event: RequestEvent): boolean => {
-    return !!event.locals.user;
+    return !!event.locals.isAdmin;
 };
 
 export const getCurrentUser = (event: RequestEvent) => {
-    return event.locals.user;
+    // No user model anymore (cookie-only admin flag)
+    return { isAdmin: !!event.locals.isAdmin };
 };
 
 export const isValidEmail = (email: string): boolean => {
@@ -18,31 +21,31 @@ export const isStrongPassword = (password: string): boolean => {
 };
 
 export const sanitizeInput = (input: string): string => {
-    return input.trim().replace(/[<>]/g, '');
+    return input.trim().replace(/[<>]/g, "");
 };
 
 export const formatDate = (date: Date | string): string => {
-    const d = typeof date === 'string' ? new Date(date) : date;
+    const d = typeof date === "string" ? new Date(date) : date;
     return d.toISOString();
 };
 
-export const handleApiError = (error: unknown, defaultMessage: string = 'An error occurred') => {
+export const handleApiError = (
+    error: unknown,
+    defaultMessage: string = "An error occurred"
+) => {
     if (error instanceof Error) {
-        return {
-            error: error.message,
-            status: 500
-        };
+        return { error: error.message, status: 500 };
     }
-    return {
-        error: defaultMessage,
-        status: 500
-    };
+    return { error: defaultMessage, status: 500 };
 };
 
-export const validateRequired = (data: Record<string, any>, fields: string[]): string[] => {
+export const validateRequired = (
+    data: Record<string, any>,
+    fields: string[]
+): string[] => {
     const missingFields: string[] = [];
-    fields.forEach(field => {
-        if (!data[field] || data[field].toString().trim() === '') {
+    fields.forEach((field) => {
+        if (!data[field] || data[field].toString().trim() === "") {
             missingFields.push(field);
         }
     });
@@ -53,12 +56,13 @@ export const generateSlug = (title: string): string => {
     return title
         .toLowerCase()
         .trim()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/[\s_-]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
 };
 
 export const isValidUUID = (uuid: string): boolean => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
 };

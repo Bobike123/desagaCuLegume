@@ -82,12 +82,4 @@
   .text-brown {
     color: var(--desaga-brown) !important;
   }
-
-  .text-green {
-    color: var(--desaga-green) !important;
-  }
-
-  .bg-light {
-    background-color: var(--desaga-cream) !important;
-  }
 </style>

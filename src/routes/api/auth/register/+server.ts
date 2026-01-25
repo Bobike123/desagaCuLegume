@@ -1,14 +1,11 @@
-import { json } from '@sveltejs/kit';
+// FILE: src/routes/api/auth/register/+server.ts
+// Auth removed (cookie-only login). Endpoint disabled.
 
-export async function POST({ request, locals }) {
-  try {
-    const { email, password } = await request.json();
+import { json } from "@sveltejs/kit";
 
-    const { data, error } = await locals.supabase.auth.signUp({ email, password });
-    if (error) return json({ error: error.message }, { status: 400 });
-
-    return json({ success: true, user: data.user }, { status: 200 });
-  } catch {
-    return json({ error: 'Register failed' }, { status: 500 });
-  }
+export async function POST() {
+  return json(
+    { error: "Registration disabled (cookie-only admin auth)." },
+    { status: 410 }
+  );
 }

@@ -1,7 +1,8 @@
+<!-- FILE: src/routes/admin/dashboard/+page.svelte -->
+
 <!-- src/routes/admin/dashboard/+page.svelte -->
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { user } from "$lib/stores/auth";
   import type { Noutate } from "$lib/stores/noutati";
   import { onMount } from "svelte";
 
@@ -115,7 +116,7 @@
         </span>
         Dashboard
       </h1>
-      <p class="dash__subtitle">Bine ai venit, {$user?.email}!</p>
+      <p class="dash__subtitle">Bine ai venit!</p>
     </div>
 
     <div class="dash__headerActions">

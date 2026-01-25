@@ -1,20 +1,17 @@
 // FILE: src/lib/stores/auth.ts
 
-import { writable, derived } from 'svelte/store';
-import type { User } from '@supabase/supabase-js';
+import { writable, derived } from "svelte/store";
 
 export interface AuthState {
-  user: User | null;
   isAdmin: boolean;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: AuthState = {
-  user: null,
   isAdmin: false,
   loading: true,
-  error: null
+  error: null,
 };
 
 function createAuthStore() {
@@ -24,42 +21,42 @@ function createAuthStore() {
     subscribe,
 
     async initAuth() {
+      update((s) => ({ ...s, loading: true, error: null }));
       try {
-        const response = await fetch('/api/auth/session');
+        const response = await fetch("/api/auth/session");
+        const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-          update((state) => ({
-            ...state,
+          set({
+            isAdmin: false,
             loading: false,
-            error: 'Failed to fetch session'
-          }));
+            error: data?.error ?? "Failed to fetch session",
+          });
           return;
         }
 
-        const data = await response.json();
         set({
-          user: data.user,
-          isAdmin: data.isAdmin,
+          isAdmin: Boolean(data?.isAdmin),
           loading: false,
-          error: null
+          error: null,
         });
       } catch (error) {
         set({
-          user: null,
           isAdmin: false,
           loading: false,
-          error: error instanceof Error ? error.message : 'Auth check failed'
+          error: error instanceof Error ? error.message : "Auth check failed",
         });
       }
     },
 
     async logout() {
       try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        set(initialState);
+        await fetch("/api/auth/logout", { method: "POST" });
+        set({ ...initialState, loading: false });
       } catch (error) {
-        update((state) => ({
-          ...state,
-          error: error instanceof Error ? error.message : 'Logout failed'
+        update((s) => ({
+          ...s,
+          error: error instanceof Error ? error.message : "Logout failed",
         }));
       }
     },
@@ -67,41 +64,10 @@ function createAuthStore() {
     reset() {
       set(initialState);
     },
-
-    setUser(user: User | null) {
-      update((state) => ({ ...state, user }));
-    },
-
-    setAdmin(isAdmin: boolean) {
-      update((state) => ({ ...state, isAdmin }));
-    }
   };
 }
 
 export const auth = createAuthStore();
+export const { initAuth, logout } = auth;
 
-export const { initAuth, logout, setUser, setAdmin } = auth;
-
-export const user = derived(auth, ($auth) => $auth.user);
 export const isAdmin = derived(auth, ($auth) => $auth.isAdmin);
-
-export async function getSession(token: string): Promise<{
-  user: User | null;
-  isAdmin: boolean;
-  error: string | null;
-}> {
-  try {
-    const response = await fetch('/api/auth/session', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!response.ok) {
-      return { user: null, isAdmin: false, error: 'Invalid session' };
-    }
-
-    const data = await response.json();
-    return { user: data.user, isAdmin: data.isAdmin, error: null };
-  } catch (error) {
-    return { user: null, isAdmin: false, error: 'Session fetch failed' };
-  }
-}

@@ -5505,9 +5505,6 @@ desaga-website/
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\Probleme.txt =====
 
-BUG** cand selectez produs care nu e in stock se blocheaza site ul de tot si imi apare doar eroarea Produs nu găsit
-Produsul pe care îl cauți nu există. Înapoi la produse (adica pagina de eroare de la produs) = isi revine daca ii dau refresh 
-
 
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\README.md =====
@@ -5649,16 +5646,14 @@ export default defineConfig({
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\app.d.ts =====
 
-// src/app.d.ts
-import type { SupabaseClient, Session, User } from '@supabase/supabase-js';
+// FILE: src/app.d.ts
+
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 declare global {
 	namespace App {
 		interface Locals {
 			supabase: SupabaseClient;
-			getSession: () => Promise<Session | null>;
-			session: Session | null;
-			user: User | null;
 			isAdmin: boolean;
 		}
 	}
@@ -5695,35 +5690,38 @@ export { };
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\hooks.server.ts =====
 
-// src/hooks.server.ts
-import { createServerClient } from '@supabase/ssr';
-import { redirect, type Handle } from '@sveltejs/kit';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+// FILE: src/hooks.server.ts
+
+import { createServerClient } from "@supabase/ssr";
+import { redirect, type Handle } from "@sveltejs/kit";
+import {
+    PUBLIC_SUPABASE_URL,
+    PUBLIC_SUPABASE_ANON_KEY,
+} from "$env/static/public";
 
 export const handle: Handle = async ({ event, resolve }) => {
-    event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-        cookies: {
-            get: (name: string) => event.cookies.get(name),
-            set: (name: string, value: string, options: any) =>
-                event.cookies.set(name, value, { ...options, path: '/' }),
-            remove: (name: string, options: any) =>
-                event.cookies.delete(name, { ...options, path: '/' })
+    event.locals.supabase = createServerClient(
+        PUBLIC_SUPABASE_URL,
+        PUBLIC_SUPABASE_ANON_KEY,
+        {
+            cookies: {
+                get: (name: string) => event.cookies.get(name),
+                set: (name: string, value: string, options: any) =>
+                    event.cookies.set(name, value, { ...options, path: "/" }),
+                remove: (name: string, options: any) =>
+                    event.cookies.delete(name, { ...options, path: "/" }),
+            },
         }
-    });
+    );
 
-    event.locals.getSession = async () => {
-        const { data } = await event.locals.supabase.auth.getSession();
-        return data.session;
-    };
+    // Cookie-only admin auth (no Supabase auth session/user)
+    event.locals.isAdmin = event.cookies.get("admin") === "1";
 
-    const session = await event.locals.getSession();
-    event.locals.session = session;
-    event.locals.user = session?.user ?? null;
-
-    event.locals.isAdmin = event.cookies.get('admin') === '1';
-
-    if (event.url.pathname.startsWith('/admin') && event.url.pathname !== '/admin/login') {
-        if (!event.locals.isAdmin) throw redirect(303, '/admin/login');
+    if (
+        event.url.pathname.startsWith("/admin") &&
+        event.url.pathname !== "/admin/login"
+    ) {
+        if (!event.locals.isAdmin) throw redirect(303, "/admin/login");
     }
 
     return resolve(event);
@@ -5732,14 +5730,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\lib\helpers.ts =====
 
-import type { RequestEvent } from '@sveltejs/kit';
+// FILE: src/lib/helpers.ts
+
+import type { RequestEvent } from "@sveltejs/kit";
 
 export const isAuthenticated = (event: RequestEvent): boolean => {
-    return !!event.locals.user;
+    return !!event.locals.isAdmin;
 };
 
 export const getCurrentUser = (event: RequestEvent) => {
-    return event.locals.user;
+    // No user model anymore (cookie-only admin flag)
+    return { isAdmin: !!event.locals.isAdmin };
 };
 
 export const isValidEmail = (email: string): boolean => {
@@ -5752,31 +5753,31 @@ export const isStrongPassword = (password: string): boolean => {
 };
 
 export const sanitizeInput = (input: string): string => {
-    return input.trim().replace(/[<>]/g, '');
+    return input.trim().replace(/[<>]/g, "");
 };
 
 export const formatDate = (date: Date | string): string => {
-    const d = typeof date === 'string' ? new Date(date) : date;
+    const d = typeof date === "string" ? new Date(date) : date;
     return d.toISOString();
 };
 
-export const handleApiError = (error: unknown, defaultMessage: string = 'An error occurred') => {
+export const handleApiError = (
+    error: unknown,
+    defaultMessage: string = "An error occurred"
+) => {
     if (error instanceof Error) {
-        return {
-            error: error.message,
-            status: 500
-        };
+        return { error: error.message, status: 500 };
     }
-    return {
-        error: defaultMessage,
-        status: 500
-    };
+    return { error: defaultMessage, status: 500 };
 };
 
-export const validateRequired = (data: Record<string, any>, fields: string[]): string[] => {
+export const validateRequired = (
+    data: Record<string, any>,
+    fields: string[]
+): string[] => {
     const missingFields: string[] = [];
-    fields.forEach(field => {
-        if (!data[field] || data[field].toString().trim() === '') {
+    fields.forEach((field) => {
+        if (!data[field] || data[field].toString().trim() === "") {
             missingFields.push(field);
         }
     });
@@ -5787,13 +5788,14 @@ export const generateSlug = (title: string): string => {
     return title
         .toLowerCase()
         .trim()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/[\s_-]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
 };
 
 export const isValidUUID = (uuid: string): boolean => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
 };
 
@@ -6869,10 +6871,11 @@ export * from './helpers';
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\lib\components\ProductCard.svelte =====
 
+<!-- FILE: src/lib/components/ProductCard.svelte -->
+
 <script lang="ts">
   import type { Product } from "$lib/stores/products";
 
-  // Canonical empty Product that matches the interface (no missing fields).
   const EMPTY_PRODUCT: Product = {
     id: "",
     name: "",
@@ -6887,13 +6890,19 @@ export * from './helpers';
 
   export let product: Product = EMPTY_PRODUCT;
 
-  // Defensive display values (prevents runtime issues if API returns bad/null data).
+  function inStock(v: unknown) {
+    return v === true || v === 1 || v === "true" || v === "1";
+  }
+
+  $: id = product?.id != null ? String(product.id) : "";
   $: name = product?.name ?? "";
   $: imageUrl = product?.image_url || "/placeholder.png";
   $: price =
     typeof product?.price === "number"
       ? product.price
       : Number(product?.price ?? 0);
+
+  $: isAvailable = inStock((product as any)?.in_stock);
 
   $: categoryLabel =
     product?.category === "de-sezon"
@@ -6907,8 +6916,15 @@ export * from './helpers';
 
 <div class="product-card card">
   <img src={imageUrl} alt={name} class="product-image card-img-top" />
+
   <div class="card-body">
-    <h5 class="product-name card-title">{name}</h5>
+    <div class="d-flex align-items-start justify-content-between gap-2">
+      <h5 class="product-name card-title mb-1">{name}</h5>
+
+      {#if !isAvailable}
+        <span class="badge text-bg-warning">Stoc epuizat</span>
+      {/if}
+    </div>
 
     <p class="product-category badge">{categoryLabel}</p>
 
@@ -6919,9 +6935,15 @@ export * from './helpers';
     <p class="product-price mb-3">{price.toFixed(2)} RON</p>
 
     <div class="d-grid gap-2">
-      <a href={`/produse/${product.id}`} class="btn btn-primary">
-        <i class="bi bi-eye"></i> Vezi detalii
-      </a>
+      {#if isAvailable && id}
+        <a href={`/produse/${id}`} class="btn btn-primary">
+          <i class="bi bi-eye"></i> Vezi detalii
+        </a>
+      {:else}
+        <button class="btn btn-secondary" disabled>
+          <i class="bi bi-x-circle"></i> Indisponibil
+        </button>
+      {/if}
     </div>
   </div>
 </div>
@@ -6963,21 +6985,18 @@ export * from './helpers';
 
 // FILE: src/lib/stores/auth.ts
 
-import { writable, derived } from 'svelte/store';
-import type { User } from '@supabase/supabase-js';
+import { writable, derived } from "svelte/store";
 
 export interface AuthState {
-  user: User | null;
   isAdmin: boolean;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: AuthState = {
-  user: null,
   isAdmin: false,
   loading: true,
-  error: null
+  error: null,
 };
 
 function createAuthStore() {
@@ -6987,42 +7006,42 @@ function createAuthStore() {
     subscribe,
 
     async initAuth() {
+      update((s) => ({ ...s, loading: true, error: null }));
       try {
-        const response = await fetch('/api/auth/session');
+        const response = await fetch("/api/auth/session");
+        const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-          update((state) => ({
-            ...state,
+          set({
+            isAdmin: false,
             loading: false,
-            error: 'Failed to fetch session'
-          }));
+            error: data?.error ?? "Failed to fetch session",
+          });
           return;
         }
 
-        const data = await response.json();
         set({
-          user: data.user,
-          isAdmin: data.isAdmin,
+          isAdmin: Boolean(data?.isAdmin),
           loading: false,
-          error: null
+          error: null,
         });
       } catch (error) {
         set({
-          user: null,
           isAdmin: false,
           loading: false,
-          error: error instanceof Error ? error.message : 'Auth check failed'
+          error: error instanceof Error ? error.message : "Auth check failed",
         });
       }
     },
 
     async logout() {
       try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        set(initialState);
+        await fetch("/api/auth/logout", { method: "POST" });
+        set({ ...initialState, loading: false });
       } catch (error) {
-        update((state) => ({
-          ...state,
-          error: error instanceof Error ? error.message : 'Logout failed'
+        update((s) => ({
+          ...s,
+          error: error instanceof Error ? error.message : "Logout failed",
         }));
       }
     },
@@ -7030,44 +7049,13 @@ function createAuthStore() {
     reset() {
       set(initialState);
     },
-
-    setUser(user: User | null) {
-      update((state) => ({ ...state, user }));
-    },
-
-    setAdmin(isAdmin: boolean) {
-      update((state) => ({ ...state, isAdmin }));
-    }
   };
 }
 
 export const auth = createAuthStore();
+export const { initAuth, logout } = auth;
 
-export const { initAuth, logout, setUser, setAdmin } = auth;
-
-export const user = derived(auth, ($auth) => $auth.user);
 export const isAdmin = derived(auth, ($auth) => $auth.isAdmin);
-
-export async function getSession(token: string): Promise<{
-  user: User | null;
-  isAdmin: boolean;
-  error: string | null;
-}> {
-  try {
-    const response = await fetch('/api/auth/session', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!response.ok) {
-      return { user: null, isAdmin: false, error: 'Invalid session' };
-    }
-
-    const data = await response.json();
-    return { user: data.user, isAdmin: data.isAdmin, error: null };
-  } catch (error) {
-    return { user: null, isAdmin: false, error: 'Session fetch failed' };
-  }
-}
 
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\lib\stores\events.ts =====
@@ -7240,8 +7228,7 @@ export async function getNoutateById(id: string) {
 
 // FILE: src/lib/stores/products.ts
 
-// src/lib/stores/products.ts
-import { writable } from 'svelte/store';
+import { writable } from "svelte/store";
 
 export interface Product {
   id: string;
@@ -7264,8 +7251,26 @@ type ProductsState = {
 const store = writable<ProductsState>({
   items: [],
   loading: false,
-  error: null
+  error: null,
 });
+
+function toBool(v: unknown): boolean {
+  return v === true || v === 1 || v === "true" || v === "1";
+}
+
+function normalizeProduct(raw: any): Product {
+  return {
+    id: raw?.id != null ? String(raw.id) : "",
+    name: raw?.name ?? "",
+    description: raw?.description ?? "",
+    category: raw?.category ?? "de-sezon",
+    price: typeof raw?.price === "number" ? raw.price : Number(raw?.price ?? 0),
+    image_url: raw?.image_url ?? "",
+    in_stock: toBool(raw?.in_stock),
+    created_at: raw?.created_at ?? undefined,
+    updated_at: raw?.updated_at ?? undefined,
+  };
+}
 
 export const productsStore = {
   subscribe: store.subscribe,
@@ -7273,14 +7278,16 @@ export const productsStore = {
   async loadAll(category?: string | null) {
     store.update((s) => ({ ...s, loading: true, error: null }));
     try {
-      const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+      const qs = category ? `?category=${encodeURIComponent(category)}` : "";
       const res = await fetch(`/api/products${qs}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? 'Failed to load products');
-      store.set({ items: data ?? [], loading: false, error: null });
-      return data as Product[];
+      if (!res.ok) throw new Error(data?.error ?? "Failed to load products");
+
+      const normalized = (Array.isArray(data) ? data : []).map(normalizeProduct);
+      store.set({ items: normalized, loading: false, error: null });
+      return normalized;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
+      const msg = err instanceof Error ? err.message : "Unknown error";
       store.set({ items: [], loading: false, error: msg });
       return [];
     }
@@ -7289,9 +7296,12 @@ export const productsStore = {
   async getById(id: string) {
     const res = await fetch(`/api/products/${id}`);
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.error ?? 'Failed to load product');
-    return data as Product;
-  }
+    if (!res.ok) throw new Error(data?.error ?? "Failed to load product");
+
+    // API returns { item: ... } in this project
+    const raw = data && typeof data === "object" && "item" in data ? (data as any).item : data;
+    return normalizeProduct(raw) as Product;
+  },
 };
 
 // Legacy exports used across your pages
@@ -8273,10 +8283,11 @@ describe('/+page.svelte', () => {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\admin\dashboard\+page.svelte =====
 
+<!-- FILE: src/routes/admin/dashboard/+page.svelte -->
+
 <!-- src/routes/admin/dashboard/+page.svelte -->
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { user } from "$lib/stores/auth";
   import type { Noutate } from "$lib/stores/noutati";
   import { onMount } from "svelte";
 
@@ -8390,7 +8401,7 @@ describe('/+page.svelte', () => {
         </span>
         Dashboard
       </h1>
-      <p class="dash__subtitle">Bine ai venit, {$user?.email}!</p>
+      <p class="dash__subtitle">Bine ai venit!</p>
     </div>
 
     <div class="dash__headerActions">
@@ -10851,28 +10862,21 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\admin\logout\+page.server.ts =====
 
-import { redirect } from '@sveltejs/kit';
-import type { PageServerLoad, Actions } from './$types';
+// FILE: src/routes/admin/logout/+page.server.ts
 
-/**
- * On page load, sign the user out if authenticated and redirect to the home page.
- */
-export const load: PageServerLoad = async ({ locals }) => {
-  if (locals.user) {
-    await locals.supabase.auth.signOut();
-    locals.user = null;
-    locals.session = null;
-  }
-  throw redirect(302, '/');
+import { redirect } from "@sveltejs/kit";
+import type { PageServerLoad, Actions } from "./$types";
+
+export const load: PageServerLoad = async ({ cookies }) => {
+  cookies.delete("admin", { path: "/" });
+  throw redirect(302, "/");
 };
 
 export const actions: Actions = {
-  default: async ({ locals }) => {
-    await locals.supabase.auth.signOut();
-    locals.user = null;
-    locals.session = null;
-    throw redirect(302, '/');
-  }
+  default: async ({ cookies }) => {
+    cookies.delete("admin", { path: "/" });
+    throw redirect(302, "/");
+  },
 };
 
 
@@ -11772,65 +11776,62 @@ export const actions: Actions = {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\admin\noutati\new\+page.server.ts =====
 
+// FILE: src/routes/admin/noutati/new/+page.server.ts
+
 // src/routes/admin/noutati/new/+page.server.ts
-import { redirect } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
-import { validateRequired, handleApiError } from '$lib/helpers';
+import { redirect } from "@sveltejs/kit";
+import type { Actions, PageServerLoad } from "./$types";
+import { validateRequired, handleApiError } from "$lib/helpers";
 
 export const load: PageServerLoad = async ({ locals }) => {
-//admin logic restriction
+    if (!locals.isAdmin) throw redirect(303, "/admin/login");
+    return {};
 };
 
 export const actions: Actions = {
     default: async ({ locals, request }) => {
         try {
-            if (!locals.user) {
-                return { success: false, error: 'Unauthorized' };
+            if (!locals.isAdmin) {
+                return { success: false, error: "Unauthorized" };
             }
 
             const formData = await request.formData();
-            const title = formData.get('title') as string | null;
-            const content = formData.get('content') as string | null;
-            const imageUrl = formData.get('imageUrl') as string | null;
+            const title = formData.get("title") as string | null;
+            const content = formData.get("content") as string | null;
+            const imageUrl = formData.get("imageUrl") as string | null;
 
             const missing = validateRequired(
-                { title: title ?? '', content: content ?? '' },
-                ['title', 'content']
+                { title: title ?? "", content: content ?? "" },
+                ["title", "content"]
             );
             if (missing.length > 0) {
-                return { success: false, error: `Missing fields: ${missing.join(', ')} ` };
+                return {
+                    success: false,
+                    error: `Missing fields: ${missing.join(", ")} `,
+                };
             }
 
             const supabase = locals.supabase;
 
             const { data, error } = await supabase
-                .from('noutati')
-                .insert([
-                    {
-                        title: title!,
-                        content: content!,
-                        image_url: imageUrl || null,
-                        date: new Date().toISOString(),
-                        published: false
-                    }
-                ])
-                .select('*')
+                .from("noutati")
+                .insert({
+                    title: title?.trim(),
+                    content: content?.trim(),
+                    image_url: imageUrl?.trim() || null,
+                })
+                .select()
                 .single();
 
-            if (error) throw error;
+            if (error) return { success: false, error: error.message };
 
-            return {
-                success: true,
-                message: 'Noutate created successfully',
-                noutate: data
-            };
-        } catch (err) {
-            const errorData = handleApiError(err, 'Failed to create noutate');
-            return { success: false, error: errorData.error };
+            return { success: true, item: data };
+        } catch (error) {
+            const err = handleApiError(error, "Create failed");
+            return { success: false, error: err.error };
         }
-    }
+    },
 };
-
 
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\admin\noutati\new\+page.svelte =====
@@ -14460,19 +14461,16 @@ export function POST({ cookies }) {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\api\auth\register\+server.ts =====
 
-import { json } from '@sveltejs/kit';
+// FILE: src/routes/api/auth/register/+server.ts
+// Auth removed (cookie-only login). Endpoint disabled.
 
-export async function POST({ request, locals }) {
-  try {
-    const { email, password } = await request.json();
+import { json } from "@sveltejs/kit";
 
-    const { data, error } = await locals.supabase.auth.signUp({ email, password });
-    if (error) return json({ error: error.message }, { status: 400 });
-
-    return json({ success: true, user: data.user }, { status: 200 });
-  } catch {
-    return json({ error: 'Register failed' }, { status: 500 });
-  }
+export async function POST() {
+  return json(
+    { error: "Registration disabled (cookie-only admin auth)." },
+    { status: 410 }
+  );
 }
 
 
@@ -14488,25 +14486,30 @@ export function GET({ cookies }) {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\api\contact\+server.ts =====
 
-import { json } from '@sveltejs/kit';
+// FILE: src/routes/api/contact/+server.ts
+// Conforms to table: contact_messages(id, name, email, phone(string), subject, message, created_at, read)
+
+import { json } from "@sveltejs/kit";
 
 export async function POST({ request, locals }) {
     const { name, email, phone, subject, message } = await request.json();
 
     if (!name || !email || !subject || !message) {
-        return json({ error: 'Missing fields' }, { status: 400 });
+        return json({ error: "Missing fields" }, { status: 400 });
     }
 
-    const { error } = await locals.supabase
-        .from('contact_messages')
-        .insert({
-            name,
-            email,
-            phone: phone || null,
-            subject,
-            message,
-            read: false
-        });
+    const phoneStr =
+        phone === undefined || phone === null ? null : String(phone).trim() || null;
+
+    const { error } = await locals.supabase.from("contact_messages").insert({
+        name: String(name).trim(),
+        email: String(email).trim(),
+        phone: phoneStr, // phone is string or null
+        subject: String(subject).trim(),
+        message: String(message).trim(),
+        read: false,
+        // created_at handled by DB default timestamptz
+    });
 
     if (error) {
         return json({ error: error.message }, { status: 400 });
@@ -14872,24 +14875,31 @@ export async function POST({ locals, request }) {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\api\products\upload\+server.ts =====
 
-import { json } from '@sveltejs/kit';
-import type { RequestEvent } from '@sveltejs/kit';
-import { handleApiError } from '$lib/helpers';
+// FILE: src/routes/api/products/upload/+server.ts
+
+import { json } from "@sveltejs/kit";
+import type { RequestEvent } from "@sveltejs/kit";
+import { handleApiError } from "$lib/helpers";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export async function POST(event: RequestEvent) {
   try {
-    if (!event.locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    if (!event.locals.isAdmin)
+      return json({ error: "Unauthorized" }, { status: 401 });
 
     const formData = await event.request.formData();
-    const file = formData.get('file') as File | null;
+    const file = formData.get("file") as File | null;
 
-    if (!file) return json({ error: 'No file provided' }, { status: 400 });
-    if (file.size > MAX_FILE_SIZE) return json({ error: 'File too large (max 5MB)' }, { status: 400 });
+    if (!file) return json({ error: "No file provided" }, { status: 400 });
+    if (file.size > MAX_FILE_SIZE)
+      return json({ error: "File too large (max 5MB)" }, { status: 400 });
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return json({ error: 'Invalid file type. Only JPEG, PNG, WebP allowed' }, { status: 400 });
+      return json(
+        { error: "Invalid file type. Only JPEG, PNG, WebP allowed" },
+        { status: 400 }
+      );
     }
 
     const supabase = event.locals.supabase;
@@ -14897,18 +14907,22 @@ export async function POST(event: RequestEvent) {
     const fileName = `${Date.now()}-${file.name}`;
     const filePath = `products/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
+    const { error: uploadError } = await supabase.storage
+      .from("images")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
     if (uploadError) throw uploadError;
 
-    const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
+    const { data: urlData } = supabase.storage
+      .from("images")
+      .getPublicUrl(filePath);
 
-    return json({ success: true, url: urlData.publicUrl, path: filePath }, { status: 200 });
-  } catch (err) {
-    const errorData = handleApiError(err, 'Failed to upload file');
-    return json({ error: errorData.error }, { status: errorData.status });
+    return json({ url: urlData.publicUrl }, { status: 200 });
+  } catch (error) {
+    const err = handleApiError(error, "Upload failed");
+    return json({ error: err.error }, { status: err.status });
   }
 }
 
@@ -15980,6 +15994,8 @@ export const load: PageServerLoad = async ({ fetch }) => {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\produse\colaboratori\+page.svelte =====
 
+<!-- FILE: src/routes/produse/colaboratori/+page.svelte -->
+
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
   import ProductCard from "$lib/components/ProductCard.svelte";
@@ -15988,10 +16004,14 @@ export const load: PageServerLoad = async ({ fetch }) => {
 
   let filteredProducts: Product[] = [];
 
+  function inStock(v: unknown) {
+    return v === true || v === 1 || v === "true" || v === "1";
+  }
+
   onMount(async () => {
     const allProducts = await getAllProducts();
     filteredProducts = allProducts.filter(
-      (p: Product) => p.category === "colaboratori",
+      (p: any) => p.category === "colaboratori" && inStock(p.in_stock),
     );
   });
 </script>
@@ -16070,7 +16090,6 @@ export const load: PageServerLoad = async ({ fetch }) => {
       </div>
     </div>
 
-    <!-- Products Grid -->
     <h3 class="h3 text-brown fw-bold mb-4 text-center">Produse disponibile</h3>
     <div class="row g-4">
       {#each filteredProducts as product (product.id)}
@@ -16108,6 +16127,8 @@ export const load: PageServerLoad = async ({ fetch }) => {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\produse\de-sezon\+page.svelte =====
 
+<!-- FILE: src/routes/produse/de-sezon/+page.svelte -->
+
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
   import ProductCard from "$lib/components/ProductCard.svelte";
@@ -16116,10 +16137,14 @@ export const load: PageServerLoad = async ({ fetch }) => {
 
   let filteredProducts: Product[] = [];
 
+  function inStock(v: unknown) {
+    return v === true || v === 1 || v === "true" || v === "1";
+  }
+
   onMount(async () => {
     const allProducts = await getAllProducts();
     filteredProducts = allProducts.filter(
-      (p: Product) => p.category === "de-sezon",
+      (p: any) => p.category === "de-sezon" && inStock(p.in_stock),
     );
   });
 </script>
@@ -16201,7 +16226,6 @@ export const load: PageServerLoad = async ({ fetch }) => {
       </div>
     </div>
 
-    <!-- Products Grid -->
     <h3 class="h3 text-brown fw-bold mb-4 text-center">
       Produse disponibile acum
     </h3>
@@ -16391,6 +16415,8 @@ export const load: PageServerLoad = async ({ fetch }) => {
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\produse\la-borcan\+page.svelte =====
 
+<!-- FILE: src/routes/produse/la-borcan/+page.svelte -->
+
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
   import ProductCard from "$lib/components/ProductCard.svelte";
@@ -16399,10 +16425,14 @@ export const load: PageServerLoad = async ({ fetch }) => {
 
   let filteredProducts: Product[] = [];
 
+  function inStock(v: unknown) {
+    return v === true || v === 1 || v === "true" || v === "1";
+  }
+
   onMount(async () => {
     const allProducts = await getAllProducts();
     filteredProducts = allProducts.filter(
-      (p: Product) => p.category === "la-borcan",
+      (p: any) => p.category === "la-borcan" && inStock(p.in_stock),
     );
   });
 </script>
@@ -16443,7 +16473,6 @@ export const load: PageServerLoad = async ({ fetch }) => {
       </div>
     </div>
 
-    <!-- Products Grid -->
     <h3 class="h3 text-brown fw-bold mb-4 text-center">
       Produse disponibile acum
     </h3>
@@ -16470,40 +16499,73 @@ export const load: PageServerLoad = async ({ fetch }) => {
   .text-brown {
     color: var(--desaga-brown) !important;
   }
-
-  .text-green {
-    color: var(--desaga-green) !important;
-  }
-
-  .bg-light {
-    background-color: var(--desaga-cream) !important;
-  }
 </style>
 
 
 ===== FILE: C:\Users\user\Desktop\University\Projects\desagaCuLegume\src\routes\produse\[id]\+page.svelte =====
 
+<!-- FILE: src/routes/produse/[id]/+page.svelte -->
+
 <script lang="ts">
   import { page } from "$app/stores";
   import ProductCard from "$lib/components/ProductCard.svelte";
   import { productsStore, type Product } from "$lib/stores/products";
-  import { onMount } from "svelte";
+  import { onDestroy } from "svelte";
 
   let product: Product | null = null;
   let relatedProducts: Product[] = [];
   let allProducts: Product[] = [];
 
-  onMount(async () => {
-    allProducts = await productsStore.loadAll();
+  let loading = true;
+  let error: string | null = null;
 
-    const found = allProducts.find((p) => p.id === $page.params.id);
-    if (found) {
-      product = found;
-      relatedProducts = allProducts
-        .filter((p) => p.category === found.category && p.id !== found.id)
-        .slice(0, 4);
-    }
+  let alive = true;
+  onDestroy(() => {
+    alive = false;
   });
+
+  let token = 0;
+
+  $: productId = $page.params.id;
+
+  $: if (productId) {
+    void loadProduct(productId);
+  }
+
+  async function loadProduct(id: string) {
+    const t = ++token;
+    loading = true;
+    error = null;
+    product = null;
+    relatedProducts = [];
+
+    try {
+      // ALWAYS fetch by id (fixes numeric/string id mismatch and avoids "Produs nu găsit" for existing items)
+      const p = await productsStore.getById(id);
+      if (!alive || t !== token) return;
+
+      product = p;
+
+      // Related products: load list, then match by category; show only in-stock
+      allProducts = await productsStore.loadAll();
+      if (!alive || t !== token) return;
+
+      relatedProducts = allProducts
+        .filter(
+          (x) =>
+            x.category === p.category &&
+            String(x.id) !== String(p.id) &&
+            x.in_stock === true,
+        )
+        .slice(0, 4);
+    } catch (e) {
+      if (!alive || t !== token) return;
+      error = e instanceof Error ? e.message : "Eroare necunoscută";
+    } finally {
+      if (!alive || t !== token) return;
+      loading = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -16511,7 +16573,14 @@ export const load: PageServerLoad = async ({ fetch }) => {
 </svelte:head>
 
 <div class="container py-5">
-  {#if product}
+  {#if loading}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body py-5 text-center">
+        <div class="spinner-border" role="status" aria-label="Se încarcă"></div>
+        <div class="mt-3 text-muted">Se încarcă produsul…</div>
+      </div>
+    </div>
+  {:else if product}
     <nav aria-label="breadcrumb" class="mb-4">
       <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="/">Acasă</a></li>
@@ -16521,6 +16590,19 @@ export const load: PageServerLoad = async ({ fetch }) => {
         </li>
       </ol>
     </nav>
+
+    {#if product.in_stock === false}
+      <div
+        class="alert alert-warning d-flex align-items-center gap-2"
+        role="alert"
+      >
+        <i class="bi bi-exclamation-circle"></i>
+        <div>
+          <strong>Stoc epuizat.</strong> Produsul există, dar nu este disponibil
+          momentan.
+        </div>
+      </div>
+    {/if}
 
     <div class="row g-5">
       <div class="col-lg-6">
@@ -16589,10 +16671,15 @@ export const load: PageServerLoad = async ({ fetch }) => {
       <h4 class="alert-heading">
         <i class="bi bi-exclamation-triangle"></i> Produs nu găsit
       </h4>
-      <p>
-        Produsul pe care îl cauți nu există. <a href="/produse"
-          >Înapoi la produse</a
-        >
+
+      {#if error}
+        <p class="mb-2">{error}</p>
+      {:else}
+        <p class="mb-2">Produsul pe care îl cauți nu există.</p>
+      {/if}
+
+      <p class="mb-0">
+        <a href="/produse">Înapoi la produse</a>
       </p>
     </div>
   {/if}
