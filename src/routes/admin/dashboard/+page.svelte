@@ -3,7 +3,6 @@
 <!-- src/routes/admin/dashboard/+page.svelte -->
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import type { Noutate } from "$lib/stores/noutati";
   import { onMount } from "svelte";
 
   interface Stats {
@@ -24,7 +23,6 @@
     unreadMessages: 0,
   };
 
-  let recentNews: Noutate[] = [];
   let loading = true;
   let errorMsg: string | null = null;
 
@@ -33,13 +31,11 @@
     errorMsg = null;
 
     try {
-      const [productsRes, noutatiRes, evenimenteRes, messagesRes] =
-        await Promise.all([
-          fetch("/api/products"),
-          fetch("/api/noutati"),
-          fetch("/api/evenimente"),
-          fetch("/api/messages"),
-        ]);
+      const [productsRes, evenimenteRes, messagesRes] = await Promise.all([
+        fetch("/api/products"),
+        fetch("/api/evenimente"),
+        fetch("/api/messages"),
+      ]);
 
       if (productsRes.ok) {
         const products: { in_stock: boolean }[] = await productsRes.json();
@@ -48,15 +44,6 @@
       } else {
         stats.totalProducts = 0;
         stats.inStock = 0;
-      }
-
-      if (noutatiRes.ok) {
-        const news: Noutate[] = await noutatiRes.json();
-        stats.totalNews = news.length;
-        recentNews = news.slice(0, 6);
-      } else {
-        stats.totalNews = 0;
-        recentNews = [];
       }
 
       if (evenimenteRes.ok) {
@@ -151,7 +138,7 @@
       aria-label="Mergi la Produse"
     >
       <div class="statcard__top">
-        <div class="statcard__icon statcard__icon--green">
+        <div class="statcard__icon statcard__icon--blue">
           <i class="bi bi-box"></i>
         </div>
         <div class="statcard__label">Produse</div>
@@ -176,39 +163,6 @@
         >
       </div>
     </button>
-
-    <button
-      type="button"
-      class="statcard"
-      on:click={() => open("/admin/noutati")}
-      disabled={loading}
-      aria-label="Mergi la Noutăți"
-    >
-      <div class="statcard__top">
-        <div class="statcard__icon statcard__icon--green">
-          <i class="bi bi-newspaper"></i>
-        </div>
-        <div class="statcard__label">Noutăți</div>
-      </div>
-
-      <div class="statcard__value">
-        {#if loading}
-          <span class="placeholder-glow"
-            ><span class="placeholder col-5"></span></span
-          >
-        {:else}
-          {stats.totalNews}
-        {/if}
-      </div>
-
-      <div class="statcard__meta">
-        <span class="badge text-bg-light border">Total</span>
-        <span class="statcard__chev" aria-hidden="true"
-          ><i class="bi bi-chevron-right"></i></span
-        >
-      </div>
-    </button>
-
     <button
       type="button"
       class="statcard"
@@ -217,7 +171,7 @@
       aria-label="Mergi la Evenimente"
     >
       <div class="statcard__top">
-        <div class="statcard__icon statcard__icon--green">
+        <div class="statcard__icon statcard__icon--blue">
           <i class="bi bi-calendar-event"></i>
         </div>
         <div class="statcard__label">Evenimente</div>
@@ -305,18 +259,6 @@
             ></i>
           </a>
 
-          <a class="quick__item" href="/admin/noutati/new">
-            <div class="quick__left">
-              <span class="quick__icon"><i class="bi bi-plus-circle"></i></span>
-              <div>
-                <div class="quick__title">Adaugă noutate</div>
-                <div class="quick__sub">Publică o nouă noutate</div>
-              </div>
-            </div>
-            <i class="bi bi-arrow-right-short quick__arrow" aria-hidden="true"
-            ></i>
-          </a>
-
           <a class="quick__item" href="/admin/evenimente/new">
             <div class="quick__left">
               <span class="quick__icon"><i class="bi bi-plus-circle"></i></span>
@@ -345,59 +287,12 @@
         </div>
       </div>
     </div>
-
-    <div class="panel">
-      <div class="panel__head">
-        <h2 class="panel__title">
-          <i class="bi bi-clock-history"></i>
-          Noutăți recente
-        </h2>
-        <a class="panel__link" href="/admin/noutati">Vezi toate</a>
-      </div>
-
-      <div class="panel__body">
-        {#if loading}
-          <div class="skeleton">
-            <div class="skeleton__row"></div>
-            <div class="skeleton__row"></div>
-            <div class="skeleton__row"></div>
-            <div class="skeleton__row"></div>
-            <div class="skeleton__row"></div>
-          </div>
-        {:else if recentNews.length > 0}
-          <div class="news">
-            {#each recentNews as item (item.id)}
-              <a class="news__item" href="/admin/noutati/{item.id}">
-                <div class="news__main">
-                  <div class="news__title">{item.title}</div>
-                  <div class="news__sub">{roDate(item.created_at)}</div>
-                </div>
-                <span
-                  class={`badge ${item.published ? "text-bg-success" : "text-bg-warning"}`}
-                >
-                  {item.published ? "Public" : "Draft"}
-                </span>
-              </a>
-            {/each}
-          </div>
-        {:else}
-          <div class="empty">
-            <div class="empty__icon"><i class="bi bi-info-circle"></i></div>
-            <div class="empty__text">Nu sunt noutăți disponibile</div>
-          </div>
-        {/if}
-      </div>
-    </div>
   </section>
 </div>
 
 <style>
   .dash {
     padding: 6px 0 12px;
-  }
-
-  .text-brown {
-    color: var(--desaga-brown) !important;
   }
 
   .dash__header {
@@ -565,17 +460,6 @@
     gap: 10px;
   }
 
-  .panel__link {
-    color: rgba(0, 0, 0, 0.55);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-
-  .panel__link:hover {
-    text-decoration: underline;
-  }
-
   .panel__body {
     padding: 12px 14px 14px;
   }
@@ -642,91 +526,6 @@
     font-size: 1.25rem;
     flex: 0 0 auto;
   }
-
-  .news {
-    display: grid;
-    gap: 10px;
-  }
-
-  .news__item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 12px;
-    border: 1px solid rgba(0, 0, 0, 0.07);
-    border-radius: 14px;
-    text-decoration: none;
-    color: inherit;
-    background: #fff;
-    transition:
-      transform 120ms ease,
-      box-shadow 120ms ease,
-      border-color 120ms ease;
-  }
-
-  .news__item:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
-    border-color: rgba(0, 0, 0, 0.12);
-  }
-
-  .news__main {
-    min-width: 0;
-  }
-
-  .news__title {
-    font-weight: 800;
-    color: rgba(0, 0, 0, 0.78);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-  }
-
-  .news__sub {
-    margin-top: 2px;
-    color: rgba(0, 0, 0, 0.55);
-    font-size: 0.9rem;
-  }
-
-  .empty {
-    border: 1px dashed rgba(0, 0, 0, 0.18);
-    border-radius: 14px;
-    padding: 18px 14px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.015);
-  }
-
-  .empty__icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: rgba(0, 0, 0, 0.04);
-    color: rgba(0, 0, 0, 0.55);
-    flex: 0 0 auto;
-  }
-
-  .empty__text {
-    color: rgba(0, 0, 0, 0.65);
-    font-weight: 700;
-  }
-
-  .skeleton__row {
-    height: 54px;
-    border-radius: 14px;
-    margin-bottom: 10px;
-    background: rgba(0, 0, 0, 0.06);
-  }
-
-  .skeleton__row:last-child {
-    margin-bottom: 0;
-  }
-
   @media (max-width: 992px) {
     .dash__cards {
       grid-template-columns: repeat(2, minmax(0, 1fr));

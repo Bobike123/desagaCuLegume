@@ -213,6 +213,7 @@
           <div class="grid">
             <div class="grid__main">
               <div class="field">
+                <!-- svelte-ignore a11y_label_has_associated_control -->
                 <label class="field__label">Titlu *</label>
                 <input
                   class="form-control field__control"
@@ -225,6 +226,7 @@
               <div class="row g-3">
                 <div class="col-md-6">
                   <div class="field">
+                    <!-- svelte-ignore a11y_label_has_associated_control -->
                     <label class="field__label">Data și ora *</label>
                     <input
                       type="datetime-local"
@@ -237,6 +239,7 @@
                 </div>
                 <div class="col-md-6">
                   <div class="field">
+                    <!-- svelte-ignore a11y_label_has_associated_control -->
                     <label class="field__label">Tip eveniment *</label>
                     <select
                       class="form-select field__control"
@@ -253,6 +256,7 @@
               </div>
 
               <div class="field">
+                <!-- svelte-ignore a11y_label_has_associated_control -->
                 <label class="field__label">Locație *</label>
                 <input
                   class="form-control field__control"
@@ -263,7 +267,9 @@
               </div>
 
               <div class="field">
+                <!-- svelte-ignore a11y_label_has_associated_control -->
                 <label class="field__label">Descriere *</label>
+                <!-- svelte-ignore element_invalid_self_closing_tag -->
                 <textarea
                   class="form-control field__control"
                   rows="8"
@@ -286,6 +292,7 @@
 
                 <div class="cardlike__body">
                   <div class="field mb-2">
+                    <!-- svelte-ignore a11y_label_has_associated_control -->
                     <label class="field__label">Image URL</label>
                     <input
                       class="form-control"
@@ -297,6 +304,7 @@
                   </div>
 
                   <div class="field mb-0">
+                    <!-- svelte-ignore a11y_label_has_associated_control -->
                     <label class="field__label">Upload</label>
                     <input
                       type="file"

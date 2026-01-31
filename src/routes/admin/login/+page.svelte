@@ -92,7 +92,7 @@
                             bind:value={password}
                             required
                             autocomplete="current-password"
-                            placeholder="••••••••"
+                            placeholder="introdu parola aici"
                             disabled={loading}
                         />
                     </div>
@@ -115,11 +115,6 @@
                         Autentificare
                     {/if}
                 </button>
-
-                <div class="auth__note">
-                    <i class="bi bi-info-circle" aria-hidden="true"></i>
-                    <span>Acces restricționat. Folosește contul de admin.</span>
-                </div>
             </form>
         </div>
     </div>

@@ -1,22 +1,73 @@
-@import 'bootstrap/dist/css/bootstrap.min.css';
-@import 'bootstrap-icons/font/bootstrap-icons.min.css';
-
 :root {
-  --bs-primary: #066423;
-  --bs-secondary: #5E5240;
-  --bs-success: #28a745;
-  --bs-info: #2e832dff;
-  --bs-warning: #ffc107;
-  --bs-danger: #dc3545;
-  --bs-light: #ffffff;
-  --bs-dark: #333333;
-  --bs-body-bg: #ffffff;
-  --bs-body-color: #333333;
-  --bs-border-color: #CCCCCC;
+  /* PRIMARY BLUE SYSTEM */
+  --desaga-blue: #2699d6;        /* primary accent */
+  --desaga-dark-blue: #1f7fb3;   /* hover / emphasis */
+  --desaga-light-blue: #e8f4fb;  /* soft backgrounds */
 
-  --desaga-green: #066423;
-  --desaga-brown: #5E5240;
-  --desaga-cream: #ffffff;
+  /* SECONDARY / NEUTRALS */
+  --desaga-light-brown: #6b4838; 
+  --desaga-brown: #5c4033;       /* earth accent */
+  --desaga-cream: #f9f7f2;       /* page background */
+  --desaga-red: #dc3545;         /* alerts only */
   --desaga-text: #333333;
-  --desaga-border: #CCCCCC;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--desaga-text);
+  background-color: var(--desaga-cream);
+}
+
+/* UTILITIES */
+.text-blue { color: var(--desaga-blue) !important; }
+.bg-blue { background-color: var(--desaga-blue) !important; }
+.bg-light-blue { background-color: var(--desaga-light-blue) !important; }
+.text-brown { color: var(--desaga-brown) !important; }
+.bg-cream { background-color: var(--desaga-cream) !important; }
+
+/* BUTTONS */
+.btn-primary {
+  background-color: var(--desaga-blue);
+  border-color: var(--desaga-blue);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--desaga-dark-blue);
+  border-color: var(--desaga-dark-blue);
+}
+
+.btn-outline-primary {
+  color: var(--desaga-blue);
+  border-color: var(--desaga-blue);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+  background-color: var(--desaga-blue);
+  color: #ffffff;
+}
+
+/* CATEGORY BADGE */
+.category-badge {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.category-text {
+  display: none;
+  margin-left: 5px;
+  font-size: 0.9em;
+}
+
+.category-badge:hover .category-text {
+  display: inline-block;
+}
+
+/* BUTTERFLY ICON */
+.butterfly-icon {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  margin-right: 5px;
 }

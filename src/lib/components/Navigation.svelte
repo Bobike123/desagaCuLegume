@@ -1,5 +1,7 @@
-<!-- src/lib/components/Nav.svelte (or wherever this file lives) -->
+<!-- src/lib/components/Nav.svelte -->
 <script lang="ts">
+    import Fluture from "$lib/IconList.svelte";
+
     import { page } from "$app/stores";
     import { onMount, onDestroy } from "svelte";
 
@@ -74,41 +76,89 @@
 </svelte:head>
 
 <!-- Top info bar -->
-<nav class="navbar navbar-dark topbar" style="background-color: #066423;">
-    <div class="container d-flex justify-content-between gap-3 flex-wrap">
-        <div class="text-white small d-flex flex-wrap gap-3">
-            <span class="d-inline-flex align-items-center gap-2">
-                <i class="bi bi-geo-alt-fill"></i>
-                Cluj-Napoca, Str. Constantin Brâncuși nr. 153
-            </span>
-            <span class="d-inline-flex align-items-center gap-2">
-                <i class="bi bi-clock-fill"></i>
-                Orar: L-V 9:00 - 18:00
-            </span>
-        </div>
+<nav class="navbar navbar-dark topbar">
+    <div
+        class="container topbar-wrap d-flex justify-content-between gap-3 flex-wrap"
+    >
+        <!-- LEFT -->
+        <ul class="topbar-list text-white small d-flex flex-wrap gap-3 m-0 p-0">
+            <li class="topbar-item">
+                <a
+                    class="text-white d-inline-flex align-items-center gap-2 text-decoration-none"
+                    href="/contact/"
+                >
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span>Cluj-Napoca, Str. Constantin Brâncuși nr. 153</span>
+                </a>
+            </li>
 
-        <div class="text-white small d-flex flex-wrap gap-3 align-items-center">
-            <span class="d-inline-flex align-items-center gap-2">
-                <i class="bi bi-telephone-fill"></i>
-                +40 729 969 822
-            </span>
+            <li class="topbar-item">
+                <a
+                    class="text-white d-inline-flex align-items-center gap-2 text-decoration-none"
+                    href="/contact/"
+                >
+                    <i class="bi bi-clock-fill"></i>
+                    <span>Orar: L-V 9:00 - 18:00</span>
+                </a>
+            </li>
 
-            <!-- svelte-ignore a11y_invalid_attribute -->
-            <a
-                class="text-white d-inline-flex align-items-center gap-2"
-                href="https://facebook.com/desagaculegume"
-            >
-                <i class="bi bi-facebook"></i> Facebook
-            </a>
+            <li class="topbar-item">
+                <a
+                    class="text-white d-inline-flex align-items-center gap-2 text-decoration-none"
+                    href="tel:+40729969822"
+                >
+                    <i class="bi bi-telephone-fill"></i>
+                    <span>+40 729 969 822</span>
+                </a>
+            </li>
+        </ul>
 
-            <!-- svelte-ignore a11y_invalid_attribute -->
-            <a
-                class="text-white d-inline-flex align-items-center gap-2"
-                href="https://www.instagram.com/desaga_cu_legume/"
-            >
-                <i class="bi bi-instagram"></i> Instagram
-            </a>
-        </div>
+        <!-- RIGHT -->
+        <ul
+            class="topbar-list topbar-social text-white small d-flex flex-wrap gap-3 m-0 p-0 align-items-center"
+        >
+            <li class="topbar-item">
+                <a
+                    class="text-white d-inline-flex align-items-center gap-2 text-decoration-none"
+                    href="https://www.facebook.com/desagaculegume/"
+                    target="_blank"
+                    rel="nofollow"
+                    aria-label="Facebook"
+                >
+                    <i class="bi bi-facebook"></i>
+                </a>
+            </li>
+
+            <li class="topbar-item">
+                <a
+                    class="text-white d-inline-flex align-items-center gap-2 text-decoration-none"
+                    href="https://www.instagram.com/desaga_cu_legume/"
+                    target="_blank"
+                    rel="nofollow"
+                    aria-label="Instagram"
+                >
+                    <i class="bi bi-instagram"></i>
+                </a>
+            </li>
+
+            <li class="topbar-item">
+                <a
+                    class="text-white d-inline-flex align-items-center gap-2 text-decoration-none"
+                    href="https://tinutulflutureluialbastru.ro/"
+                    target="_blank"
+                    rel="nofollow"
+                    aria-label="Ținutul Fluturelui Albastru"
+                >
+                    <span class="topbar-fluture" aria-hidden="true">
+                        <Fluture size={14} />
+                    </span>
+
+                    <span class="topbar-fluture-text">
+                        Sunt din Ținutul Fluturelui Albastru
+                    </span>
+                </a>
+            </li>
+        </ul>
     </div>
 </nav>
 
@@ -117,7 +167,7 @@
     <div class="container">
         <a class="navbar-brand fw-bold fs-4 d-flex align-items-center" href="/">
             <img
-                src="src/assets/logo.png"
+                src="$lib/assets/logo.png"
                 alt="DeSaga Logo"
                 height="32"
                 class="me-2"
@@ -125,7 +175,6 @@
             DeSaga cu Legume
         </a>
 
-        <!-- Desktop nav (always visible at lg+) -->
         <div class="d-none d-lg-flex ms-auto align-items-center">
             <ul class="navbar-nav align-items-lg-center">
                 <li class="nav-item">
@@ -143,8 +192,10 @@
                         class="nav-link dropdown-toggle {navActiveStarts(
                             '/produse',
                         )}"
-                        href="/produse">Produse</a
+                        href="/produse"
                     >
+                        Produse
+                    </a>
                     <ul class="dropdown-menu">
                         <li>
                             <a class="dropdown-item" href="/produse"
@@ -176,11 +227,6 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link {navActive('/noutati')}" href="/noutati"
-                        >Noutăți</a
-                    >
-                </li>
-                <li class="nav-item">
                     <a
                         class="nav-link {navActive('/evenimente')}"
                         href="/evenimente">Evenimente</a
@@ -191,19 +237,25 @@
                         >Contact</a
                     >
                 </li>
+                <li class="nav-item">
+                    <!-- svelte-ignore a11y_consider_explicit_label -->
+                    <a
+                        class=" bi-basket nav-link {navActive('/cos')}"
+                        href="/cos"
+                    ></a>
+                </li>
 
                 <li class="nav-item ms-lg-2">
                     <a
                         class="btn btn-admin btn-sm text-white"
                         href="/admin/login"
                     >
-                        <i class="bi bi-lock"></i> Admin
+                        <i class="bi bi-lock"></i> Login
                     </a>
                 </li>
             </ul>
         </div>
 
-        <!-- Mobile burger (always visible below lg) -->
         <button
             type="button"
             class="navbar-toggler d-lg-none burger"
@@ -220,7 +272,7 @@
     </div>
 </nav>
 
-<!-- Offcanvas (mobile menu content must live here; never rely on the desktop collapse) -->
+<!-- Offcanvas -->
 <div
     class="offcanvas offcanvas-end mobile-offcanvas"
     tabindex="-1"
@@ -293,15 +345,6 @@
             </div>
 
             <a
-                class="mobile-link {navActive('/noutati')}"
-                href="/noutati"
-                on:click={closeMenu}
-            >
-                <span>Noutăți</span>
-                <i class="bi bi-chevron-right"></i>
-            </a>
-
-            <a
                 class="mobile-link {navActive('/evenimente')}"
                 href="/evenimente"
                 on:click={closeMenu}
@@ -316,6 +359,16 @@
                 on:click={closeMenu}
             >
                 <span>Contact</span>
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            <a
+                class="mobile-link {navActive('/cos')}"
+                href="/cos"
+                on:click={closeMenu}
+            >
+                <span>
+                    <i class="bi bi-basket"> </i> COS
+                </span>
                 <i class="bi bi-chevron-right"></i>
             </a>
 
@@ -333,109 +386,154 @@
 </div>
 
 <style>
-    /* Mobile polish for the green top info bar */
+    /* uses your global variables:
+       --desaga-blue: #2699d6;
+       --desaga-dark-blue: #1f7fb3;
+       --desaga-light-blue: #e8f4fb;
+    */
+
+    .topbar-list {
+        list-style: none;
+    }
+
+    .topbar-item {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+    }
+
+    .topbar-fluture {
+        display: inline-flex;
+        align-items: center;
+        line-height: 0;
+    }
+
+    .topbar-fluture-text {
+        display: none;
+        white-space: nowrap;
+        line-height: 1.25;
+    }
+
+    @media (min-width: 768px) {
+        .topbar-fluture-text {
+            display: inline;
+        }
+    }
+
+    /* TOPBAR COLOR: blue accents */
+    .topbar {
+        background-color: var(--desaga-blue);
+    }
+
+    /* Mobile polish for the top info bar */
     @media (max-width: 991.98px) {
         .topbar .container {
             padding-top: 10px;
             padding-bottom: 10px;
             gap: 10px !important;
-        }
-
-        /* Stack the two groups (left info + right info) */
-        .topbar .container {
             flex-direction: column;
             align-items: stretch !important;
         }
 
-        .topbar .container > div {
+        .topbar .container > ul {
+            padding: 8px 10px !important;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
             justify-content: flex-start !important;
             gap: 10px !important;
         }
 
-        /* Make each item full-width so it wraps nicely */
-        .topbar .container span,
+        .topbar .container li,
+        .topbar .container a {
+            width: 100%;
+        }
+
         .topbar .container a {
             display: flex !important;
             align-items: flex-start;
-            width: 100%;
             line-height: 1.25;
             white-space: normal;
         }
 
-        /* Reduce icon/text spacing slightly */
         .topbar .container .gap-2 {
             gap: 8px !important;
         }
 
-        /* Optional: subtle separators between items inside each group */
-        .topbar .container > div {
-            padding: 8px 10px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.06);
+        .topbar .topbar-social {
+            justify-content: center !important;
+            gap: 14px !important;
+            padding: 6px 10px !important;
+        }
+
+        .topbar .topbar-social li,
+        .topbar .topbar-social a {
+            width: auto !important;
+        }
+
+        .topbar .topbar-social a {
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 6px 8px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .topbar .topbar-social .topbar-fluture-text {
+            display: none !important;
         }
     }
 
-    /* Extra-small: make socials compact (icon-only) */
     @media (max-width: 420px) {
-        .topbar a {
-            justify-content: flex-start;
-        }
-
-        .topbar a i {
-            font-size: 1.05rem;
-        }
-
-        /* hide "Facebook/Instagram" text but keep accessible name from link context */
-        .topbar a {
+        .topbar .topbar-social {
             gap: 10px !important;
+            padding: 6px 8px !important;
         }
-        .topbar a:not(:has(img)) {
-            font-size: 0; /* collapses text */
-        }
-        .topbar a i {
-            font-size: 1.1rem; /* restore icon size */
+
+        .topbar .topbar-social a i {
+            font-size: 1.1rem;
         }
     }
 
-    /* Active underline for desktop */
+    /* Active underline for desktop: blue */
     .nav-link.active {
-        color: #066423 !important;
-        border-bottom: 2px solid #066423;
+        color: var(--desaga-blue) !important;
+        border-bottom: 2px solid var(--desaga-blue);
     }
 
     .desktop-dropdown:hover > .dropdown-menu {
         display: block;
     }
 
+    /* ADMIN BUTTON: blue */
     .btn-admin {
-        background-color: #066423;
-        border-color: #066423;
+        background-color: var(--desaga-blue);
+        border-color: var(--desaga-blue);
     }
 
     .btn-admin:hover,
     .btn-admin:focus {
-        background-color: #054f1b;
-        border-color: #054f1b;
+        background-color: var(--desaga-dark-blue);
+        border-color: var(--desaga-dark-blue);
     }
 
     .btn-admin:active {
-        background-color: #043d15;
-        border-color: #043d15;
+        background-color: var(--desaga-dark-blue);
+        border-color: var(--desaga-dark-blue);
+        filter: brightness(0.95);
     }
 
+    /* FIX: focus shadow must be a real shadow, not a color value */
     .form-control:focus,
     .form-select:focus {
-        border-color: var(--desaga-green);
-        box-shadow: 0 0 0 0.2rem rgba(118, 236, 30, 0.25);
+        border-color: var(--desaga-blue);
+        box-shadow: 0 0 0 0.2rem rgba(38, 153, 214, 0.25);
     }
 
-    /* Fix: prevent mobile collapse logic from hiding nav items.
-	   Desktop uses d-none d-lg-flex; mobile uses offcanvas only. */
     .mainnav .container {
         min-width: 0;
     }
 
-    /* Burger animation */
+    /* Burger */
     .burger {
         border: 0;
         padding: 8px;
@@ -443,7 +541,7 @@
     }
 
     .burger:focus {
-        box-shadow: 0 0 0 0.2rem rgba(6, 100, 35, 0.18);
+        box-shadow: 0 0 0 0.2rem rgba(38, 153, 214, 0.25);
     }
 
     .burger__bars {
@@ -464,7 +562,6 @@
             opacity 180ms ease;
     }
 
-    /* Animate into X when aria-expanded=true */
     .burger[aria-expanded="true"] .burger__bar:nth-child(1) {
         transform: translateY(8px) rotate(45deg);
     }
@@ -478,7 +575,7 @@
         transform: translateY(-8px) rotate(-45deg);
     }
 
-    /* Mobile offcanvas styling */
+    /* Mobile offcanvas */
     .mobile-offcanvas {
         width: min(92vw, 360px);
     }
@@ -501,10 +598,11 @@
         border: 1px solid rgba(0, 0, 0, 0.06);
     }
 
+    /* Mobile active: blue */
     .mobile-link.active {
-        border-color: rgba(6, 100, 35, 0.35);
-        background: rgba(6, 100, 35, 0.06);
-        color: #066423;
+        border-color: rgba(38, 153, 214, 0.35);
+        background: rgba(38, 153, 214, 0.08);
+        color: var(--desaga-blue);
     }
 
     .mobile-section {
@@ -521,7 +619,7 @@
     }
 
     .mobile-section__title.active {
-        color: #066423;
+        color: var(--desaga-blue);
     }
 
     .mobile-sublink {
@@ -534,10 +632,9 @@
     }
 
     .mobile-sublink:hover {
-        background: rgba(0, 0, 0, 0.03);
+        background: rgba(38, 153, 214, 0.08);
     }
 
-    /* Topbar wrapping safety */
     .topbar .container > * {
         min-width: 0;
     }

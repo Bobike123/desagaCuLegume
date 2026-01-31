@@ -1,0 +1,603 @@
+
+
+
+
+<!-- FILE: src/routes/despre-noi/+page.svelte -->
+<script lang="ts">
+  import img2016 from "$lib/assets/despre-noi/2016.jpeg";
+  import img2017_2018 from "$lib/assets/despre-noi/2017-2018.jpeg";
+  import img2019 from "$lib/assets/despre-noi/2019.jpeg";
+  import imgAstazi from "$lib/assets/despre-noi/Astazi.jpeg";
+  import bgLong from "$lib/assets/despre-noi/bg-long.jpeg";
+
+  const stats = [
+    { value: "2500", label: "m² de solarii", icon: "bi-house-heart" },
+    { value: "10+", label: "ani experiență", icon: "bi-award" },
+    { value: "100%", label: "produse locale", icon: "bi-geo-alt" },
+    { value: "20+", label: "colaboratori", icon: "bi-people" },
+  ] as const;
+
+  const timeline = [
+    {
+      year: "2016",
+      title: "Primul pas",
+      text: "Am început schimbarea în 2016 când în timpul liber și în weekend dădeam o mână de ajutor la Ferma de legume a unei rude la Jucu. A fost suficient un sezon agricol să ne dăm seama că asta ne dorim.",
+      img: img2016,
+    },
+    {
+      year: "2017–2018",
+      title: "Găsirea liniștii",
+      text: "Ne-am găsit liniștea în mijlocul naturii: munca fizică ne golea mintea de stresul zilnic și ne încărca bateriile.",
+      img: img2017_2018,
+    },
+    {
+      year: "2019",
+      title: "Decizia mare",
+      text: "Am lăsat în urmă un job stabil și am preluat oficial ferma de la Jucu.",
+      img: img2019,
+    },
+    {
+      year: "Astăzi",
+      title: "Comunitate",
+      text: "Să pui suflet în ceea ce faci și să construiești o comunitate îți dă un sentiment de împlinire.",
+      img: imgAstazi,
+    },
+  ] as const;
+</script>
+
+<svelte:head>
+  <title>Despre Noi - DeSaga cu Legume</title>
+</svelte:head>
+
+<section
+  class="section-flush timeline timeline-page"
+  style={`--bg: url(${bgLong});`}
+>
+  <div
+    class="timeline-hero d-flex align-items-center justify-content-center text-center"
+  >
+    <div class="timeline-hero-overlay"></div>
+
+    <div class="container position-relative z-1">
+      <h1 class="display-3 fw-bold text-white mb-3">Despre noi</h1>
+      <p class="fs-4 text-white">Hai sa ne cunoastem</p>
+    </div>
+  </div>
+
+  <div class="container container-flush">
+    <div class="panel panel-flush">
+      <div class="timeline-stack">
+        <div class="photo-col">
+          {#each timeline as step, i (step.year)}
+            <div
+              class="photo-step"
+              class:last-photo={i === timeline.length - 1}
+              style={`--z:${i + 1}; --rot:${(i % 2 ? 1 : -1) * (2 + i * 0.4)}deg;`}
+            >
+              <div class="polaroid">
+                <div class="polaroid-pin" aria-hidden="true"></div>
+
+                <div class="polaroid-frame">
+                  <img src={step.img} alt={step.year} loading="lazy" />
+                  <div class="polaroid-sheen" aria-hidden="true"></div>
+                </div>
+
+                <div class="polaroid-cap">
+                  <span class="polaroid-cap-dot" aria-hidden="true"></span>
+                  {step.year}
+                </div>
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <div class="note-col">
+          {#each timeline as step, i (step.year)}
+            <div
+              class="note-step"
+              style={`--z:${i + 1}; --rot:${(i % 2 ? -1 : 1) * (1.5 + i * 0.25)}deg;`}
+            >
+              <article class="note">
+                <div class="note-pin" aria-hidden="true"></div>
+
+                <div class="note-top">
+                  <span class="note-year">{step.year}</span>
+                  <span class="note-title">{step.title}</span>
+                </div>
+
+                <div class="note-rule" aria-hidden="true"></div>
+
+                <p class="note-text">{step.text}</p>
+              </article>
+            </div>
+          {/each}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-flush mt-4">
+      <h2 class="h4 fw-bold mb-3">Facts</h2>
+      <div class="facts-wide">
+        {#each stats as s (s.label)}
+          <div class="fact-tile">
+            <div class="fact-tile-icon">
+              <i class={"bi " + s.icon}></i>
+            </div>
+            <div>
+              <div class="fact-tile-value">{s.value}</div>
+              <div class="fact-tile-label">{s.label}</div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  :global(:root) {
+    --accent: #2492cc;
+    --accent-rgb: 36, 146, 204;
+
+    --paper: rgba(255, 255, 255, 0.92);
+    --ink: rgba(12, 18, 26, 0.9);
+    --shadow-lg: 0 22px 60px rgba(0, 0, 0, 0.22);
+    --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.18);
+    --shadow-sm: 0 10px 24px rgba(0, 0, 0, 0.14);
+  }
+
+  .timeline-page {
+    background-image: var(--bg);
+    background-position: top center;
+    background-repeat: repeat-y;
+    background-size: 100% auto;
+    background-color: #fff;
+  }
+
+  .section-flush {
+    padding: 0 !important;
+  }
+
+  .container-flush {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .panel {
+    background: transparent !important;
+    padding: 16px;
+  }
+
+  .panel-flush {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Hero */
+  .timeline-hero {
+    position: relative;
+    min-height: 46vh;
+    overflow: hidden;
+    background: transparent !important;
+  }
+
+  .timeline-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        1200px 600px at 20% 20%,
+        rgba(36, 146, 204, 0.34),
+        transparent 60%
+      ),
+      radial-gradient(
+        900px 500px at 80% 30%,
+        rgba(0, 0, 0, 0.35),
+        transparent 65%
+      ),
+      linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.55),
+        rgba(0, 0, 0, 0.18) 60%,
+        rgba(0, 0, 0, 0.45)
+      );
+    /* removed blur */
+  }
+
+  .z-1 {
+    z-index: 1;
+  }
+
+  .timeline-hero h1,
+  .timeline-hero p {
+    text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  }
+
+  /* Timeline layout */
+  /* Timeline layout: stack photo + note in the same place */
+  .timeline-stack {
+    display: grid;
+    grid-template-columns: 1fr; /* was 1fr 1.2fr */
+    gap: 0;
+    padding: 10px 0 30px;
+  }
+
+  /* Put both columns in the same grid cell so they overlap */
+  .photo-col,
+  .note-col {
+    grid-column: 1;
+    grid-row: 1;
+    position: relative;
+  }
+
+  /* Keep them centered */
+  .photo-col,
+  .note-col {
+    display: block;
+  }
+
+  .photo-step,
+  .note-step {
+    left: 50%;
+    /* center both on the same x/y anchor */
+    transform: translate(-50%, -50%) rotate(var(--rot));
+    margin-bottom: 55vh;
+    position: sticky;
+    top: 50vh;
+  }
+
+  /* Ensure note is above photo (still respects per-step stacking) */
+  .photo-step {
+    z-index: var(--z);
+  }
+
+  .note-step {
+    z-index: calc(var(--z) + 100);
+  }
+
+  /* Remove the “last photo is different” behavior: make it stick/unstick same as notes */
+  .photo-step.last-photo {
+    position: sticky;
+    top: 50vh;
+    transform: translate(-50%, -50%) rotate(var(--rot));
+    margin-bottom: 55vh;
+  }
+
+  /* Mobile stays normal (your existing mobile block already sets static + single column) */
+
+  /* Polaroids */
+  .polaroid {
+    position: relative;
+    width: 360px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(248, 250, 252, 0.92)
+    );
+    border-radius: 18px;
+    padding: 14px 14px 10px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transform-origin: 40% 30%;
+  }
+
+  .polaroid::before {
+    content: "";
+    position: absolute;
+    inset: -14px -14px -18px -14px;
+    border-radius: 26px;
+    background: radial-gradient(
+        600px 220px at 20% 0%,
+        rgba(255, 255, 255, 0.65),
+        transparent 70%
+      ),
+      radial-gradient(
+        420px 200px at 90% 20%,
+        rgba(36, 146, 204, 0.16),
+        transparent 70%
+      );
+    /* removed blur */
+    pointer-events: none;
+    opacity: 0.9;
+  }
+
+  .polaroid-frame {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .polaroid img {
+    width: 100%;
+    height: 440px;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.02);
+    filter: contrast(1.02) saturate(1.05);
+  }
+
+  .polaroid-sheen {
+    position: absolute;
+    inset: -40% -30%;
+    transform: rotate(18deg);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.28),
+      transparent
+    );
+    opacity: 0.75;
+    pointer-events: none;
+  }
+
+  .polaroid-cap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 8px 2px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: 0.5px;
+  }
+
+  .polaroid-cap-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(var(--accent-rgb), 0.9);
+    box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.35);
+  }
+
+  .polaroid-pin {
+    position: absolute;
+    top: -10px;
+    left: 48%;
+    transform: translateX(-50%) rotate(-6deg);
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: radial-gradient(
+        circle at 30% 30%,
+        #ffffff,
+        rgba(255, 255, 255, 0.2) 55%
+      ),
+      radial-gradient(
+        circle at 60% 65%,
+        rgba(var(--accent-rgb), 0.9),
+        rgba(36, 146, 204, 0.65)
+      );
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    z-index: 2;
+  }
+
+  .polaroid-pin::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    opacity: 0.7;
+  }
+
+  /* Sticky notes: remove plasters/tapes and remove any blur usage */
+  .note {
+    position: relative;
+    max-width: 720px;
+    padding: 22px 22px 18px;
+    border-radius: 18px;
+    color: var(--ink);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 248, 196, 0.98),
+      rgba(255, 241, 158, 0.95)
+    );
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  .note::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        800px 400px at 20% 10%,
+        rgba(255, 255, 255, 0.35),
+        transparent 60%
+      ),
+      radial-gradient(
+        600px 260px at 90% 30%,
+        rgba(var(--accent-rgb), 0.1),
+        transparent 62%
+      );
+    pointer-events: none;
+  }
+
+  .note::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.06),
+      rgba(0, 0, 0, 0.06) 1px,
+      transparent 1px,
+      transparent 28px
+    );
+    opacity: 0.16;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+  }
+
+  .note-top {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .note-year {
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: rgba(var(--accent-rgb), 0.95);
+    letter-spacing: 0.7px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .note-title {
+    font-size: clamp(1.25rem, 1.4vw, 1.55rem);
+    font-weight: 950;
+    line-height: 1.15;
+  }
+
+  .note-rule {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(0, 0, 0, 0.25),
+      transparent
+    );
+    margin: 8px 0 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .note-text {
+    position: relative;
+    z-index: 1;
+    font-size: clamp(1.05rem, 1.1vw, 1.2rem);
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  .note-pin {
+    position: absolute;
+    top: -9px;
+    left: 52%;
+    transform: translateX(-50%) rotate(10deg);
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: radial-gradient(
+        circle at 30% 30%,
+        rgba(255, 255, 255, 0.95),
+        rgba(255, 255, 255, 0.15) 55%
+      ),
+      radial-gradient(
+        circle at 60% 70%,
+        rgba(255, 94, 94, 0.95),
+        rgba(255, 94, 94, 0.65)
+      );
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+    z-index: 3;
+  }
+
+  /* Facts: remove blur */
+  .facts-wide {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .fact-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-sm);
+    /* removed backdrop-filter */
+  }
+
+  .fact-tile-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: rgba(var(--accent-rgb), 0.12);
+    border: 1px solid rgba(var(--accent-rgb), 0.22);
+    box-shadow: 0 12px 24px rgba(var(--accent-rgb), 0.18);
+  }
+
+  .fact-tile-icon i {
+    font-size: 1.25rem;
+    color: rgba(var(--accent-rgb), 0.95);
+  }
+
+  .fact-tile-value {
+    font-weight: 900;
+    font-size: 1.2rem;
+    line-height: 1.05;
+  }
+
+  .fact-tile-label {
+    opacity: 0.85;
+    font-weight: 700;
+  }
+
+  @media (min-width: 992px) {
+    .facts-wide {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (max-width: 992px) {
+    .timeline-stack {
+      grid-template-columns: 1fr;
+      padding: 8px 0 18px;
+    }
+
+    .photo-step,
+    .note-step {
+      position: static;
+      top: auto;
+      transform: none;
+      margin-bottom: 16px;
+    }
+
+    .polaroid {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .container-flush {
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+    }
+
+    .timeline-hero-overlay {
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.45),
+        rgba(0, 0, 0, 0.15)
+      );
+    }
+
+    .timeline-hero {
+      min-height: 34vh;
+    }
+
+    .timeline-page {
+      background-size: cover;
+      background-repeat: no-repeat;
+    }
+  }
+</style>

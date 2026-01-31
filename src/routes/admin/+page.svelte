@@ -618,7 +618,7 @@
     .form-control:focus,
     .form-select:focus,
     textarea:focus {
-        border-color: var(--desaga-green);
+        border-color: var(--desaga-blue);
         box-shadow: 0 0 0 0.2rem rgba(118, 236, 30, 0.25);
     }
 

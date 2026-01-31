@@ -1,3 +1,4 @@
+<!-- FILE: src/lib/components/EventCard.svelte -->
 <script lang="ts">
   interface Event {
     id: string;
@@ -21,7 +22,11 @@
 
   const formatDate = (dateStr: string | Date) => {
     const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
-    return d.toLocaleDateString("ro-RO");
+    return d.toLocaleDateString("ro-RO", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   const getEventTypeLabel = (type: string) => {
@@ -38,66 +43,154 @@
   };
 </script>
 
-<div class="event-card card h-100">
+<a href={`/evenimente/${event.id}`} class="event-card">
   <img
-    src={event.image_url || ""}
+    src={event.image_url || "/placeholder.png"}
     alt={event.title}
-    class="event-image card-img-top"
+    class="event-image"
   />
-  <div class="card-body d-flex flex-column">
-    <h5 class="event-title card-title">{event.title}</h5>
-    <p class="card-text text-secondary grow">{event.description}</p>
-    <div class="d-flex justify-content-between align-items-center mt-3">
-      <div>
-        <p class="event-date mb-1">
+
+  <div class="card-body">
+    <div class="top">
+      <h5 class="event-title">{event.title}</h5>
+
+      <span class="event-type">{getEventTypeLabel(event.event_type)}</span>
+
+      <p class="event-description">
+        {event.description || "Eveniment organizat de DeSaga"}
+      </p>
+    </div>
+
+    <div class="bottom">
+      <div class="meta">
+        <span>
           <i class="bi bi-calendar-event"></i>
           {formatDate(event.date)}
-        </p>
-        <p class="event-location mb-1">
+        </span>
+        <span>
           <i class="bi bi-geo-alt"></i>
           {event.location}
-        </p>
-        <span class="event-type badge bg-primary"
-          >{getEventTypeLabel(event.event_type)}</span
-        >
+        </span>
       </div>
-      <a href={`/evenimente/${event.id}`} class="btn btn-sm btn-primary"
-        >Vezi detalii</a
-      >
+
+      <span class="cta">
+        Vezi detalii <i class="bi bi-arrow-right"></i>
+      </span>
     </div>
   </div>
-</div>
+</a>
 
 <style>
+  /* === CARD === */
   .event-card {
-    border-color: var(--desaga-border);
-    transition: all 0.3s ease;
+    width: 360px;
+    height: 380px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    text-decoration: none;
+    color: inherit;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+    flex-shrink: 0;
   }
+
   .event-card:hover {
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.14);
   }
+
+  /* === IMAGE === */
   .event-image {
-    height: 200px;
+    height: 170px;
+    width: 100%;
     object-fit: cover;
+    flex-shrink: 0;
   }
-  .event-title {
-    color: #5e5240;
-    font-weight: bold;
+
+  /* === BODY === */
+  .card-body {
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
   }
-  .event-date {
-    color: #066423;
-    font-weight: bold;
-    font-size: 0.85rem;
+
+  .top {
+    flex: 1;
   }
-  .event-location {
-    color: #333333;
-    font-size: 0.85rem;
+
+  .bottom {
+    margin-top: 10px;
   }
+
+  /* === TEXT === */
   .event-type {
-    background-color: #066423 !important;
-    color: white;
+    display: inline-block;
     font-size: 0.75rem;
-    padding: 0.25em 0.5em;
-    border-radius: 0.25rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(var(--accent-rgb, 36, 146, 204), 0.12);
+    color: var(--accent, #2492cc);
+    margin-bottom: 8px;
+  }
+
+  .event-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin: 0 0 6px;
+    line-height: 1.25;
+    color: #222;
+  }
+
+  .event-description {
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: #555;
+  }
+
+  .meta i {
+    margin-right: 6px;
+    color: var(--accent, #2492cc);
+  }
+
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent, #2492cc);
+  }
+
+  /* === MOBILE === */
+  @media (max-width: 576px) {
+    .event-card {
+      width: 320px;
+      height: 360px;
+    }
+
+    .event-image {
+      height: 150px;
+    }
   }
 </style>

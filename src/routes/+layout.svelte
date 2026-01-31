@@ -1,6 +1,7 @@
 <script>
 	import Navigation from "$lib/components/Navigation.svelte";
 	import Footer from "$lib/components/Footer.svelte";
+	import ScrollToTop from "$lib/components/ScrollToTop.svelte";
 	import { auth } from "$lib/stores/auth";
 	import "$lib/styles/global.css";
 	import { onMount } from "svelte";
@@ -30,10 +31,14 @@
 		src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
 	></script>
 </svelte:head>
+
 <Navigation />
+
 <main class="min-vh-100 bg-white">
 	<slot />
+	<ScrollToTop />
 </main>
+
 <Footer />
 
 <style>

@@ -1,0 +1,32 @@
+$excludeDirs = @(
+  "\.git",
+  "\node_modules",
+  "\.svelte-kit",
+  "\static\images",
+  "\src\assets",
+  "\.vercel",
+  "\.vscode",
+  "\package-lock.json"
+)
+
+$includeExt  = @(
+  ".svelte",".ts",".js",".json",".css",".scss",
+  ".md",".txt",".html",".svg",".env",".yml",".yaml"
+)
+
+$out = "REPO.txt"
+if (Test-Path -LiteralPath $out) { Remove-Item -LiteralPath $out }
+
+Get-ChildItem -Recurse -File |
+Where-Object {
+  $full = $_.FullName
+  ($excludeDirs | ForEach-Object { $full -match [regex]::Escape($_) }) -notcontains $true `
+  -and ($includeExt -contains $_.Extension.ToLower())
+} |
+ForEach-Object {
+  $p = $_.FullName
+  Add-Content -LiteralPath $out -Value "`r`n`r`n===== FILE: $p =====`r`n"
+  Get-Content -LiteralPath $p | Add-Content -LiteralPath $out
+}
+
+Write-Host "Done -> $out"
