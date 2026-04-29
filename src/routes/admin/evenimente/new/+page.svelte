@@ -102,8 +102,9 @@
         <div class="grid">
           <div class="grid__main">
             <div class="field">
-              <label class="field__label">Titlu *</label>
+              <label class="field__label" for="event-title">Titlu *</label>
               <input
+                id="event-title"
                 name="title"
                 class="form-control form-control-lg field__control"
                 required
@@ -112,8 +113,9 @@
             </div>
 
             <div class="field">
-              <label class="field__label">Descriere *</label>
+              <label class="field__label" for="event-description">Descriere *</label>
               <textarea
+                id="event-description"
                 name="description"
                 rows="8"
                 class="form-control field__control"
@@ -128,8 +130,9 @@
             <div class="row g-3">
               <div class="col-md-6">
                 <div class="field">
-                  <label class="field__label">Data *</label>
+                  <label class="field__label" for="event-date">Data *</label>
                   <input
+                    id="event-date"
                     type="datetime-local"
                     name="date"
                     class="form-control field__control"
@@ -140,8 +143,9 @@
 
               <div class="col-md-6">
                 <div class="field">
-                  <label class="field__label">Tip *</label>
+                  <label class="field__label" for="event-type">Tip *</label>
                   <select
+                    id="event-type"
                     name="event_type"
                     class="form-select field__control"
                     required
@@ -155,8 +159,9 @@
             </div>
 
             <div class="field">
-              <label class="field__label">Locație *</label>
+              <label class="field__label" for="event-location">Locație *</label>
               <input
+                id="event-location"
                 name="location"
                 class="form-control field__control"
                 required
@@ -255,9 +260,6 @@
 </div>
 
 <style>
-  .text-brown {
-    color: var(--desaga-brown) !important;
-  }
 
   .page {
     padding: 10px 0 22px;

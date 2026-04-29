@@ -1,96 +1,73 @@
-<!-- FILE: src/lib/components/ProductCard.svelte -->
 <script lang="ts">
-  import type { Product } from "$lib/stores/products";
-  import { fly } from "svelte/transition";
+  import { fly } from 'svelte/transition';
+  import { cart } from '$lib/stores/cart';
+  import type { Product } from '$lib/stores/products';
 
   const EMPTY_PRODUCT: Product = {
-    id: "",
-    name: "",
-    description: "",
-    category: "de-sezon",
+    id: '',
+    name: '',
+    description: '',
+    category: 'de-sezon',
     price: 0,
-    image_url: "",
+    image_url: '',
     in_stock: false,
-    created_at: undefined,
-    updated_at: undefined,
   };
 
   export let product: Product = EMPTY_PRODUCT;
 
-  function inStock(v: unknown): boolean {
-    return v === true || v === 1 || v === "true" || v === "1";
+  function safeText(v: unknown): string {
+    return typeof v === 'string' ? v : v == null ? '' : String(v);
   }
 
   function toNumber(v: unknown): number {
-    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   }
 
-  function safeText(v: unknown): string {
-    return typeof v === "string" ? v : v == null ? "" : String(v);
-  }
-
-  $: id = product?.id != null ? String(product.id) : "";
+  $: id = product?.id != null ? String(product.id) : '';
   $: name = safeText(product?.name).trim();
   $: description = safeText(product?.description).trim();
   $: imageUrl =
-    typeof product?.image_url === "string" &&
-    product.image_url.trim().length > 0
+    typeof product?.image_url === 'string' && product.image_url.trim().length > 0
       ? product.image_url.trim()
-      : "/placeholder.png";
-
-  $: price = toNumber((product as any)?.price);
-  $: isAvailable = inStock((product as any)?.in_stock);
-
+      : '/placeholder.png';
+  $: price = toNumber(product?.price);
+  $: isAvailable = Boolean(product?.in_stock);
+  $: currentQty = $cart.items.find((item) => item.productId === id)?.quantity ?? 0;
   $: category = safeText(product?.category);
-
   $: categoryMeta =
-    category === "de-sezon"
-      ? { label: "De Sezon", icon: "bi-leaf", tone: "tone-green" }
-      : category === "la-borcan"
-        ? { label: "La Borcan", icon: "bi-archive", tone: "tone-amber" }
-        : category === "colaboratori"
-          ? { label: "Colaboratori", icon: "bi-people", tone: "tone-blue" }
-          : { label: "HORECA", icon: "bi-shop", tone: "tone-purple" };
-
+    category === 'de-sezon'
+      ? { label: 'De Sezon', icon: 'bi-leaf', tone: 'tone-green' }
+      : category === 'la-borcan'
+        ? { label: 'La Borcan', icon: 'bi-archive', tone: 'tone-amber' }
+        : category === 'colaboratori'
+          ? { label: 'Colaboratori', icon: 'bi-people', tone: 'tone-blue' }
+          : { label: 'HORECA', icon: 'bi-shop', tone: 'tone-purple' };
   $: href = id ? `/produse/${id}` : undefined;
 
-  let qty = 0;
-
-  // animation control
   let lastDelta: 1 | -1 = 1;
-  let bumpTick = 0; // used to replay the bump animation
-
-  function clampQty(n: number) {
-    return Math.max(0, Math.min(99, n));
-  }
+  let bumpTick = 0;
 
   function addToBasket() {
     if (!isAvailable) return;
     lastDelta = 1;
-    qty = 1;
+    cart.addProduct(product, 1);
     bumpTick += 1;
   }
 
   function inc() {
     if (!isAvailable) return;
     lastDelta = 1;
-    const next = clampQty(qty + 1);
-    if (next !== qty) {
-      qty = next;
-      bumpTick += 1;
-    }
+    cart.addProduct(product, 1);
+    bumpTick += 1;
   }
 
   function dec() {
     if (!isAvailable) return;
     lastDelta = -1;
-    const next = clampQty(qty - 1);
-    if (next !== qty) {
-      qty = next;
-      bumpTick += 1;
-    }
+    cart.setQuantity(id, Math.max(0, currentQty - 1));
+    bumpTick += 1;
   }
 
   function stopAll(e: Event) {
@@ -101,17 +78,12 @@
   $: flyY = lastDelta === 1 ? 10 : -10;
 </script>
 
-<a
-  class="card"
-  {href}
-  aria-disabled={!isAvailable}
-  aria-label={name || "Produs"}
->
+<a class="card" {href} aria-disabled={!isAvailable} aria-label={name || 'Produs'}>
   <div class="media">
     <img class="img" src={imageUrl} alt={name} loading="lazy" />
     <div class="badges">
-      <span class={"pill " + categoryMeta.tone}>
-        <i class={"bi " + categoryMeta.icon}></i>
+      <span class={'pill ' + categoryMeta.tone}>
+        <i class={'bi ' + categoryMeta.icon}></i>
         {categoryMeta.label}
       </span>
 
@@ -126,8 +98,8 @@
 
   <div class="body">
     <div class="content">
-      <h5 class="title">{name || "Produs"}</h5>
-      <p class="desc">{description || "Produs de calitate."}</p>
+      <h5 class="title">{name || 'Produs'}</h5>
+      <p class="desc">{description || 'Produs de calitate.'}</p>
     </div>
 
     <div class="footer">
@@ -137,54 +109,24 @@
 
       {#if !isAvailable}
         <div class="cta cta-off">Indisponibil</div>
-      {:else if qty === 0}
-        <button
-          class="btn-add"
-          type="button"
-          on:click|preventDefault|stopPropagation={addToBasket}
-        >
+      {:else if currentQty === 0}
+        <button class="btn-add" type="button" on:click|preventDefault|stopPropagation={addToBasket}>
           <i class="bi bi-basket"></i>
           Adaugă
         </button>
       {:else}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div
-          class="stepper"
-          role="group"
-          aria-label="Cantitate în coș"
-          on:click={stopAll}
-        >
-          <button
-            class="step-btn"
-            type="button"
-            on:click|preventDefault|stopPropagation={dec}
-            aria-label="Scade cantitatea"
-          >
+        <div class="stepper" role="group" aria-label="Cantitate în coș">
+          <button class="step-btn" type="button" on:click|preventDefault|stopPropagation={dec} aria-label="Scade cantitatea">
             <i class="bi bi-dash"></i>
           </button>
-
-          <!-- Number animation:
-               - fly up when increment, fly down when decrement
-               - bump scale on every change (bumpTick forces rerun) -->
           <div class="qty-wrap" aria-label="Cantitate">
-            {#key `${qty}-${bumpTick}`}
-              <div
-                class={"step-qty " + (lastDelta === 1 ? "qty-up" : "qty-down")}
-                in:fly={{ y: flyY, duration: 120 }}
-                out:fly={{ y: -flyY, duration: 120 }}
-              >
-                {qty}
+            {#key `${currentQty}-${bumpTick}`}
+              <div class={lastDelta === 1 ? 'step-qty qty-up' : 'step-qty qty-down'} in:fly={{ y: flyY, duration: 120 }} out:fly={{ y: -flyY, duration: 120 }}>
+                {currentQty}
               </div>
             {/key}
           </div>
-
-          <button
-            class="step-btn"
-            type="button"
-            on:click|preventDefault|stopPropagation={inc}
-            aria-label="Crește cantitatea"
-          >
+          <button class="step-btn" type="button" on:click|preventDefault|stopPropagation={inc} aria-label="Crește cantitatea">
             <i class="bi bi-plus"></i>
           </button>
         </div>
@@ -206,10 +148,7 @@
     background: #fff;
     text-decoration: none;
     color: inherit;
-    transition:
-      transform 0.12s ease,
-      box-shadow 0.12s ease,
-      border-color 0.12s ease;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
   }
 
   .card:hover {
@@ -218,7 +157,7 @@
     border-color: rgba(0, 0, 0, 0.12);
   }
 
-  .card[aria-disabled="true"] {
+  .card[aria-disabled='true'] {
     opacity: 0.62;
     filter: grayscale(0.05);
   }
@@ -262,26 +201,11 @@
     white-space: nowrap;
   }
 
-  .tone-green {
-    border-color: rgba(25, 135, 84, 0.22);
-    background: rgba(25, 135, 84, 0.12);
-  }
-  .tone-amber {
-    border-color: rgba(255, 193, 7, 0.28);
-    background: rgba(255, 193, 7, 0.14);
-  }
-  .tone-blue {
-    border-color: rgba(13, 110, 253, 0.22);
-    background: rgba(13, 110, 253, 0.12);
-  }
-  .tone-purple {
-    border-color: rgba(111, 66, 193, 0.22);
-    background: rgba(111, 66, 193, 0.12);
-  }
-  .tone-warning {
-    border-color: rgba(255, 193, 7, 0.35);
-    background: rgba(255, 193, 7, 0.22);
-  }
+  .tone-green { border-color: rgba(25, 135, 84, 0.22); background: rgba(25, 135, 84, 0.12); }
+  .tone-amber { border-color: rgba(255, 193, 7, 0.28); background: rgba(255, 193, 7, 0.14); }
+  .tone-blue { border-color: rgba(13, 110, 253, 0.22); background: rgba(13, 110, 253, 0.12); }
+  .tone-purple { border-color: rgba(111, 66, 193, 0.22); background: rgba(111, 66, 193, 0.12); }
+  .tone-warning { border-color: rgba(255, 193, 7, 0.35); background: rgba(255, 193, 7, 0.22); }
 
   .body {
     flex: 1;
@@ -353,17 +277,7 @@
     padding: 0.5rem 0.75rem;
     border-radius: 12px;
     cursor: pointer;
-    transition:
-      transform 0.12s ease,
-      box-shadow 0.12s ease,
-      filter 0.12s ease;
     white-space: nowrap;
-  }
-
-  .btn-add:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 18px rgba(var(--accent-rgb, 36, 146, 204), 0.18);
-    filter: brightness(0.98);
   }
 
   .stepper {
@@ -384,14 +298,8 @@
     background: transparent;
     color: var(--accent, #2492cc);
     cursor: pointer;
-    transition: background 0.12s ease;
   }
 
-  .step-btn:hover {
-    background: rgba(var(--accent-rgb, 36, 146, 204), 0.14);
-  }
-
-  /* number animation container */
   .qty-wrap {
     width: 25px;
     height: 25px;
@@ -413,18 +321,9 @@
   }
 
   @keyframes bump {
-    0% {
-      transform: scale(0.9);
-      opacity: 0.85;
-    }
-    60% {
-      transform: scale(1.12);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
+    0% { transform: scale(0.9); opacity: 0.85; }
+    60% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
   }
 
   .cta {
@@ -436,7 +335,6 @@
     white-space: nowrap;
   }
 
-  .cta-off {
-    color: rgba(0, 0, 0, 0.55);
-  }
+  .cta-off { color: rgba(0, 0, 0, 0.55); }
 </style>
+

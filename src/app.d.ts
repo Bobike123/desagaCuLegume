@@ -1,18 +1,35 @@
-// FILE: src/app.d.ts
-
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 declare global {
-	namespace App {
-		interface Locals {
-			supabase: SupabaseClient;
-			isAdmin: boolean;
-		}
-	}
+  namespace App {
+    interface UserSession {
+      id: number;
+      email: string;
+      username: string;
+      fullName: string | null;
+      phone: string | null;
+      status: string;
+    }
 
-	interface Window {
-		bootstrap?: any;
-	}
+    interface SessionState {
+      sessionId: string;
+      user: UserSession;
+      isAdmin: boolean;
+      roles: string[];
+    }
+
+    interface Locals {
+      supabase: SupabaseClient;
+      isAdmin: boolean;
+      isAuthenticated: boolean;
+      user: UserSession | null;
+      session: SessionState | null;
+    }
+  }
+
+  interface Window {
+    bootstrap?: any;
+  }
 }
 
-export { };
+export {};

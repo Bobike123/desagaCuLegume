@@ -1,10 +1,11 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { onMount } from "svelte";
-  import { getAllEvents, type Event } from "$lib/stores/events";
+  import { getAllEvents, getEventById, type Event } from "$lib/stores/events";
 
   let currentEvent: Event | null = null;
   let relatedEvents: Event[] = [];
+  let loading = true;
 
   const formatDate = (d: string | Date): string =>
     new Date(d).toLocaleDateString("ro-RO", {
@@ -16,25 +17,24 @@
     });
 
   onMount(async () => {
-    const list: Event[] = await getAllEvents();
+    loading = true;
 
-    const found = list.find((x) => x.id === $page.params.id);
-    if (!found) return;
+    try {
+      const id = $page.params.id;
+      if (!id) throw new Error("Missing event id");
 
-    currentEvent = {
-      ...found,
-      date: new Date(found.date),
-      created_at: found.created_at ? new Date(found.created_at) : new Date(),
-    };
+      currentEvent = await getEventById(id);
 
-    relatedEvents = list
-      .filter((x) => x.id !== found.id)
-      .slice(0, 3)
-      .map((x) => ({
-        ...x,
-        date: new Date(x.date),
-        created_at: x.created_at ? new Date(x.created_at) : new Date(),
-      }));
+      const list: Event[] = await getAllEvents();
+      relatedEvents = list
+        .filter((x: Event) => String(x.id) !== String(currentEvent?.id))
+        .slice(0, 3);
+    } catch {
+      currentEvent = null;
+      relatedEvents = [];
+    } finally {
+      loading = false;
+    }
   });
 </script>
 

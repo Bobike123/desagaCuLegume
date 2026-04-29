@@ -1,462 +1,336 @@
-<!-- src/routes/admin/messages/+page.svelte -->
 <script lang="ts">
-    import { onMount } from "svelte";
+  import { onMount } from 'svelte';
+  import AdminNav from '$lib/components/AdminNav.svelte';
 
-    type MessageItem = {
-        id: string;
-        name: string | null;
-        email: string | null;
-        phone: string | null;
-        message: string;
-        created_at: string;
-        read: boolean;
-    };
+  type ConversationListItem = {
+    id: string;
+    subject: string;
+    status: string;
+    unreadCount: number;
+    updatedAt: string;
+    user: {
+      fullName: string | null;
+      email: string;
+      phone: string | null;
+    } | null;
+    lastMessage: {
+      body: string;
+      senderType: string;
+      createdAt: string;
+    } | null;
+  };
 
-    let items: MessageItem[] = [];
-    let loading = true;
-    let error = "";
+  type ConversationDetail = {
+    id: string;
+    subject: string;
+    status: string;
+    user: {
+      fullName: string | null;
+      email: string;
+      phone: string | null;
+    } | null;
+    messages: Array<{
+      id: string;
+      senderType: string;
+      body: string;
+      createdAt: string;
+      isRead: boolean;
+    }>;
+  };
 
-    let searchQuery = "";
-    let toast = "";
-    let toastType: "success" | "danger" | "info" = "info";
+  let items: ConversationListItem[] = [];
+  let current: ConversationDetail | null = null;
+  let selectedId = '';
+  let reply = '';
+  let loading = true;
+  let error = '';
 
-    function showToast(msg: string, type: typeof toastType = "info") {
-        toast = msg;
-        toastType = type;
-        setTimeout(() => (toast = ""), 2500);
+  async function loadList() {
+    loading = true;
+    error = '';
+
+    try {
+      const res = await fetch('/api/messages');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca mesajele.');
+      items = Array.isArray(data?.items) ? data.items : [];
+
+      if (!selectedId && items.length > 0) {
+        selectedId = items[0].id;
+      }
+
+      if (selectedId) {
+        await loadConversation(selectedId);
+      }
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Nu am putut încărca mesajele.';
+    } finally {
+      loading = false;
     }
+  }
 
-    function roDateTime(value: string) {
-        try {
-            return new Date(value).toLocaleString("ro-RO", {
-                year: "numeric",
-                month: "short",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-            });
-        } catch {
-            return value;
-        }
-    }
+  async function loadConversation(id: string) {
+    selectedId = id;
+    const res = await fetch(`/api/messages/${id}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca conversația.');
+    current = data.item;
+    await fetch(`/api/messages/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ markRead: true }),
+    });
+    await refreshListSilent();
+  }
 
-    async function loadMessages() {
-        loading = true;
-        error = "";
-        try {
-            const res = await fetch("/api/messages");
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                error = data?.error ?? "Failed to load messages";
-                return;
-            }
-            items = data.items ?? [];
-        } catch {
-            error = "Failed to load messages";
-        } finally {
-            loading = false;
-        }
-    }
+  async function refreshListSilent() {
+    const res = await fetch('/api/messages');
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) items = Array.isArray(data?.items) ? data.items : [];
+  }
 
-    onMount(loadMessages);
+  async function sendReply() {
+    if (!selectedId || !reply.trim()) return;
 
-    $: filtered = (items ?? []).filter((m) => {
-        const q = searchQuery.toLowerCase().trim();
-        if (!q) return true;
-        const hay = [
-            m.name ?? "",
-            m.email ?? "",
-            m.phone ?? "",
-            m.message ?? "",
-        ]
-            .join(" ")
-            .toLowerCase();
-        return hay.includes(q);
+    const res = await fetch(`/api/messages/${selectedId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: reply }),
     });
 
-    $: unreadCount = (items ?? []).filter((m) => !m.read).length;
-
-    async function toggleRead(id: string, read: boolean) {
-        try {
-            const res = await fetch(`/api/messages/${id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ read }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                showToast(data?.error ?? "Eroare la actualizare", "danger");
-                return;
-            }
-            items = items.map((m) => (m.id === id ? { ...m, read } : m));
-            showToast(read ? "Marcat vazut" : "Marcat necitit", "success");
-        } catch {
-            showToast("Eroare la actualizare", "danger");
-        }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      error = data?.error ?? 'Nu am putut trimite răspunsul.';
+      return;
     }
 
-    async function remove(id: string) {
-        if (!confirm("Ștergi acest mesaj?")) return;
+    reply = '';
+    await loadConversation(selectedId);
+  }
 
-        try {
-            const res = await fetch(`/api/messages/${id}`, {
-                method: "DELETE",
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                showToast(data?.error ?? "Eroare la ștergere", "danger");
-                return;
-            }
-            items = items.filter((m) => m.id !== id);
-            showToast("Mesaj șters", "success");
-        } catch {
-            showToast("Eroare la ștergere", "danger");
-        }
+  async function updateStatus(status: string) {
+    if (!selectedId) return;
+    const res = await fetch(`/api/messages/${selectedId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      error = data?.error ?? 'Nu am putut actualiza statusul.';
+      return;
     }
+    await loadConversation(selectedId);
+  }
+
+  onMount(loadList);
 </script>
 
 <svelte:head>
-    <title>Mesaje - Admin</title>
+  <title>Mesaje - Admin DeSaga</title>
 </svelte:head>
 
+<AdminNav />
+
 <div class="page">
-    <header class="page__header">
-        <div>
-            <h1 class="page__title">
-                <span class="page__icon" aria-hidden="true"
-                    ><i class="bi bi-inbox"></i></span
-                >
-                Mesaje
-            </h1>
-            <p class="page__subtitle">
-                Mesaje primite din formularul de contact
-            </p>
-        </div>
+  <div class="page__head">
+    <div>
+      <h1>Mesaje</h1>
+      <p>Conversații dintre utilizatori și administratori.</p>
+    </div>
+    <button class="btn btn-outline-secondary" on:click={loadList} disabled={loading}>Reîncarcă</button>
+  </div>
 
-        <div class="page__actions">
-            <button
-                class="btn btn-outline-secondary page__btn"
-                on:click={loadMessages}
-                disabled={loading}
-            >
-                <i class="bi bi-arrow-clockwise"></i>
-                <span>Reîncarcă</span>
-            </button>
-        </div>
-    </header>
+  {#if error}<div class="alert alert-danger">{error}</div>{/if}
 
-    {#if toast}
-        <div
-            class={`alert alert-${toastType} d-flex align-items-center gap-2 shadow-sm mb-3`}
-            role="alert"
-        >
-            <i class="bi bi-info-circle"></i>
-            <div>{toast}</div>
-        </div>
-    {/if}
-
-    {#if error}
-        <div
-            class="alert alert-danger d-flex align-items-center gap-2 shadow-sm mb-3"
-            role="alert"
-        >
-            <i class="bi bi-exclamation-triangle"></i>
-            <div>{error}</div>
-        </div>
-    {/if}
-
-    <section class="toolbar">
-        <div class="toolbar__search">
-            <i class="bi bi-search" aria-hidden="true"></i>
-            <input
-                type="text"
-                class="form-control toolbar__input"
-                placeholder="Caută nume, email, telefon, mesaj..."
-                bind:value={searchQuery}
-            />
-        </div>
-
-        <div class="toolbar__meta">
-            <span class="badge text-bg-light border">
-                {#if loading}…{:else}{filtered.length} rezultate{/if}
-            </span>
-            <span
-                class={`badge ${unreadCount > 0 ? "text-bg-danger" : "text-bg-success"}`}
-            >
-                {unreadCount > 0 ? `${unreadCount} necitite` : "0 necitite"}
-            </span>
-        </div>
-    </section>
-
-    {#if loading}
-        <div class="card border-0 shadow-sm">
-            <div class="card-body py-5 text-center">
-                <div
-                    class="spinner-border"
-                    role="status"
-                    aria-label="Se încarcă"
-                ></div>
-                <div class="mt-3 text-muted">Se încarcă mesajele…</div>
+  <div class="grid">
+    <div class="panel listPanel">
+      {#if loading}
+        <div>Se încarcă conversațiile…</div>
+      {:else if items.length === 0}
+        <div>Nu există conversații.</div>
+      {:else}
+        {#each items as item (item.id)}
+          <button class:selected={selectedId === item.id} class="conversationBtn" on:click={() => loadConversation(item.id)}>
+            <div class="conversationBtn__top">
+              <strong>{item.user?.fullName || item.user?.email || 'Utilizator'}</strong>
+              {#if item.unreadCount > 0}<span class="badge text-bg-danger">{item.unreadCount}</span>{/if}
             </div>
+            <div class="conversationBtn__subject">{item.subject}</div>
+            {#if item.lastMessage}
+              <div class="conversationBtn__message">{item.lastMessage.body}</div>
+            {/if}
+          </button>
+        {/each}
+      {/if}
+    </div>
+
+    <div class="panel detailPanel">
+      {#if current}
+        <div class="detailHead">
+          <div>
+            <h2>{current.subject}</h2>
+            <div class="muted">{current.user?.fullName || current.user?.email}</div>
+            <div class="muted">{current.user?.phone || ''}</div>
+          </div>
+          <div class="detailActions">
+            <button class="btn btn-sm btn-outline-secondary" on:click={() => updateStatus('OPEN')}>Open</button>
+            <button class="btn btn-sm btn-outline-secondary" on:click={() => updateStatus('CLOSED')}>Closed</button>
+            <button class="btn btn-sm btn-outline-secondary" on:click={() => updateStatus('ARCHIVED')}>Archived</button>
+          </div>
         </div>
-    {:else if items.length === 0}
-        <div class="empty">
-            <div class="empty__icon"><i class="bi bi-info-circle"></i></div>
-            <div class="empty__text">
-                <div class="fw-bold">Nu există mesaje</div>
-                <div class="text-muted">
-                    Când cineva trimite formularul, apare aici.
-                </div>
+
+        <div class="messages">
+          {#each current.messages as message (message.id)}
+            <div class={`message ${message.senderType === 'ADMIN' ? 'message--admin' : 'message--user'}`}>
+              <div class="message__meta">{message.senderType} · {new Date(message.createdAt).toLocaleString('ro-RO')}</div>
+              <div>{message.body}</div>
             </div>
+          {/each}
         </div>
-    {:else if filtered.length === 0}
-        <div class="empty">
-            <div class="empty__icon"><i class="bi bi-search"></i></div>
-            <div class="empty__text">
-                <div class="fw-bold">Niciun rezultat</div>
-                <div class="text-muted">Schimbă căutarea.</div>
-            </div>
+
+        <div class="replyBox">
+          <textarea class="form-control" rows="4" bind:value={reply} placeholder="Scrie răspunsul administratorului..."></textarea>
+          <div class="replyActions">
+            <button class="btn btn-primary" on:click={sendReply}>Trimite răspuns</button>
+          </div>
         </div>
-    {:else}
-        <div class="card border-0 shadow-sm tablecard">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead class="thead">
-                        <tr class="text-secondary">
-                            <th>Data</th>
-                            <th>Nume</th>
-                            <th class="d-none d-md-table-cell">Email</th>
-                            <th class="d-none d-lg-table-cell">Telefon</th>
-                            <th>Mesaj</th>
-                            <th class="text-end">Acțiuni</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {#each filtered as m (m.id)}
-                            <tr class={!m.read ? "row--unread" : ""}>
-                                <td class="text-nowrap muted"
-                                    >{roDateTime(m.created_at)}</td
-                                >
-                                <td class="name">
-                                    <div class="name__main">
-                                        {m.name ?? "-"}
-                                    </div>
-                                    <div class="name__sub d-md-none">
-                                        <span class="muted"
-                                            >{m.email ?? "-"}</span
-                                        >
-                                        <span class="dot">•</span>
-                                        <span class="muted"
-                                            >{m.phone ?? "-"}</span
-                                        >
-                                    </div>
-                                </td>
-                                <td class="d-none d-md-table-cell muted"
-                                    >{m.email ?? "-"}</td
-                                >
-                                <td class="d-none d-lg-table-cell muted"
-                                    >{m.phone ?? "-"}</td
-                                >
-
-                                <td class="msg" style="max-width: 520px;">
-                                    <div class="msg__line" title={m.message}>
-                                        {m.message}
-                                    </div>
-                                </td>
-
-                                <td class="text-end text-nowrap">
-                                    <button
-                                        class={`btn btn-sm ${m.read ? "btn-outline-secondary" : "btn-success"} me-2`}
-                                        on:click={() =>
-                                            toggleRead(m.id, !m.read)}
-                                    >
-                                        {m.read ? "Vazut" : "Necitit"}
-                                    </button>
-
-                                    <button
-                                        class="btn btn-sm btn-outline-danger"
-                                        on:click={() => remove(m.id)}
-                                    >
-                                        <i class="bi bi-trash"></i>
-                                        <span class="d-none d-sm-inline"
-                                            >Șterge</span
-                                        >
-                                    </button>
-                                </td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    {/if}
+      {:else}
+        <div>Selectează o conversație.</div>
+      {/if}
+    </div>
+  </div>
 </div>
 
 <style>
-    .page {
-        padding: 10px 0 22px;
-    }
+  .page {
+    margin-left: 240px;
+    min-height: 100vh;
+    padding: 24px;
+    background: #f8fafc;
+  }
 
-    .page__header {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 14px;
-        margin: 6px 0 14px;
-    }
+  .page__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
 
-    .page__title {
-        margin: 0;
-        font-weight: 900;
-        letter-spacing: -0.02em;
-        color: var(--desaga-brown);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 1.6rem;
-        line-height: 1.2;
-    }
+  .page__head h1 { margin: 0; font-weight: 900; }
+  .page__head p { margin: 6px 0 0; color: rgba(0, 0, 0, 0.65); }
 
-    .page__icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        display: grid;
-        place-items: center;
-        background: rgba(0, 0, 0, 0.04);
-    }
+  .grid {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 16px;
+  }
 
-    .page__subtitle {
-        margin: 6px 0 0;
-        color: rgba(0, 0, 0, 0.55);
-    }
+  .panel {
+    background: white;
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  }
 
-    .page__actions {
-        display: flex;
-        gap: 10px;
-    }
-    .page__btn {
-        border-radius: 12px;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
+  .listPanel {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    max-height: calc(100vh - 120px);
+    overflow: auto;
+  }
 
-    .toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin: 10px 0 14px;
-    }
+  .conversationBtn {
+    text-align: left;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px;
+  }
 
-    .toolbar__search {
-        position: relative;
-        flex: 1 1 auto;
-        max-width: 560px;
-    }
+  .conversationBtn.selected {
+    border-color: rgba(38, 153, 214, 0.45);
+    background: rgba(38, 153, 214, 0.06);
+  }
 
-    .toolbar__search > i {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: rgba(0, 0, 0, 0.45);
-    }
+  .conversationBtn__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
 
-    .toolbar__input {
-        padding-left: 38px;
-        border-radius: 14px;
-    }
+  .conversationBtn__subject {
+    margin-top: 6px;
+    font-weight: 700;
+  }
 
-    .toolbar__meta {
-        flex: 0 0 auto;
-        display: inline-flex;
-        gap: 8px;
-        align-items: center;
-    }
+  .conversationBtn__message {
+    margin-top: 6px;
+    color: rgba(0, 0, 0, 0.65);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 
-    .tablecard {
-        border-radius: 16px;
-        overflow: hidden;
-    }
+  .detailHead {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
 
-    .thead {
-        background: rgba(0, 0, 0, 0.015);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    }
+  .detailHead h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 900;
+  }
 
-    .muted {
-        color: rgba(0, 0, 0, 0.55);
-        font-weight: 600;
-    }
+  .detailActions {
+    display: flex;
+    gap: 8px;
+    align-items: start;
+  }
 
-    .row--unread {
-        background: rgba(255, 193, 7, 0.12);
-    }
+  .messages {
+    display: grid;
+    gap: 12px;
+    max-height: 55vh;
+    overflow: auto;
+    padding-right: 4px;
+  }
 
-    .name {
-        font-weight: 800;
-        color: rgba(0, 0, 0, 0.78);
-    }
-    .name__sub {
-        margin-top: 4px;
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-    .dot {
-        color: rgba(0, 0, 0, 0.35);
-    }
+  .message {
+    padding: 12px;
+    border-radius: 14px;
+  }
 
-    .msg__line {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
+  .message--user {
+    background: rgba(0, 0, 0, 0.04);
+  }
 
-    .empty {
-        border: 1px dashed rgba(0, 0, 0, 0.18);
-        border-radius: 16px;
-        padding: 18px 14px;
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        background: rgba(0, 0, 0, 0.015);
-    }
+  .message--admin {
+    background: rgba(38, 153, 214, 0.08);
+  }
 
-    .empty__icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 14px;
-        display: grid;
-        place-items: center;
-        background: rgba(0, 0, 0, 0.04);
-        color: rgba(0, 0, 0, 0.55);
-        flex: 0 0 auto;
-    }
+  .message__meta {
+    font-size: 0.82rem;
+    color: rgba(0, 0, 0, 0.6);
+    margin-bottom: 6px;
+  }
 
-    .form-control:focus,
-    .form-select:focus {
-        border-color: var(--desaga-green);
-        box-shadow: 0 0 0 0.2rem rgba(118, 236, 30, 0.25);
-    }
+  .replyBox {
+    margin-top: 16px;
+  }
 
-    @media (max-width: 576px) {
-        .page__actions {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        .page__btn {
-            justify-content: center;
-        }
-        .toolbar {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        .toolbar__search {
-            max-width: none;
-        }
-    }
+  .replyActions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+
+  .muted { color: rgba(0, 0, 0, 0.65); }
 </style>

@@ -1,7 +1,19 @@
-// src/routes/api/auth/logout/+server.ts
 import { json } from '@sveltejs/kit';
+import { clearSessionCookie, getRequestMeta, logoutSession } from '$lib/server/auth';
+import { SESSION_COOKIE_NAME } from '$lib/server/supabase';
 
-export function POST({ cookies }) {
-  cookies.delete('admin', { path: '/' });
+export async function POST({ request, cookies }) {
+  const token = cookies.get(SESSION_COOKIE_NAME);
+
+  if (token) {
+    try {
+      await logoutSession(token, getRequestMeta(request));
+    } catch (error) {
+      console.error('Logout failed', error);
+    }
+  }
+
+  clearSessionCookie(cookies);
   return json({ success: true }, { status: 200 });
 }
+

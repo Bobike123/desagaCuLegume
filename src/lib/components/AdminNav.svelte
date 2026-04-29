@@ -1,43 +1,50 @@
-<!-- FILE: src/lib/components/AdminNav.svelte -->
 <script lang="ts">
-  import { page } from "$app/stores";
-  import { logout } from "$lib/stores/auth";
-
-  async function handleLogout() {
-    await logout();
-  }
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
+  import { auth } from '$lib/stores/auth';
 
   const links = [
     {
-      href: "/admin/dashboard",
-      label: "Dashboard",
-      icon: "bi-house",
-      active: (p: string) => p === "/admin/dashboard",
+      href: '/admin/dashboard',
+      label: 'Dashboard',
+      icon: 'bi-house',
+      active: (path: string) => path === '/admin/dashboard',
     },
     {
-      href: "/admin/produse",
-      label: "Produse",
-      icon: "bi-box",
-      active: (p: string) => p.startsWith("/admin/produse"),
+      href: '/admin/produse',
+      label: 'Produse',
+      icon: 'bi-box',
+      active: (path: string) => path.startsWith('/admin/produse'),
     },
     {
-      href: "/admin/evenimente",
-      label: "Evenimente",
-      icon: "bi-calendar-event",
-      active: (p: string) => p.startsWith("/admin/evenimente"),
+      href: '/admin/comenzi',
+      label: 'Comenzi',
+      icon: 'bi-receipt',
+      active: (path: string) => path.startsWith('/admin/comenzi'),
     },
     {
-      href: "/admin/messages",
-      label: "Mesaje",
-      icon: "bi-inbox",
-      active: (p: string) => p.startsWith("/admin/messages"),
+      href: '/admin/messages',
+      label: 'Mesaje',
+      icon: 'bi-chat-dots',
+      active: (path: string) => path.startsWith('/admin/messages'),
+    },
+    {
+      href: '/admin/evenimente',
+      label: 'Evenimente',
+      icon: 'bi-calendar-event',
+      active: (path: string) => path.startsWith('/admin/evenimente'),
     },
   ];
+
+  async function handleLogout() {
+    await auth.logout();
+    await goto('/admin/login');
+  }
 </script>
 
 <nav class="adminNav">
   <div class="adminNav__brand">
-    <i class="bi bi-gear"></i>
+    <i class="bi bi-shield-lock"></i>
     <span>Admin</span>
   </div>
 
@@ -104,6 +111,7 @@
     background: transparent;
     border: none;
     cursor: pointer;
+    width: 100%;
   }
 
   .adminNav a:hover,
@@ -112,8 +120,8 @@
   }
 
   .adminNav a.active {
-    background: rgba(6, 100, 35, 0.12);
-    color: var(--desaga-brown);
+    background: rgba(38, 153, 214, 0.12);
+    color: var(--desaga-blue);
   }
 
   .adminNav__logout {

@@ -1,543 +1,151 @@
-<!-- FILE: src/routes/admin/dashboard/+page.svelte -->
-
-<!-- src/routes/admin/dashboard/+page.svelte -->
 <script lang="ts">
-  import { goto } from "$app/navigation";
-  import { onMount } from "svelte";
+  import { onMount } from 'svelte';
+  import AdminNav from '$lib/components/AdminNav.svelte';
 
-  interface Stats {
-    totalProducts: number;
-    totalNews: number;
-    totalEvents: number;
-    inStock: number;
-    totalMessages: number;
+  type DashboardState = {
+    products: number;
+    orders: number;
+    messages: number;
     unreadMessages: number;
-  }
+  };
 
-  let stats: Stats = {
-    totalProducts: 0,
-    totalNews: 0,
-    totalEvents: 0,
-    inStock: 0,
-    totalMessages: 0,
+  let stats: DashboardState = {
+    products: 0,
+    orders: 0,
+    messages: 0,
     unreadMessages: 0,
   };
 
   let loading = true;
-  let errorMsg: string | null = null;
+  let error = '';
 
   async function loadDashboard() {
     loading = true;
-    errorMsg = null;
+    error = '';
 
     try {
-      const [productsRes, evenimenteRes, messagesRes] = await Promise.all([
-        fetch("/api/products"),
-        fetch("/api/evenimente"),
-        fetch("/api/messages"),
+      const [productsRes, ordersRes, messagesRes] = await Promise.all([
+        fetch('/api/products'),
+        fetch('/api/orders'),
+        fetch('/api/messages'),
       ]);
 
-      if (productsRes.ok) {
-        const products: { in_stock: boolean }[] = await productsRes.json();
-        stats.totalProducts = products.length;
-        stats.inStock = products.filter((p) => p.in_stock).length;
-      } else {
-        stats.totalProducts = 0;
-        stats.inStock = 0;
+      const productsData = await productsRes.json().catch(() => ({}));
+      const ordersData = await ordersRes.json().catch(() => ({}));
+      const messagesData = await messagesRes.json().catch(() => ({}));
+
+      if (!productsRes.ok || !ordersRes.ok || !messagesRes.ok) {
+        throw new Error(productsData?.error ?? ordersData?.error ?? messagesData?.error ?? 'Nu am putut încărca dashboard-ul.');
       }
 
-      if (evenimenteRes.ok) {
-        const events: unknown[] = await evenimenteRes.json();
-        stats.totalEvents = events.length;
-      } else {
-        stats.totalEvents = 0;
-      }
-
-      if (messagesRes.ok) {
-        const payload: { items: { read?: boolean }[] } =
-          await messagesRes.json();
-        stats.totalMessages = payload.items.length;
-        stats.unreadMessages = payload.items.filter((m) => !m.read).length;
-      } else {
-        stats.totalMessages = 0;
-        stats.unreadMessages = 0;
-      }
-    } catch (e) {
-      errorMsg = "Nu am putut încărca datele dashboard-ului.";
-      console.error("Error loading dashboard:", e);
+      stats.products = Array.isArray(productsData?.items) ? productsData.items.length : 0;
+      stats.orders = Array.isArray(ordersData?.items) ? ordersData.items.length : 0;
+      stats.messages = Array.isArray(messagesData?.items) ? messagesData.items.length : 0;
+      stats.unreadMessages = Array.isArray(messagesData?.items)
+        ? messagesData.items.reduce((sum: number, item: any) => sum + Number(item.unreadCount ?? 0), 0)
+        : 0;
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Nu am putut încărca dashboard-ul.';
     } finally {
       loading = false;
     }
   }
 
   onMount(loadDashboard);
-
-  function open(path: string) {
-    goto(path);
-  }
-
-  function roDate(value: unknown) {
-    if (!value) return "N/A";
-    try {
-      return new Date(value as string | Date).toLocaleDateString("ro-RO", {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-      });
-    } catch {
-      return "N/A";
-    }
-  }
 </script>
 
 <svelte:head>
   <title>Dashboard - Admin DeSaga</title>
 </svelte:head>
 
-<div class="dash">
-  <header class="dash__header">
+<AdminNav />
+
+<div class="page">
+  <div class="page__head">
     <div>
-      <h1 class="dash__title">
-        <span class="dash__icon" aria-hidden="true">
-          <i class="bi bi-house"></i>
-        </span>
-        Dashboard
-      </h1>
-      <p class="dash__subtitle">Bine ai venit!</p>
+      <h1>Dashboard</h1>
+      <p>Produse, comenzi și conversații din baza nouă de date.</p>
     </div>
+    <button class="btn btn-outline-secondary" on:click={loadDashboard} disabled={loading}>
+      <i class="bi bi-arrow-clockwise"></i> Reîncarcă
+    </button>
+  </div>
 
-    <div class="dash__headerActions">
-      <button
-        type="button"
-        class="btn btn-outline-secondary dash__refresh"
-        on:click={loadDashboard}
-        disabled={loading}
-      >
-        <i class="bi bi-arrow-clockwise"></i>
-        <span>Reîncarcă</span>
-      </button>
-    </div>
-  </header>
-
-  {#if errorMsg}
-    <div
-      class="alert alert-warning d-flex align-items-center gap-2 mb-4"
-      role="alert"
-    >
-      <i class="bi bi-exclamation-triangle"></i>
-      <div>{errorMsg}</div>
-    </div>
+  {#if error}
+    <div class="alert alert-danger">{error}</div>
   {/if}
 
-  <section class="dash__cards">
-    <button
-      type="button"
-      class="statcard"
-      on:click={() => open("/admin/produse")}
-      disabled={loading}
-      aria-label="Mergi la Produse"
-    >
-      <div class="statcard__top">
-        <div class="statcard__icon statcard__icon--blue">
-          <i class="bi bi-box"></i>
-        </div>
-        <div class="statcard__label">Produse</div>
-      </div>
-
-      <div class="statcard__value">
-        {#if loading}
-          <span class="placeholder-glow"
-            ><span class="placeholder col-6"></span></span
-          >
-        {:else}
-          {stats.totalProducts}
-        {/if}
-      </div>
-
-      <div class="statcard__meta">
-        <span class="badge text-bg-light border">
-          {#if loading}…{:else}{stats.inStock} în stoc{/if}
-        </span>
-        <span class="statcard__chev" aria-hidden="true"
-          ><i class="bi bi-chevron-right"></i></span
-        >
-      </div>
-    </button>
-    <button
-      type="button"
-      class="statcard"
-      on:click={() => open("/admin/evenimente")}
-      disabled={loading}
-      aria-label="Mergi la Evenimente"
-    >
-      <div class="statcard__top">
-        <div class="statcard__icon statcard__icon--blue">
-          <i class="bi bi-calendar-event"></i>
-        </div>
-        <div class="statcard__label">Evenimente</div>
-      </div>
-
-      <div class="statcard__value">
-        {#if loading}
-          <span class="placeholder-glow"
-            ><span class="placeholder col-4"></span></span
-          >
-        {:else}
-          {stats.totalEvents}
-        {/if}
-      </div>
-
-      <div class="statcard__meta">
-        <span class="badge text-bg-light border">Total</span>
-        <span class="statcard__chev" aria-hidden="true"
-          ><i class="bi bi-chevron-right"></i></span
-        >
-      </div>
-    </button>
-
-    <button
-      type="button"
-      class="statcard"
-      on:click={() => open("/admin/messages")}
-      disabled={loading}
-      aria-label="Mergi la Mesaje"
-    >
-      <div class="statcard__top">
-        <div class="statcard__icon statcard__icon--green">
-          <i class="bi bi-chat-dots"></i>
-        </div>
-        <div class="statcard__label">Mesaje</div>
-      </div>
-
-      <div class="statcard__value">
-        {#if loading}
-          <span class="placeholder-glow"
-            ><span class="placeholder col-6"></span></span
-          >
-        {:else}
-          {stats.totalMessages}
-        {/if}
-      </div>
-
-      <div class="statcard__meta">
-        {#if loading}
-          <span class="badge text-bg-light border">…</span>
-        {:else if stats.unreadMessages > 0}
-          <span class="badge text-bg-danger"
-            >{stats.unreadMessages} necitit</span
-          >
-        {:else}
-          <span class="badge text-bg-success">Nimic nou</span>
-        {/if}
-        <span class="statcard__chev" aria-hidden="true"
-          ><i class="bi bi-chevron-right"></i></span
-        >
-      </div>
-    </button>
-  </section>
-
-  <section class="dash__grid">
-    <div class="panel">
-      <div class="panel__head">
-        <h2 class="panel__title">
-          <i class="bi bi-lightning-charge"></i>
-          Acțiuni rapide
-        </h2>
-      </div>
-
-      <div class="panel__body">
-        <div class="quick">
-          <a class="quick__item" href="/admin/produse/new">
-            <div class="quick__left">
-              <span class="quick__icon"><i class="bi bi-plus-circle"></i></span>
-              <div>
-                <div class="quick__title">Adaugă produs</div>
-                <div class="quick__sub">Crează un nou produs</div>
-              </div>
-            </div>
-            <i class="bi bi-arrow-right-short quick__arrow" aria-hidden="true"
-            ></i>
-          </a>
-
-          <a class="quick__item" href="/admin/evenimente/new">
-            <div class="quick__left">
-              <span class="quick__icon"><i class="bi bi-plus-circle"></i></span>
-              <div>
-                <div class="quick__title">Adaugă eveniment</div>
-                <div class="quick__sub">Crează un nou eveniment</div>
-              </div>
-            </div>
-            <i class="bi bi-arrow-right-short quick__arrow" aria-hidden="true"
-            ></i>
-          </a>
-
-          <a class="quick__item" href="/admin/messages">
-            <div class="quick__left">
-              <span class="quick__icon"><i class="bi bi-inbox"></i></span>
-              <div>
-                <div class="quick__title">Mesaje</div>
-                <div class="quick__sub">
-                  Vezi mesajele din formularul de contact
-                </div>
-              </div>
-            </div>
-            <i class="bi bi-arrow-right-short quick__arrow" aria-hidden="true"
-            ></i>
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
+  <div class="cards">
+    <a class="cardStat" href="/admin/produse">
+      <div class="cardStat__label">Produse</div>
+      <div class="cardStat__value">{loading ? '…' : stats.products}</div>
+    </a>
+    <a class="cardStat" href="/admin/comenzi">
+      <div class="cardStat__label">Comenzi</div>
+      <div class="cardStat__value">{loading ? '…' : stats.orders}</div>
+    </a>
+    <a class="cardStat" href="/admin/messages">
+      <div class="cardStat__label">Conversații</div>
+      <div class="cardStat__value">{loading ? '…' : stats.messages}</div>
+      <div class="cardStat__meta">{loading ? '…' : `${stats.unreadMessages} mesaje necitite`}</div>
+    </a>
+  </div>
 </div>
 
 <style>
-  .dash {
-    padding: 6px 0 12px;
+  .page {
+    margin-left: 240px;
+    min-height: 100vh;
+    padding: 24px;
+    background: #f8fafc;
   }
 
-  .dash__header {
+  .page__head {
     display: flex;
-    align-items: flex-start;
     justify-content: space-between;
+    align-items: center;
     gap: 16px;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
   }
 
-  .dash__title {
+  .page__head h1 {
     margin: 0;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--desaga-brown);
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    font-size: 1.75rem;
-    line-height: 1.2;
-  }
-
-  .dash__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    display: grid;
-    place-items: center;
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  .dash__subtitle {
-    margin: 6px 0 0;
-    color: rgba(0, 0, 0, 0.55);
-  }
-
-  .dash__headerActions {
-    display: flex;
-    gap: 10px;
-  }
-
-  .dash__refresh {
-    border-radius: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .dash__cards {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 18px;
-  }
-
-  .statcard {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: #fff;
-    border-radius: 16px;
-    padding: 14px;
-    text-align: left;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
-    transition:
-      transform 120ms ease,
-      box-shadow 120ms ease,
-      border-color 120ms ease;
-    cursor: pointer;
-    min-height: 122px;
-  }
-
-  .statcard:disabled {
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
-
-  .statcard:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
-    border-color: rgba(0, 0, 0, 0.12);
-  }
-
-  .statcard__top {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .statcard__icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    font-size: 1.2rem;
-    background: rgba(0, 0, 0, 0.04);
-    color: var(--desaga-green);
-  }
-
-  .statcard__icon--green {
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  .statcard__label {
-    color: rgba(0, 0, 0, 0.55);
-    font-weight: 600;
-    letter-spacing: 0.01em;
-  }
-
-  .statcard__value {
-    margin-top: 10px;
-    font-size: 2rem;
     font-weight: 900;
-    color: var(--desaga-brown);
-    letter-spacing: -0.02em;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
   }
 
-  .statcard__meta {
-    margin-top: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+  .page__head p {
+    margin: 6px 0 0;
+    color: rgba(0, 0, 0, 0.65);
   }
 
-  .statcard__chev {
-    color: rgba(0, 0, 0, 0.35);
-    font-size: 0.95rem;
-  }
-
-  .dash__grid {
+  .cards {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-top: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
   }
 
-  .panel {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-  }
-
-  .panel__head {
-    padding: 14px 14px 10px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    background: rgba(0, 0, 0, 0.015);
-  }
-
-  .panel__title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 800;
-    color: var(--desaga-brown);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .panel__body {
-    padding: 12px 14px 14px;
-  }
-
-  .quick {
-    display: grid;
-    gap: 10px;
-  }
-
-  .quick__item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 12px;
-    border: 1px solid rgba(0, 0, 0, 0.07);
-    border-radius: 14px;
+  .cardStat {
+    background: white;
+    border-radius: 18px;
+    padding: 20px;
     text-decoration: none;
     color: inherit;
-    background: #fff;
-    transition:
-      transform 120ms ease,
-      box-shadow 120ms ease,
-      border-color 120ms ease;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
   }
 
-  .quick__item:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
-    border-color: rgba(0, 0, 0, 0.12);
+  .cardStat__label {
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.65);
   }
 
-  .quick__left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
+  .cardStat__value {
+    font-size: 2rem;
+    font-weight: 900;
+    margin-top: 8px;
   }
 
-  .quick__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: rgba(0, 0, 0, 0.04);
-    color: var(--desaga-green);
-    flex: 0 0 auto;
-  }
-
-  .quick__title {
-    font-weight: 800;
-    color: rgba(0, 0, 0, 0.78);
-    line-height: 1.15;
-  }
-
-  .quick__sub {
-    color: rgba(0, 0, 0, 0.55);
-    font-size: 0.9rem;
-  }
-
-  .quick__arrow {
-    color: rgba(0, 0, 0, 0.35);
-    font-size: 1.25rem;
-    flex: 0 0 auto;
-  }
-  @media (max-width: 992px) {
-    .dash__cards {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .dash__grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 420px) {
-    .dash__cards {
-      grid-template-columns: 1fr;
-    }
+  .cardStat__meta {
+    margin-top: 8px;
+    color: rgba(0, 0, 0, 0.65);
   }
 </style>

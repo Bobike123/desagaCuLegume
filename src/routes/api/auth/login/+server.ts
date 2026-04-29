@@ -1,21 +1,47 @@
-// src/routes/api/auth/login/+server.ts
 import { json } from '@sveltejs/kit';
-import { VITE_ADMIN_EMAIL, VITE_ADMIN_PASSWORD } from '$env/static/private';
+import {
+  createSession,
+  findUserByIdentity,
+  getRequestMeta,
+  getRolesForUser,
+  setSessionCookie,
+  verifyPassword,
+} from '$lib/server/auth';
 
 export async function POST({ request, cookies }) {
-  const { username, password } = await request.json();
+  const body = await request.json().catch(() => ({}));
+  const identity = String(body.identity ?? body.email ?? body.username ?? '').trim();
+  const password = String(body.password ?? '');
+  const requireAdmin = Boolean(body.requireAdmin);
 
-  if (username !== VITE_ADMIN_EMAIL || password !== VITE_ADMIN_PASSWORD) {
-    return json({ error: 'Credențiale invalide' }, { status: 401 });
+  if (!identity || !password) {
+    return json({ error: 'Email sau username și parola sunt obligatorii.' }, { status: 400 });
   }
 
-  cookies.set('admin', '1', {
-    path: '/',
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24
-  });
+  try {
+    const user = await findUserByIdentity(identity);
 
-  return json({ success: true });
+    if (!user || user.status !== 'ACTIVE') {
+      return json({ error: 'Credențiale invalide.' }, { status: 401 });
+    }
+
+    if (!verifyPassword(password, user.password_hash)) {
+      return json({ error: 'Credențiale invalide.' }, { status: 401 });
+    }
+
+    const roles = await getRolesForUser(user.user_id);
+
+    if (requireAdmin && !roles.includes('ADMIN')) {
+      return json({ error: 'Contul nu are privilegii de administrator.' }, { status: 403 });
+    }
+
+    const meta = getRequestMeta(request);
+    const { token } = await createSession(user.user_id, meta);
+    setSessionCookie(cookies, token);
+
+    return json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error('Login failed', error);
+    return json({ error: 'Autentificarea a eșuat.' }, { status: 500 });
+  }
 }
