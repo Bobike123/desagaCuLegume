@@ -1,214 +1,280 @@
-<!-- FILE: src/routes/despre-noi/+page.svelte -->
+
 <script lang="ts">
-  import Hero from "$lib/components/Hero.svelte";
+  import Hero from '$lib/components/Hero.svelte';
+
+  const phoneHref = 'tel:+40729969822';
+
+  type QuickInfoItem = { icon: string; label: string; href?: string };
+  type ProductGroup = { title: string; icon: string; href: string };
 
   const stats = [
-    { value: "2500", label: "m² de solarii", icon: "bi-house-heart" },
-    { value: "10+", label: "ani experiență", icon: "bi-award" },
-    { value: "100%", label: "produse locale", icon: "bi-geo-alt" },
-    { value: "20+", label: "colaboratori", icon: "bi-people" },
+    { value: '2.500 m²', label: 'solarii lucrate', icon: 'bi-house-heart' },
+    { value: '2016', label: 'primul sezon', icon: 'bi-calendar-heart' },
+    { value: '20+', label: 'colaboratori locali', icon: 'bi-people' },
+    { value: 'zilnic', label: 'stoc după recoltă', icon: 'bi-arrow-repeat' },
   ] as const;
 
   const principles = [
     {
-      title: "Local",
-      text: "Sprijinim producători locali și păstrăm un lanț scurt, corect.",
-      icon: "bi-geo-alt-fill",
+      title: 'Lanț scurt',
+      text: 'Produsele ajung rapid din fermă și de la colaboratori locali la rulota DeSaga.',
+      icon: 'bi-signpost-split',
     },
     {
-      title: "Gustos",
-      text: "Gustul vine din ingrediente bune, nu din artificii.",
-      icon: "bi-emoji-smile",
+      title: 'Sezon real',
+      text: 'Stocul se schimbă în funcție de recoltă. Nu promitem produse care nu sunt disponibile.',
+      icon: 'bi-calendar2-week',
     },
     {
-      title: "Sănătos",
-      text: "Respectăm ritmul naturii și lucrăm responsabil.",
-      icon: "bi-shield-check",
+      title: 'Gust înainte de volum',
+      text: 'Alegem produse pentru prospețime, gust și utilitate în bucătăria de zi cu zi.',
+      icon: 'bi-emoji-smile',
     },
     {
-      title: "Sustenabil",
-      text: "Alegem soluții care protejează solul și resursele.",
-      icon: "bi-recycle",
+      title: 'Comunitate locală',
+      text: 'Lucrăm cu oameni din zonă și păstrăm o relație directă cu clienții.',
+      icon: 'bi-heart',
     },
   ] as const;
 
   const timeline = [
     {
-      year: "2016",
-      title: "Primul pas",
-      text: "Am început schimbarea în 2016 când în timpul liber și în weekend dădeam o mână de ajutor la Ferma de legume a unei rude la Jucu. A fost suficient un sezon agricol să ne dăm seama că asta ne dorim.",
+      year: '2016',
+      title: 'Primul contact cu ferma',
+      text: 'În weekenduri și în timpul liber am început să ajutăm la o fermă de legume din Jucu. După un sezon agricol, direcția era clară.',
     },
     {
-      year: "2017–2018",
-      title: "Găsirea liniștii",
-      text: "Ne-am găsit liniștea în mijlocul naturii: munca fizică ne golea mintea de stresul zilnic și ne încărca bateriile. Soare, păsărele, zumzetul albinuțelor… și împlinirea de fiecare dată când punem pe masă o salată crescută de noi, din stadiul de sămânță.",
+      year: '2017–2018',
+      title: 'Ritm mai simplu',
+      text: 'Munca în aer liber, liniștea din natură și satisfacția de a pune pe masă ceva crescut de la sămânță au schimbat felul în care vedeam munca.',
     },
     {
-      year: "2019",
-      title: "Decizia mare",
-      text: "În scurt timp am știut că asta e ceea ce trebuie să facem, am lăsat în urmă un job stabil ce ne aducea un venit constant, lunar și am preluat în mod oficial Ferma de la Jucu. Am botezat-o Desaga cu legume, am investit în ea TOTUL. Timpul, banii, toate resursele noastre.",
+      year: '2019',
+      title: 'DeSaga cu Legume',
+      text: 'Am preluat oficial ferma de la Jucu, am numit-o DeSaga cu Legume și am investit timpul, banii și energia în proiect.',
     },
     {
-      year: "Astăzi",
-      title: "Misiunea Noastra",
-      text: "Să pui suflet în ceea ce faci, inclusiv în formarea și păstrarea unei mici comunități, îți dă un sentiment de împlinire care te ajută să treci peste greutăți mai ușor. Și împreună.",
+      year: 'Astăzi',
+      title: 'Rulota și comunitatea',
+      text: 'Aducem produse locale la rulota din Cluj-Napoca și construim o mică rețea de clienți și producători care apreciază gustul simplu și corect.',
     },
   ] as const;
 
-  const quickInfo = [
+  const quickInfo: QuickInfoItem[] = [
     {
-      icon: "bi-geo-alt-fill",
-      text: "Cluj-Napoca, Str. Constantin Brâncuși nr. 153",
+      icon: 'bi-geo-alt-fill',
+      label: 'Str. Constantin Brâncuși nr. 153, Cluj-Napoca',
+      href: '/contact',
     },
-    { icon: "bi-clock-fill", text: "L–V: 9:00 – 18:00" },
-    { icon: "bi-telephone-fill", text: "+40 729 969 822" },
-  ] as const;
+    { icon: 'bi-clock-fill', label: 'L–V: 9:00–18:00' },
+    { icon: 'bi-telephone-fill', label: '+40 729 969 822', href: phoneHref },
+  ];
+
+  const productGroups: ProductGroup[] = [
+    { title: 'Legume și fructe de sezon', icon: '', href: '/produse/de-sezon' },
+    { title: 'Produse la borcan', icon: '', href: '/produse/la-borcan' },
+    { title: 'Produse de la colaboratori', icon: '', href: '/produse/colaboratori' },
+    { title: 'Oferte HORECA', icon: '', href: '/horeca' },
+  ];
 </script>
 
 <svelte:head>
-  <title>Despre Noi - DeSaga cu Legume</title>
+  <title>Despre noi - DeSaga cu Legume</title>
+  <meta
+    name="description"
+    content="Povestea DeSaga cu Legume: fermă locală, produse de sezon, colaboratori locali și rulota DeSaga din Cluj-Napoca."
+  />
 </svelte:head>
 
 <Hero
-  title="Despre Noi"
-  subtitle="Haideți să ne cunoaștem"
+  title="Despre DeSaga cu Legume"
+  subtitle="O fermă locală crescută din muncă, sezon, gust și relații directe cu oamenii din comunitate."
+  eyebrow="Din fermă. Direct la rulota DeSaga."
+  primaryHref="/produse"
+  primaryLabel="Vezi produsele"
+  secondaryHref={phoneHref}
+  secondaryLabel="Sună pentru stoc"
+  facts={quickInfo}
   backgroundImage=""
-  height="320px"
+  height="360px"
 />
 
-<!-- Top: concise intro + sidebar -->
-<section class="py-5">
+<section class="section section-intro">
   <div class="container">
-    <div class="row g-4 align-items-stretch">
-      <!-- Left: intro + principles (compact) -->
-      <div class="col-lg-7">
-        <div class="panel">
-          <div
-            class="panel-head d-flex align-items-center justify-content-between gap-2 flex-wrap"
-          >
-            <h2 class="h4 fw-bold m-0">
-              <i class="bi bi-leaf"></i> Povestea noastră
-            </h2>
+    <div class="intro-grid">
+      <article class="panel story-panel">
+        <div class="section-kicker">
+          <i class="bi "></i>
+          Povestea noastră
+        </div>
 
-            <div class="d-flex gap-2 flex-wrap">
-              <a href="/produse" class="btn btn-accent btn-sm">
-                <i class="bi bi-box"></i> Produse
-              </a>
-              <a href="/contact" class="btn btn-outline-accent btn-sm">
-                <i class="bi bi-chat-dots"></i> Contact
-              </a>
-            </div>
+        <h2>Doi orășeni care au ales ferma, nu vitrina perfectă.</h2>
+
+        <p class="lead-text">
+          DeSaga cu Legume a pornit din dorința de a lucra cu mâinile, de a vedea
+          rezultatul în sol și de a pune pe masă produse care au gust.
+        </p>
+
+        <p>
+          Ferma, rulota și colaboratorii locali formează același traseu simplu:
+          produse crescute sau alese cu grijă, aduse aproape de oamenii din
+          Cluj-Napoca. Stocul se schimbă des, iar asta este normal pentru un loc
+          care lucrează cu sezonul, nu împotriva lui.
+        </p>
+
+        <div class="story-actions">
+          <a class="btn btn-accent" href="/produse">
+            <i class="bi bi-basket"></i>
+            Cumpără local
+          </a>
+          <a class="btn btn-outline-accent" href="/contact">
+            <i class="bi bi-geo-alt"></i>
+            Unde ne găsești
+          </a>
+        </div>
+      </article>
+
+      <aside class="panel panel-soft trust-panel" aria-label="Informații rapide">
+        <div class="farm-visual" aria-hidden="true">
+          <div class="farm-visual__sun"></div>
+          <div class="farm-visual__rows">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
           </div>
-
-          <p class="lead mb-4">
-            Doi orășeni cu drag de natură care au ales un ritm mai simplu: muncă
-            în aer liber, legume curate, comunitate.
-          </p>
-
-          <div class="section-head">
-            <h3 class="h6 fw-bold m-0 text-muted">
-              <i class="bi bi-compass"></i> Principii
-            </h3>
-          </div>
-
-          <div class="row g-3 align-items-stretch">
-            {#each principles as p (p.title)}
-              <div class="col-12 col-md-6 d-flex">
-                <div class="mini-card w-100">
-                  <div class="mini-icon">
-                    <i class={"bi " + p.icon}></i>
-                  </div>
-                  <div class="mini-title">{p.title}</div>
-                  <div class="mini-text">{p.text}</div>
-                </div>
-              </div>
-            {/each}
+          <div class="farm-visual__label">
+            <i class="bi bi-shop-window"></i>
+            Rulota DeSaga
           </div>
         </div>
-      </div>
 
-      <!-- Right: image + quick info + single line value prop -->
-      <div class="col-lg-5">
-        <div class="panel panel-soft h-100">
-          <div class="media-card">
-            <img src="" alt="Solarii DeSaga" class="media-img" />
-          </div>
-
-          <div class="mt-3 small-note">
-            {#each quickInfo as item (item.text)}
-              <div class="note-row">
-                <i class={"bi " + item.icon}></i>
-                <span>{item.text}</span>
+        <div class="quick-list">
+          {#each quickInfo as item (item.label)}
+            {#if item.href}
+              <a class="quick-row" href={item.href}>
+                <i class={'bi ' + item.icon}></i>
+                <span>{item.label}</span>
+              </a>
+            {:else}
+              <div class="quick-row">
+                <i class={'bi ' + item.icon}></i>
+                <span>{item.label}</span>
               </div>
-            {/each}
-          </div>
-
-          <div class="mt-4 tip">
-            <div class="tip-icon"><i class="bi bi-info-circle"></i></div>
-            <div class="tip-text">
-              Din fermă direct la tine: local, gustos, sănătos, sustenabil.
-            </div>
-          </div>
+            {/if}
+          {/each}
         </div>
-      </div>
+      </aside>
     </div>
   </div>
 </section>
 
-<!-- Timeline + Facts (fixed layout) -->
-<section class="py-5 bg-soft">
+<section class="section bg-soft">
   <div class="container">
-    <div class="row g-4 align-items-stretch">
-      <!-- Timeline: half width -->
-      <div class="col-12 col-lg-9">
-        <div class="panel h-100">
-          <div class="section-head">
-            <h2 class="h4 fw-bold m-0">
-              <i class="bi bi-signpost-2"></i> Timeline
-            </h2>
-          </div>
-
-          <div class="timeline">
-            {#each timeline as step (step.year)}
-              <div class="tl-item">
-                <div class="tl-dot" aria-hidden="true"></div>
-                <div class="tl-card">
-                  <div class="tl-top">
-                    <span class="tl-year">{step.year}</span>
-                    <span class="tl-title">{step.title}</span>
-                  </div>
-                  <p class="tl-text">{step.text}</p>
-                </div>
-              </div>
-            {/each}
-          </div>
+    <div class="section-title">
+      <div>
+        <div class="section-kicker">
+          <i class="bi bi-shield-check"></i>
+          Încredere
         </div>
+        <h2>Ce promitem clar</h2>
       </div>
+      <a href="/contact" class="section-link">Contact rapid <i class="bi bi-arrow-right"></i></a>
+    </div>
 
-      <!-- Facts: half width -->
-      <div class="col-12 col-lg-3">
-        <div class="panel h-100">
-          <div class="section-head">
-            <h2 class="h4 fw-bold m-0">
-              <i class="bi bi-info-circle"></i> Facts
-            </h2>
+    <div class="principles-grid">
+      {#each principles as item (item.title)}
+        <article class="principle-card">
+          <span class="card-icon"><i class={'bi ' + item.icon}></i></span>
+          <h3>{item.title}</h3>
+          <p>{item.text}</p>
+        </article>
+      {/each}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="split-grid">
+      <article class="panel timeline-panel">
+        <div class="section-title section-title--compact">
+          <div>
+            <div class="section-kicker">
+              <i class="bi bi-signpost-2"></i>
+              Timeline
+            </div>
+            <h2>Cum a crescut DeSaga</h2>
+          </div>
+        </div>
+
+        <div class="timeline">
+          {#each timeline as step (step.year)}
+            <div class="timeline-item">
+              <div class="timeline-dot" aria-hidden="true"></div>
+              <div class="timeline-card">
+                <div class="timeline-top">
+                  <span class="timeline-year">{step.year}</span>
+                  <h3>{step.title}</h3>
+                </div>
+                <p>{step.text}</p>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </article>
+
+      <aside class="side-stack">
+        <div class="panel stats-panel">
+          <div class="section-kicker">
+            <i class="bi bi-info-circle"></i>
+            Pe scurt
           </div>
 
-          <div class="facts-grid">
-            {#each stats as s (s.label)}
-              <div class="fact-tile">
-                <div class="fact-tile-icon">
-                  <i class={"bi " + s.icon}></i>
-                </div>
-
-                <div class="fact-tile-body">
-                  <div class="fact-tile-value">{s.value}</div>
-                  <div class="fact-tile-label">{s.label}</div>
-                </div>
+          <div class="stats-grid">
+            {#each stats as stat (stat.label)}
+              <div class="stat-card">
+                <span class="stat-icon"><i class={'bi ' + stat.icon}></i></span>
+                <strong>{stat.value}</strong>
+                <span>{stat.label}</span>
               </div>
             {/each}
           </div>
         </div>
+
+        <div class="panel product-panel">
+          <div class="section-kicker">
+            <i class="bi bi-basket"></i>
+            Ce găsești la noi
+          </div>
+
+          <div class="product-links">
+            {#each productGroups as group (group.href)}
+              <a href={group.href}>
+                <span><i class={'bi ' + group.icon}></i> {group.title}</span>
+                <i class="bi bi-chevron-right"></i>
+              </a>
+            {/each}
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="section final-cta">
+  <div class="container">
+    <div class="cta-card">
+      <div>
+        <div class="section-kicker section-kicker--light">
+          <i class="bi bi-telephone-fill"></i>
+          Stocul se schimbă des
+        </div>
+        <h2>Sună sau treci pe la rulotă pentru produsele disponibile azi.</h2>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-light btn-lg" href={phoneHref}>Sună acum</a>
+        <a class="btn btn-outline-light btn-lg" href="/produse">Vezi produsele</a>
       </div>
     </div>
   </div>
@@ -220,278 +286,419 @@
     --accent-rgb: 36, 146, 204;
   }
 
+  .section {
+    padding: 3rem 0;
+  }
+
+  .section-intro {
+    padding-bottom: 2.25rem;
+  }
+
   .bg-soft {
     background: rgba(var(--accent-rgb), 0.06);
   }
 
-  .section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 1rem;
-  }
-
-  /* Panels */
-  .panel {
-    background: #fff;
-    border-radius: 18px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
-    padding: 16px;
-    height: 100%;
-  }
-
-  .panel-soft {
-    background: rgba(var(--accent-rgb), 0.06);
-    border-color: rgba(var(--accent-rgb), 0.18);
-  }
-
-  .panel-head {
-    margin-bottom: 10px;
-  }
-
-  /* =======================
-   FACTS (STACKED + SLIM)
-   ======================= */
-
-  .facts-grid {
+  .intro-grid,
+  .split-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 1rem;
   }
 
-  /* force vertical stacking at all breakpoints */
-  @media (min-width: 576px) {
-    .facts-grid {
-      grid-template-columns: 1fr;
+  @media (min-width: 992px) {
+    .intro-grid {
+      grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.75fr);
+      align-items: stretch;
+    }
+
+    .split-grid {
+      grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
+      align-items: start;
     }
   }
 
-  .fact-tile {
-    display: grid;
-    grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
-
-    gap: 6px;
-    padding: 10px 12px;
-    border-radius: 14px;
-
-    background: rgba(var(--accent-rgb), 0.06);
-    border: 1px solid rgba(var(--accent-rgb), 0.16);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
-
-    min-height: 0;
+  .panel {
+    height: 100%;
+    padding: 1.2rem;
+    border-radius: 22px;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
   }
 
-  .fact-tile-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: rgba(var(--accent-rgb), 0.14);
+  .panel-soft {
+    background: rgba(var(--accent-rgb), 0.07);
+    border-color: rgba(var(--accent-rgb), 0.18);
+  }
+
+  .story-panel h2,
+  .section-title h2,
+  .cta-card h2 {
+    margin: 0;
+    font-weight: 950;
+    letter-spacing: -0.035em;
+    color: #17212b;
+  }
+
+  .story-panel h2 {
+    max-width: 780px;
+    font-size: clamp(1.75rem, 4vw, 3rem);
+    line-height: 1.03;
+  }
+
+  .story-panel p {
+    color: rgba(0, 0, 0, 0.68);
+    line-height: 1.65;
+  }
+
+  .lead-text {
+    margin-top: 1rem;
+    font-size: 1.15rem;
+    color: rgba(0, 0, 0, 0.78) !important;
+  }
+
+  .section-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.75rem;
     color: var(--accent);
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: 0.055em;
+    font-size: 0.78rem;
   }
 
-  .fact-tile-body {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
+  .section-kicker--light {
+    color: rgba(255, 255, 255, 0.88);
   }
 
-  .fact-tile-value {
-    font-weight: 1000;
-    font-size: 1.25rem;
-    line-height: 1.05;
-    color: rgba(0, 0, 0, 0.88);
-    letter-spacing: -0.02em;
-  }
-
-  .fact-tile-label {
-    font-weight: 800;
-    font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.62);
-    line-height: 1.15;
-  }
-
-  /* Image block */
-  .media-card {
-    border-radius: 16px;
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-  }
-
-  .media-img {
-    width: 100%;
-    height: 240px;
-    object-fit: cover;
-    display: block;
-  }
-
-  .small-note {
-    display: grid;
-    gap: 8px;
-    padding: 10px 2px 0;
-  }
-
-  .note-row {
+  .story-actions,
+  .cta-actions {
     display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    font-weight: 600;
-    color: rgba(0, 0, 0, 0.72);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
   }
 
-  .note-row i {
+  .farm-visual {
+    position: relative;
+    min-height: 240px;
+    overflow: hidden;
+    border-radius: 18px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.08)),
+      linear-gradient(135deg, rgba(38, 153, 214, 0.28), rgba(93, 132, 71, 0.22));
+    border: 1px solid rgba(var(--accent-rgb), 0.16);
+  }
+
+  .farm-visual__sun {
+    position: absolute;
+    top: 28px;
+    right: 34px;
+    width: 68px;
+    height: 68px;
+    border-radius: 999px;
+    background: rgba(255, 211, 100, 0.88);
+    box-shadow: 0 0 0 18px rgba(255, 211, 100, 0.14);
+  }
+
+  .farm-visual__rows {
+    position: absolute;
+    inset: auto 0 0;
+    height: 58%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 0 22px 22px;
+    transform: perspective(280px) rotateX(48deg);
+    transform-origin: bottom;
+  }
+
+  .farm-visual__rows span {
+    border-radius: 999px 999px 10px 10px;
+    background: linear-gradient(180deg, rgba(47, 128, 73, 0.94), rgba(82, 55, 34, 0.78));
+  }
+
+  .farm-visual__label {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #17212b;
+    font-weight: 950;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  }
+
+  .quick-list {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 1rem;
+  }
+
+  .quick-row {
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+    padding: 0.85rem;
+    border-radius: 16px;
+    color: rgba(20, 33, 43, 0.82);
+    background: rgba(255, 255, 255, 0.68);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    text-decoration: none;
+    font-weight: 850;
+  }
+
+  .quick-row i {
     color: var(--accent);
     margin-top: 2px;
   }
 
-  .tip {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    padding: 12px 12px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.55);
-    border: 1px solid rgba(var(--accent-rgb), 0.18);
+  a.quick-row:hover,
+  a.quick-row:focus {
+    color: var(--accent);
+    background: #fff;
   }
 
-  .tip-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 14px;
+  .section-title {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .section-title--compact {
+    margin-bottom: 1rem;
+  }
+
+  .section-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .section-link:hover,
+  .section-link:focus {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .principles-grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .principles-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .principle-card {
+    min-height: 100%;
+    padding: 1rem;
+    border-radius: 20px;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .card-icon,
+  .stat-icon {
+    width: 44px;
+    height: 44px;
     display: grid;
     place-items: center;
-    background: rgba(var(--accent-rgb), 0.14);
+    border-radius: 16px;
     color: var(--accent);
-    flex: 0 0 auto;
+    background: rgba(var(--accent-rgb), 0.13);
   }
 
-  .tip-text {
-    font-weight: 700;
-    color: rgba(0, 0, 0, 0.72);
-    line-height: 1.35;
+  .principle-card h3 {
+    margin: 0.85rem 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 950;
   }
 
-  /* Timeline */
+  .principle-card p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.68);
+    line-height: 1.48;
+  }
+
   .timeline {
     display: grid;
-    gap: 12px;
+    gap: 1rem;
   }
 
-  .tl-item {
+  .timeline-item {
     display: grid;
-    grid-template-columns: 18px 1fr;
-    gap: 10px;
-    align-items: start;
+    grid-template-columns: 22px 1fr;
+    gap: 0.85rem;
     position: relative;
   }
 
-  .tl-dot {
+  .timeline-dot {
     width: 12px;
     height: 12px;
+    margin-top: 18px;
     border-radius: 999px;
-    margin-top: 12px;
     background: var(--accent);
-    box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.12);
-    position: relative;
+    box-shadow: 0 0 0 7px rgba(var(--accent-rgb), 0.12);
     justify-self: center;
+    position: relative;
     z-index: 1;
   }
 
-  .tl-dot::before {
-    content: "";
+  .timeline-dot::before {
+    content: '';
     position: absolute;
+    top: -42px;
+    bottom: -70px;
     left: 50%;
-    transform: translateX(-50%);
-    top: -24px;
-    bottom: -24px;
     width: 2px;
-    background: rgba(var(--accent-rgb), 0.22);
+    transform: translateX(-50%);
+    background: rgba(var(--accent-rgb), 0.2);
     z-index: -1;
   }
 
-  .timeline .tl-item:first-child .tl-dot::before {
+  .timeline-item:first-child .timeline-dot::before {
     top: 50%;
   }
 
-  .timeline .tl-item:last-child .tl-dot::before {
+  .timeline-item:last-child .timeline-dot::before {
     bottom: 50%;
   }
 
-  .tl-card {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 16px;
-    padding: 12px 14px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+  .timeline-card {
+    padding: 1rem;
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.025);
+    border: 1px solid rgba(15, 23, 42, 0.07);
   }
 
-  .tl-top {
+  .timeline-top {
     display: flex;
+    gap: 0.75rem;
     align-items: baseline;
-    gap: 10px;
-    margin-bottom: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 0.35rem;
   }
 
-  .tl-year {
-    font-weight: 900;
+  .timeline-year {
     color: var(--accent);
+    font-weight: 950;
   }
 
-  .tl-title {
-    font-weight: 900;
-    color: rgba(0, 0, 0, 0.84);
-  }
-
-  .tl-text {
+  .timeline-card h3 {
     margin: 0;
-    color: rgba(0, 0, 0, 0.7);
-    line-height: 1.45;
+    font-size: 1rem;
+    font-weight: 950;
   }
 
-  /* Principles mini cards */
-  .mini-card {
-    height: 100%;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 16px;
-    padding: 14px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
+  .timeline-card p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.68);
+    line-height: 1.55;
   }
 
-  .mini-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 14px;
+  .side-stack {
     display: grid;
-    place-items: center;
-    background: rgba(var(--accent-rgb), 0.14);
-    color: var(--accent);
-    margin-bottom: 10px;
-    flex: 0 0 auto;
+    gap: 1rem;
   }
 
-  .mini-title {
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.9rem;
+    border-radius: 18px;
+    background: rgba(var(--accent-rgb), 0.06);
+    border: 1px solid rgba(var(--accent-rgb), 0.14);
+  }
+
+  .stat-card strong {
+    font-size: 1.25rem;
+    font-weight: 1000;
+    line-height: 1;
+  }
+
+  .stat-card span:last-child {
+    color: rgba(0, 0, 0, 0.62);
+    font-weight: 850;
+    line-height: 1.2;
+  }
+
+  .product-links {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .product-links a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.82rem;
+    border-radius: 16px;
+    color: rgba(20, 33, 43, 0.82);
+    background: rgba(15, 23, 42, 0.025);
+    border: 1px solid rgba(15, 23, 42, 0.07);
+    text-decoration: none;
     font-weight: 900;
-    margin-bottom: 4px;
+  }
+
+  .product-links a:hover,
+  .product-links a:focus {
+    color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.08);
+  }
+
+  .final-cta {
+    padding-top: 0;
+  }
+
+  .cta-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    border-radius: 24px;
+    color: #fff;
+    background:
+      radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 22rem),
+      var(--desaga-blue);
+    box-shadow: 0 18px 42px rgba(38, 153, 214, 0.24);
+  }
+
+  .cta-card h2 {
+    max-width: 680px;
+    color: #fff;
+    font-size: clamp(1.45rem, 3vw, 2.25rem);
+  }
+
+  .cta-actions {
+    margin: 0;
     flex: 0 0 auto;
   }
 
-  .mini-text {
-    color: rgba(0, 0, 0, 0.7);
-    line-height: 1.4;
-    font-size: 0.95rem;
-    flex: 1 1 auto;
+  .cta-actions .btn {
+    border-radius: 999px;
+    font-weight: 950;
   }
 
-  /* Buttons */
   :global(.btn-accent) {
     background: var(--accent) !important;
     border-color: var(--accent) !important;
@@ -501,8 +708,9 @@
 
   :global(.btn-accent:hover),
   :global(.btn-accent:focus) {
-    filter: brightness(0.95);
-    box-shadow: 0 12px 26px rgba(var(--accent-rgb), 0.28);
+    background: var(--desaga-dark-blue) !important;
+    border-color: var(--desaga-dark-blue) !important;
+    color: #fff !important;
   }
 
   :global(.btn-outline-accent) {
@@ -513,14 +721,30 @@
   :global(.btn-outline-accent:hover),
   :global(.btn-outline-accent:focus) {
     background: rgba(var(--accent-rgb), 0.12) !important;
-    border-color: rgba(var(--accent-rgb), 0.75) !important;
     color: var(--accent) !important;
   }
 
-  /* Mobile */
-  @media (max-width: 576px) {
-    .media-img {
-      height: 200px;
+  @media (max-width: 767.98px) {
+    .section {
+      padding: 2rem 0;
+    }
+
+    .section-title,
+    .cta-card {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .section-link {
+      width: fit-content;
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .cta-actions .btn {
+      width: 100%;
     }
   }
 </style>

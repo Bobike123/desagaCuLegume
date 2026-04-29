@@ -3,6 +3,7 @@
 <script lang="ts">
 
   import { goto } from "$app/navigation";
+  import AdminNav from "$lib/components/AdminNav.svelte";
 
   type EventItem = {
     id: string;
@@ -144,6 +145,8 @@
 <svelte:head>
   <title>Editare Eveniment - Admin DeSaga</title>
 </svelte:head>
+
+<AdminNav />
 
 <div class="page">
   <header class="page__header">
@@ -397,7 +400,10 @@
 
 <style>
   .page {
-    padding: 10px 0 22px;
+    margin-left: 240px;
+    min-height: 100vh;
+    padding: 24px;
+    background: #f8fafc;
   }
 
   .page__header {
@@ -582,6 +588,13 @@
     }
     .panel__hint {
       display: none;
+    }
+  }
+
+  @media (max-width: 991.98px) {
+    .page {
+      margin-left: 0;
+      padding-top: 84px;
     }
   }
 </style>

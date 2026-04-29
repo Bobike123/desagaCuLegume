@@ -1,3 +1,4 @@
+
 import { createAdminClient } from '$lib/server/supabase';
 
 export type CategoryRow = {

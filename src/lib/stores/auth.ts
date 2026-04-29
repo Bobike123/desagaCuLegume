@@ -131,6 +131,65 @@ function createAuthStore() {
       }
     },
 
+    async updateProfile(payload: {
+      fullName?: string;
+      phone?: string;
+      email?: string;
+      username?: string;
+    }) {
+      update((state) => ({ ...state, loading: true, error: null }));
+
+      try {
+        const response = await fetch('/api/user', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const message = data?.error ?? 'Profile update failed';
+          update((state) => ({ ...state, loading: false, error: message }));
+          throw new Error(message);
+        }
+
+        await loadSession();
+        return data;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Profile update failed';
+        update((state) => ({ ...state, loading: false, error: message }));
+        throw error;
+      }
+    },
+
+    async changePassword(payload: { currentPassword: string; newPassword: string }) {
+      update((state) => ({ ...state, loading: true, error: null }));
+
+      try {
+        const response = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const message = data?.error ?? 'Password change failed';
+          update((state) => ({ ...state, loading: false, error: message }));
+          throw new Error(message);
+        }
+
+        update((state) => ({ ...state, loading: false, error: null }));
+        return data;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Password change failed';
+        update((state) => ({ ...state, loading: false, error: message }));
+        throw error;
+      }
+    },
+
     async logout() {
       try {
         await fetch('/api/auth/logout', { method: 'POST' });

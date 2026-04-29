@@ -1,238 +1,358 @@
-<script>
-    let openMenu = false;
-    let openLocation = false;
+<script lang="ts">
+  let openMenu = false;
+  let openLocation = false;
+
+  const menuLinks = [
+    { href: '/', label: 'Acasă' },
+    { href: '/produse', label: 'Produse' },
+    { href: '/produse/de-sezon', label: 'De sezon' },
+    { href: '/produse/la-borcan', label: 'La borcan' },
+    { href: '/produse/colaboratori', label: 'Colaboratori' },
+    { href: '/horeca', label: 'HORECA' },
+    { href: '/contact', label: 'Contact' },
+  ];
+
+  const phoneHref = 'tel:+40729969822';
+  const facebookHref = 'https://www.facebook.com/desagaculegume/';
+  const instagramHref = 'https://www.instagram.com/desaga_cu_legume/';
 </script>
 
 <footer class="footer">
-    <div class="footer-main text-white py-5">
-        <div class="container">
-            <div class="row g-4">
-                <!-- Brand -->
-                <div class="col-md-4">
-                    <h5 class="fw-bold mb-3">
-                        <i class="bi bi-leaf"></i> DeSaga cu Legume
-                    </h5>
-                    <p class="small mb-2">
-                        Legume proaspete de la fermele locale, direct la masa
-                        ta.
-                    </p>
-                    <div class="d-flex gap-2 mt-2 footer-social">
-                        <a
-                            href="https://facebook.com/desagaculegume"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="text-white fs-5"
-                            aria-label="Facebook"
-                        >
-                            <i class="fa fa-facebook"></i>
-                        </a>
-                        <a
-                            href="https://www.instagram.com/desaga_cu_legume/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="text-white fs-5"
-                            aria-label="Instagram"
-                        >
-                            <i class="fa fa-instagram"></i>
-                        </a>
-                    </div>
-                </div>
+  <div class="footer-main">
+    <div class="container">
+      <div class="footer-grid">
+        <section class="footer-brand" aria-label="DeSaga cu Legume">
+          <h2 class="footer-logo">
+            <i class="bi "></i>
+            <span>DeSaga cu Legume</span>
+          </h2>
+          <p>
+            Legume locale, produse de sezon și bunătăți la borcan, direct de la
+            rulota DeSaga din Cluj-Napoca.
+          </p>
 
-                <!-- Menu -->
-                <div class="col-md-4 footer-group">
-                    <button
-                        type="button"
-                        class="footer-title"
-                        on:click={() => (openMenu = !openMenu)}
-                        aria-expanded={openMenu}
-                    >
-                        <span class="fw-bold">Meniu</span>
-                        <i
-                            class="fa fa-angle-down footer-caret"
-                            class:rotated={openMenu}
-                            aria-hidden="true"
-                        ></i>
-                    </button>
+          <div class="footer-cta">
+            <a class="footer-call" href={phoneHref}>
+              <i class="bi bi-telephone-fill"></i>
+              <span>Sună pentru stocul de azi</span>
+            </a>
+          </div>
 
-                    <div class="footer-panel" class:open={openMenu}>
-                        <ul class="list-unstyled mb-0">
-                            <li><a href="/">Acasă</a></li>
-                            <li><a href="/despre-noi">Despre Noi</a></li>
-                            <li><a href="/produse">Produse</a></li>
-                            <li><a href="/contact">Contact</a></li>
-                            <li><a href="/horeca">HoReCA</a></li>
-                            <li><a href="/cos">Coș</a></li>
-                        </ul>
-                    </div>
-                </div>
+          <div class="footer-social" aria-label="Social media">
+            <a href={facebookHref} target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+              <i class="bi bi-facebook"></i>
+            </a>
+            <a href={instagramHref} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <i class="bi bi-instagram"></i>
+            </a>
+          </div>
+        </section>
 
-                <!-- Location -->
-                <div class="col-md-4 footer-group">
-                    <button
-                        type="button"
-                        class="footer-title"
-                        on:click={() => (openLocation = !openLocation)}
-                        aria-expanded={openLocation}
-                    >
-                        <span class="fw-bold">Locația Noastră</span>
-                        <i
-                            class="fa fa-angle-down footer-caret"
-                            class:rotated={openLocation}
-                            aria-hidden="true"
-                        ></i>
-                    </button>
+        <section class="footer-group">
+          <button
+            type="button"
+            class="footer-title"
+            on:click={() => (openMenu = !openMenu)}
+            aria-expanded={openMenu}
+          >
+            <span>Meniu</span>
+            <i class="bi bi-chevron-down footer-caret" class:rotated={openMenu} aria-hidden="true"></i>
+          </button>
 
-                    <div class="footer-panel" class:open={openLocation}>
-                        <p class="small mb-2">
-                            Cluj-Napoca, Str. Constantin Brancusi nr. 153<br />
-                            Orar: L-V: 9:00 - 18:00<br />
-                            Tel: 0729 969 822
-                        </p>
+          <div class="footer-panel" class:open={openMenu}>
+            <nav aria-label="Meniu footer">
+              {#each menuLinks as item}
+                <a href={item.href}>{item.label}</a>
+              {/each}
+              <a class="footer-muted-link" href="/despre-noi">Despre noi</a>
+              <a class="footer-muted-link" href="/evenimente">Evenimente</a>
+            </nav>
+          </div>
+        </section>
 
-                        <iframe
-                            class="footer-map"
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2733.2627958985477!2d23.613140411901085!3d46.759716245953896!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47490c49b6ff9853%3A0x2cdb1ae569801b0b!2sStrada%20Constantin%20Br%C3%A2ncu%C8%99i%20153%2C%20Cluj-Napoca%20400645%2C%20Rom%C3%A2nia!5e0!3m2!1sro!2sdk!4v1765492717214!5m2!1sro!2sdk"
-                            loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade"
-                            title="Harta locatie"
-                        ></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <section class="footer-group">
+          <button
+            type="button"
+            class="footer-title"
+            on:click={() => (openLocation = !openLocation)}
+            aria-expanded={openLocation}
+          >
+            <span>Locație și program</span>
+            <i class="bi bi-chevron-down footer-caret" class:rotated={openLocation} aria-hidden="true"></i>
+          </button>
+
+          <div class="footer-panel" class:open={openLocation}>
+            <address class="footer-address">
+              <a href="/contact">
+                <i class="bi bi-geo-alt-fill"></i>
+                <span>Cluj-Napoca, Str. Constantin Brâncuși nr. 153</span>
+              </a>
+              <span>
+                <i class="bi bi-clock-fill"></i>
+                <span>L–V: 9:00–18:00</span>
+              </span>
+              <a href={phoneHref}>
+                <i class="bi bi-telephone-fill"></i>
+                <span>0729 969 822</span>
+              </a>
+            </address>
+
+            <iframe
+              class="footer-map"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2733.2627958985477!2d23.613140411901085!3d46.759716245953896!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47490c49b6ff9853%3A0x2cdb1ae569801b0b!2sStrada%20Constantin%20Br%C3%A2ncu%C8%99i%20153%2C%20Cluj-Napoca%20400645%2C%20Rom%C3%A2nia!5e0!3m2!1sro!2sdk!4v1765492717214!5m2!1sro!2sdk"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              title="Harta locației DeSaga cu Legume"
+            ></iframe>
+          </div>
+        </section>
+      </div>
     </div>
+  </div>
 
-    <div class="footer-bottom text-white text-center py-2">
-        <p class="small mb-0">
-            &copy; 2024 DeSaga cu Legume. Toate drepturile rezervate.
-        </p>
-        <p class="small mb-0">
-            Realizat cu <i class="bi bi-heart text-danger"></i> pentru comunitatea
-            locală keep it greeen
-        </p>
+  <div class="footer-bottom">
+    <div class="container footer-bottom-wrap">
+      <p>&copy; 2024–2026 DeSaga cu Legume. Toate drepturile rezervate.</p>
+      <p>Realizat pentru comunitatea locală. Keep it green.</p>
+      <a href="/admin/login">Administrare</a>
     </div>
+  </div>
 </footer>
 
 <style>
+  .footer {
+    color: #fff;
+  }
+
+  .footer-main {
+    background:
+      radial-gradient(circle at top left, rgba(var(--desaga-accent-rgb), 0.22), transparent 32rem),
+      var(--desaga-slate);
+    padding: clamp(2rem, 5vw, 3rem) 0;
+  }
+
+  .footer-grid {
+    display: grid;
+    gap: 2rem;
+  }
+
+  @media (min-width: 768px) {
+    .footer-grid {
+      grid-template-columns: minmax(0, 1.2fr) minmax(170px, 0.75fr) minmax(260px, 1fr);
+      align-items: start;
+    }
+  }
+
+  .footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+    font-weight: 950;
+    margin: 0 0 0.75rem;
+  }
+
+  .footer-brand p {
+    max-width: 34rem;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.78);
+    line-height: 1.55;
+  }
+
+  .footer-cta {
+    margin-top: 1rem;
+  }
+
+  .footer-call {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: #fff;
+    background: var(--desaga-blue);
+    border-radius: 999px;
+    padding: 0.72rem 1rem;
+    font-weight: 900;
+    text-decoration: none;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+  }
+
+  .footer-call:hover,
+  .footer-call:focus {
+    color: #fff;
+    background: var(--desaga-dark-blue);
+  }
+
+  .footer-social {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 1rem;
+  }
+
+  .footer-social a {
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.09);
+    text-decoration: none;
+  }
+
+  .footer-social a:hover,
+  .footer-social a:focus {
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .footer-title {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: transparent;
+    border: 0;
+    color: #fff;
+    padding: 0;
+    margin-bottom: 0.85rem;
+    text-align: left;
+    font-weight: 950;
+  }
+
+  .footer-caret {
+    display: none;
+    transition: transform 0.2s ease;
+  }
+
+  .footer-caret.rotated {
+    transform: rotate(180deg);
+  }
+
+  .footer-panel {
+    display: block;
+  }
+
+  .footer-panel nav {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .footer-panel a,
+  .footer-address > span {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+  }
+
+  .footer-panel a:hover,
+  .footer-panel a:focus {
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .footer-muted-link {
+    opacity: 0.76;
+  }
+
+  .footer-address {
+    display: grid;
+    gap: 0.68rem;
+    margin: 0 0 1rem;
+    font-style: normal;
+  }
+
+  .footer-address a,
+  .footer-address > span {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    line-height: 1.35;
+  }
+
+  .footer-address i {
+    color: #a8dff8;
+    margin-top: 2px;
+  }
+
+  .footer-map {
+    width: 100%;
+    height: 170px;
+    border: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .footer-bottom {
+    background: var(--desaga-dark-blue);
+    padding: 0.78rem 0;
+  }
+
+  .footer-bottom-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .footer-bottom p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.86);
+  }
+
+  .footer-bottom a {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.85rem;
+    text-decoration: none;
+  }
+
+  .footer-bottom a:hover,
+  .footer-bottom a:focus {
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 767.98px) {
     .footer-main {
-        background-color: #334155;
+      padding: 2rem 0;
     }
 
-    .footer-bottom {
-        background-color: var(--desaga-dark-blue);
+    .footer-brand {
+      text-align: center;
     }
 
-    .footer p {
-        line-height: 1.5;
+    .footer-logo,
+    .footer-social,
+    .footer-cta {
+      justify-content: center;
     }
 
-    /* links hover animation */
-    .footer a {
-        color: #fff;
-        text-decoration: none;
-        position: relative;
-        display: inline-block;
-        transition:
-            color 0.2s ease,
-            transform 0.2s ease;
+    .footer-group {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 1rem;
     }
 
-    .footer a::after {
-        content: "";
-        position: absolute;
-        left: 0;
-        bottom: -2px;
-        width: 100%;
-        height: 2px;
-        background-color: #a8e6a3;
-        transform: scaleX(0);
-        transform-origin: right;
-        transition: transform 0.25s ease;
-    }
-
-    .footer a:hover::after,
-    .footer a:focus-visible::after {
-        transform: scaleX(1);
-        transform-origin: left;
-    }
-
-    .footer a:hover {
-        color: #a8e6a3;
-        transform: translateX(3px);
-    }
-
-    .footer-social {
-        justify-content: flex-start;
-    }
-
-    .footer-title {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: transparent;
-        border: 0;
-        color: #fff;
-        padding: 0;
-        margin-bottom: 0.75rem;
-        text-align: left;
-    }
-
-    /* caret hidden on desktop */
     .footer-caret {
-        display: none;
+      display: inline-flex;
     }
 
     .footer-panel {
-        display: block;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
     }
 
-    .footer-map {
-        width: 60%;
-        height: 150px;
-        border: 0;
-        border-radius: 8px;
+    .footer-panel.open {
+      max-height: 720px;
     }
 
-    /* mobile */
-    @media (max-width: 767.98px) {
-        .footer-main {
-            text-align: center;
-        }
-
-        .footer-social {
-            justify-content: center;
-        }
-
-        .footer-group {
-            text-align: left;
-        }
-
-        /* show caret only on mobile */
-        .footer-caret {
-            display: inline-block;
-            transition: transform 0.25s ease;
-        }
-
-        /* closed = down, open = up */
-        .footer-caret.rotated {
-            transform: rotate(180deg);
-        }
-
-        .footer-panel {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.25s ease;
-        }
-
-        .footer-panel.open {
-            max-height: 600px;
-        }
-
-        .footer-map {
-            width: 100%;
-            height: 180px;
-            margin-top: 0.75rem;
-        }
+    .footer-bottom-wrap {
+      justify-content: center;
+      text-align: center;
     }
+  }
 </style>

@@ -1,74 +1,122 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    let visible = false;
 
-    let visible: boolean = false;
+    const SHOW_AFTER = 300;
+    const SCROLL_DURATION = 650;
+
+    let animationFrame: number | null = null;
+    let scrollTicking = false;
+
+    function getScrollTop(): number {
+        return window.scrollY || document.documentElement.scrollTop || 0;
+    }
 
     function onScroll(): void {
-        visible = window.scrollY > 300;
+        if (scrollTicking) return;
+
+        scrollTicking = true;
+
+        requestAnimationFrame(() => {
+            visible = getScrollTop() > SHOW_AFTER;
+            scrollTicking = false;
+        });
     }
 
-    function animateScrollToTop(duration: number = 650): void {
-        const startY: number =
-            window.scrollY || document.documentElement.scrollTop || 0;
-        const start: number = performance.now();
-
-        const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
-
-        const step = (now: number): void => {
-            const progress: number = Math.min(1, (now - start) / duration);
-            const eased: number = easeOutCubic(progress);
-
-            window.scrollTo(0, Math.round(startY * (1 - eased)));
-
-            if (progress < 1) {
-                requestAnimationFrame(step);
-            }
-        };
-
-        requestAnimationFrame(step);
+    function prefersReducedMotion(): boolean {
+        return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
 
-    function scrollToTop(): void {
-        animateScrollToTop(650);
+    function cancelScrollAnimation(): void {
+        if (animationFrame !== null) {
+            cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+        }
     }
 
-    onMount(() => {
-        window.addEventListener("scroll", onScroll, { passive: true });
-        onScroll();
+function animateScrollToTop(duration = SCROLL_DURATION): void {
+    cancelScrollAnimation();
 
-        return () => {
-            window.removeEventListener("scroll", onScroll);
-        };
-    });
+    const startY = getScrollTop();
+
+    if (startY <= 0) return;
+
+    if (prefersReducedMotion()) {
+        window.scrollTo({ top: 0, behavior: "auto" });
+        return;
+    }
+
+    const start = performance.now();
+
+    const easeOutQuad = (t: number): number => 1 - (1 - t) * (1 - t);
+
+    const step = (now: number): void => {
+        const progress = Math.min(1, (now - start) / duration);
+        const eased = easeOutQuad(progress);
+
+        window.scrollTo({
+            top: Math.round(startY * (1 - eased)),
+            behavior: "auto"
+        });
+
+        if (progress < 1) {
+            animationFrame = requestAnimationFrame(step);
+        } else {
+            animationFrame = null;
+        }
+    };
+
+    animationFrame = requestAnimationFrame(step);
+}
 </script>
 
-<div class="scrolltop" class:visible>
+<svelte:window onscroll={onScroll} />
+
+<div
+    class="scrolltop"
+    class:visible
+    aria-hidden={!visible}
+>
     <button
         type="button"
         class="scrolltop-btn"
         aria-label="Scroll to top"
-        on:click={scrollToTop}
+        title="Scroll to top"
+        tabindex={visible ? 0 : -1}
+        onclick={() => animateScrollToTop()}
     >
-        <i class="bi bi-arrow-up-short" aria-hidden="true"></i>
+        <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            width="28"
+            height="28"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M12 19V5" />
+            <path d="m5 12 7-7 7 7" />
+        </svg>
     </button>
 </div>
 
 <style>
     .scrolltop {
         position: fixed;
-        right: 1rem;
-        bottom: 1.25rem;
+        right: max(1rem, env(safe-area-inset-right));
+        bottom: max(1.25rem, env(safe-area-inset-bottom));
         z-index: 9999;
 
         opacity: 0;
         visibility: hidden;
-        transform: translateY(14px) scale(0.98);
+        transform: translateY(0.875rem) scale(0.98);
         pointer-events: none;
 
         transition:
-            opacity 0.25s ease,
-            transform 0.25s ease,
-            visibility 0.25s ease;
+            opacity 0.2s ease,
+            transform 0.2s ease,
+            visibility 0.2s ease;
     }
 
     .scrolltop.visible {
@@ -79,19 +127,20 @@
     }
 
     .scrolltop-btn {
-        width: 46px;
-        height: 46px;
+        width: 3rem;
+        height: 3rem;
         display: grid;
         place-items: center;
 
-        border: none;
-        cursor: pointer;
+        border: 0;
         border-radius: 9999px;
+        cursor: pointer;
 
-        background: #334155;
         color: #fff;
+        background: #334155;
 
-        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+        box-shadow: 0 0.625rem 1.375rem rgb(0 0 0 / 28%);
+
         transition:
             transform 0.18s ease,
             background-color 0.18s ease,
@@ -99,27 +148,35 @@
     }
 
     .scrolltop-btn:hover {
-        background-color: #2b3a4f;
-        transform: translateY(-3px);
-        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.32);
+        background: #263449;
+        transform: translateY(-0.1875rem);
+        box-shadow: 0 0.875rem 1.875rem rgb(0 0 0 / 32%);
     }
 
     .scrolltop-btn:active {
-        transform: translateY(-1px) scale(0.98);
+        transform: translateY(-0.0625rem) scale(0.98);
     }
 
-    .scrolltop-btn i {
-        font-size: 1.9rem;
-        line-height: 1;
+    .scrolltop-btn:focus-visible {
+        outline: 3px solid #93c5fd;
+        outline-offset: 4px;
+    }
+
+    .scrolltop-btn svg {
+        display: block;
     }
 
     @media (max-width: 767.98px) {
         .scrolltop-btn {
-            width: 50px;
-            height: 50px;
+            width: 3.25rem;
+            height: 3.25rem;
         }
-        .scrolltop-btn i {
-            font-size: 2.1rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .scrolltop,
+        .scrolltop-btn {
+            transition: none;
         }
     }
 </style>

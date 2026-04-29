@@ -1,22 +1,20 @@
 <!-- FILE: src/routes/produse/colaboratori/+page.svelte -->
-
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
   import ProductCard from "$lib/components/ProductCard.svelte";
   import { getAllProducts, type Product } from "$lib/stores/products";
   import { onMount } from "svelte";
 
-  let filteredProducts: Product[] = [];
+  const categorySlug = "colaboratori";
+  const phoneHref = "tel:+40729969822";
 
-  function inStock(v: unknown) {
-    return v === true || v === 1 || v === "true" || v === "1";
-  }
+  let products: Product[] = [];
+  let loading = true;
 
   onMount(async () => {
-    const allProducts = await getAllProducts();
-    filteredProducts = allProducts.filter(
-      (p: any) => p.category === "colaboratori" && inStock(p.in_stock),
-    );
+    loading = true;
+    products = (await getAllProducts(categorySlug)).filter((p: Product) => p.in_stock === true);
+    loading = false;
   });
 </script>
 
@@ -26,104 +24,240 @@
 
 <Hero
   title="Colaboratori"
-  subtitle="O mică Băcănie cu produse de calitate"
+  subtitle="Produse locale de la oameni faini, alese pentru calitate."
   backgroundImage=""
-  height="400px"
+  height="300px"
 />
 
-<section class="py-5">
+<section class="category-page py-5">
   <div class="container">
-    <div class="row mb-5">
-      <div class="col-lg-8 mx-auto">
-        <h2 class="h2 text-brown fw-bold mb-3">
-          <i class="bi bi-people"></i> Consumă SĂNĂTOS
-        </h2>
-        <p class="lead">Din Fermă direct la Rulota DeSaga</p>
-        <p>
-          Pentru că vrem ca Rulota DeSaga să fie o mică Băcănie, am hotărât să
-          completăm oferta de legume-fructe proaspete și procesate și cu alte
-          produse făcute de oameni faini, pe care am avut ocazia să-i cunoaștem
-          la târguri și evenimente.
-        </p>
-
-        <div class="card bg-light border-0 my-4">
-          <div class="card-body">
-            <h5 class="card-title text-brown fw-bold mb-3">
-              🛍️ Categoria de produse:
-            </h5>
-
-            <div class="row">
-              <div class="col-md-4 mb-3">
-                <h6 class="text-green fw-bold">🧀 Brânzeturi:</h6>
-                <ul class="list-unstyled small">
-                  <li>• Brânză proaspătă</li>
-                  <li>• Telemea maturată</li>
-                  <li>• Unt</li>
-                  <li>• Smântână</li>
-                  <li>• Ouă</li>
-                  <li>• Mozzarella</li>
-                  <li>• Cașcaval</li>
-                </ul>
-              </div>
-              <div class="col-md-4 mb-3">
-                <h6 class="text-green fw-bold">🌾 Alimente:</h6>
-                <ul class="list-unstyled small">
-                  <li>• Ulei presat la rece</li>
-                  <li>• Paste</li>
-                  <li>• Ouă</li>
-                  <li>• Legume uscate</li>
-                  <li>• Usturoi pulbere</li>
-                  <li>• Boia</li>
-                </ul>
-              </div>
-              <div class="col-md-4 mb-3">
-                <h6 class="text-green fw-bold">🍯 Dulcegării:</h6>
-                <ul class="list-unstyled small">
-                  <li>• Miere de albine</li>
-                  <li>• Propolis</li>
-                  <li>• Polen</li>
-                  <li>• Dulcețuri</li>
-                  <li>• Siropuri</li>
-                  <li>• Batoane din fructe</li>
-                  <li>• Sucuri naturale</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="intro-card">
+      <div class="intro-icon"><i class="bi bi-people"></i></div>
+      <div>
+        <p class="eyebrow mb-2">Mică băcănie locală</p>
+        <h2>Produse de la colaboratori verificați</h2>
+        <p class="lead mb-0">Completăm legumele și produsele DeSaga cu alimente locale, lactate, miere și alte produse făcute responsabil.</p>
+      </div>
+      <div class="intro-actions">
+        <a href="/produse" class="btn btn-outline-primary"><i class="bi"></i> Toate produsele</a>
+        <a href={phoneHref} class="btn btn-primary"><i class="bi bi-telephone"></i> Sună pentru stoc</a>
       </div>
     </div>
 
-    <h3 class="h3 text-brown fw-bold mb-4 text-center">Produse disponibile</h3>
-    <div class="row g-4">
-      {#each filteredProducts as product (product.id)}
-        <div class="col-md-6 col-lg-3">
-          <ProductCard {product} />
-        </div>
-      {/each}
+    <div class="info-grid">
+      <div class="info-card"><strong>Brânzeturi</strong><span>Produse lactate de la colaboratori locali.</span></div>
+      <div class="info-card"><strong>Alimente</strong><span>Ulei presat la rece, paste, legume uscate, condimente.</span></div>
+      <div class="info-card"><strong>Dulcegării</strong><span>Miere, siropuri, dulcețuri, sucuri naturale și alte produse.</span></div>
     </div>
 
-    {#if filteredProducts.length === 0}
-      <div class="alert alert-info text-center" role="alert">
-        <h4 class="alert-heading">
-          <i class="bi bi-info-circle"></i> Niciun produs disponibil
-        </h4>
-        <p>Revino mai târziu pentru produse de la colaboratori!</p>
+    <div class="section-head">
+      <div>
+        <h3>Produse disponibile acum</h3>
+        <p>Afișăm doar produsele marcate disponibile în baza de date.</p>
+      </div>
+      <span class="count-pill">{products.length} disponibile</span>
+    </div>
+
+    {#if loading}
+      <div class="products-grid" aria-label="Se încarcă produsele">
+        {#each Array(8) as _}
+          <div class="skeleton"></div>
+        {/each}
+      </div>
+    {:else if products.length === 0}
+      <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-info-circle"></i></div>
+        <div>
+          <h4>Niciun produs disponibil momentan</h4>
+          <p>Nu avem produse de la colaboratori disponibile momentan. Stocul depinde de livrările colaboratorilor.</p>
+          <div class="empty-actions">
+            <a href="/produse" class="btn btn-outline-primary">Vezi toate produsele</a>
+            <a href={phoneHref} class="btn btn-primary">Sună pentru stocul de azi</a>
+          </div>
+        </div>
+      </div>
+    {:else}
+      <div class="products-grid">
+        {#each products as product (product.id)}
+          <ProductCard {product} />
+        {/each}
       </div>
     {/if}
   </div>
 </section>
 
 <style>
-  .text-brown {
-    color: var(--desaga-brown) !important;
+  .category-page {
+    background: linear-gradient(180deg, #fff 0%, rgba(36, 146, 204, 0.05) 100%);
   }
 
-  .text-green {
-    color: var(--desaga-green) !important;
+  .intro-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding: 20px;
+    border-radius: 24px;
+    border: 1px solid rgba(36, 146, 204, 0.14);
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
   }
 
-  .bg-light {
-    background-color: var(--desaga-cream) !important;
+  @media (min-width: 992px) {
+    .intro-card {
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+    }
+  }
+
+  .intro-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    color: var(--desaga-blue);
+    background: rgba(36, 146, 204, 0.12);
+    font-size: 1.35rem;
+  }
+
+  .eyebrow {
+    color: var(--desaga-blue);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.78rem;
+  }
+
+  .intro-card h2 {
+    margin: 0 0 0.4rem;
+    color: var(--desaga-brown);
+    font-weight: 950;
+    letter-spacing: -0.04em;
+  }
+
+  .intro-card .lead {
+    color: rgba(0, 0, 0, 0.68);
+    line-height: 1.65;
+  }
+
+  .intro-actions,
+  .empty-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .info-card {
+    border-radius: 18px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: #fff;
+    padding: 14px;
+  }
+
+  .info-card strong {
+    display: block;
+    color: var(--desaga-brown);
+    margin-bottom: 4px;
+  }
+
+  .info-card span {
+    color: rgba(0, 0, 0, 0.66);
+    font-size: 0.92rem;
+  }
+
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .section-head h3 {
+    margin: 0 0 0.25rem;
+    color: var(--desaga-brown);
+    font-weight: 950;
+  }
+
+  .section-head p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.64);
+  }
+
+  .count-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 7px 12px;
+    color: var(--desaga-blue);
+    background: rgba(36, 146, 204, 0.12);
+    font-weight: 900;
+  }
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 18px;
+  }
+
+  @media (max-width: 576px) {
+    .products-grid { grid-template-columns: 1fr; }
+    .intro-card { grid-template-columns: 1fr; }
+    .intro-actions .btn,
+    .empty-actions .btn { width: 100%; }
+  }
+
+  .skeleton {
+    height: 360px;
+    border-radius: 18px;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite linear;
+  }
+
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+
+  .empty-state {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 22px;
+    background: #fff;
+    border: 1px solid rgba(36, 146, 204, 0.14);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
+  }
+
+  .empty-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    color: var(--desaga-blue);
+    background: rgba(36, 146, 204, 0.12);
+  }
+
+  .empty-state h4 {
+    margin: 0 0 0.4rem;
+    color: var(--desaga-brown);
+    font-weight: 950;
+  }
+
+  .empty-state p {
+    color: rgba(0, 0, 0, 0.68);
   }
 </style>

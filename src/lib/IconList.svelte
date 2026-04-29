@@ -1,4 +1,3 @@
-<!-- src/lib/IconList.svelte -->
 <script lang="ts">
 	export let size: number | string = 18; // px by default
 	export let color: string = "currentColor"; // inherits text color

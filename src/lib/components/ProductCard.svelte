@@ -25,6 +25,11 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  function fallbackImage(event: Event) {
+    const img = event.currentTarget as HTMLImageElement;
+    if (!img.src.endsWith('/placeholder.png')) img.src = '/placeholder.png';
+  }
+
   $: id = product?.id != null ? String(product.id) : '';
   $: name = safeText(product?.name).trim();
   $: description = safeText(product?.description).trim();
@@ -36,71 +41,70 @@
   $: isAvailable = Boolean(product?.in_stock);
   $: currentQty = $cart.items.find((item) => item.productId === id)?.quantity ?? 0;
   $: category = safeText(product?.category);
+  $: stockQuantity = toNumber(product?.stock_quantity);
   $: categoryMeta =
     category === 'de-sezon'
-      ? { label: 'De Sezon', icon: 'bi-leaf', tone: 'tone-green' }
+      ? { label: 'De sezon', icon: '', tone: 'tone-green' }
       : category === 'la-borcan'
-        ? { label: 'La Borcan', icon: 'bi-archive', tone: 'tone-amber' }
+        ? { label: 'La borcan', icon: '', tone: 'tone-amber' }
         : category === 'colaboratori'
-          ? { label: 'Colaboratori', icon: 'bi-people', tone: 'tone-blue' }
-          : { label: 'HORECA', icon: 'bi-shop', tone: 'tone-purple' };
+          ? { label: 'Colaboratori', icon: '', tone: 'tone-blue' }
+          : { label: 'HORECA', icon: '', tone: 'tone-purple' };
   $: href = id ? `/produse/${id}` : undefined;
+  $: stockLabel = isAvailable
+    ? stockQuantity > 0
+      ? `${stockQuantity} în stoc`
+      : 'Disponibil'
+    : 'Stoc epuizat';
 
   let lastDelta: 1 | -1 = 1;
   let bumpTick = 0;
 
   function addToBasket() {
-    if (!isAvailable) return;
+    if (!isAvailable || !id) return;
     lastDelta = 1;
     cart.addProduct(product, 1);
     bumpTick += 1;
   }
 
   function inc() {
-    if (!isAvailable) return;
+    if (!isAvailable || !id) return;
     lastDelta = 1;
     cart.addProduct(product, 1);
     bumpTick += 1;
   }
 
   function dec() {
-    if (!isAvailable) return;
+    if (!isAvailable || !id) return;
     lastDelta = -1;
     cart.setQuantity(id, Math.max(0, currentQty - 1));
     bumpTick += 1;
   }
 
-  function stopAll(e: Event) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
   $: flyY = lastDelta === 1 ? 10 : -10;
 </script>
 
-<a class="card" {href} aria-disabled={!isAvailable} aria-label={name || 'Produs'}>
-  <div class="media">
-    <img class="img" src={imageUrl} alt={name} loading="lazy" />
+<article class="card" data-available={isAvailable}>
+  <a class="media-link" href={href} aria-label={name || 'Produs'}>
+    <img class="img" src={imageUrl} alt={name || 'Produs'} loading="lazy" on:error={fallbackImage} />
     <div class="badges">
       <span class={'pill ' + categoryMeta.tone}>
         <i class={'bi ' + categoryMeta.icon}></i>
         {categoryMeta.label}
       </span>
 
-      {#if !isAvailable}
-        <span class="pill tone-warning">
-          <i class="bi bi-exclamation-triangle"></i>
-          Stoc epuizat
-        </span>
-      {/if}
+      <span class={`pill ${isAvailable ? 'tone-stock' : 'tone-warning'}`}>
+        <i class={`bi ${isAvailable ? 'bi-check2-circle' : 'bi-exclamation-triangle'}`}></i>
+        {stockLabel}
+      </span>
     </div>
-  </div>
+  </a>
 
   <div class="body">
-    <div class="content">
+    <a class="content-link" href={href}>
       <h5 class="title">{name || 'Produs'}</h5>
-      <p class="desc">{description || 'Produs de calitate.'}</p>
-    </div>
+      <p class="desc">{description || 'Descrierea produsului va fi actualizată în curând.'}</p>
+    </a>
 
     <div class="footer">
       <div class="price">
@@ -108,15 +112,15 @@
       </div>
 
       {#if !isAvailable}
-        <div class="cta cta-off">Indisponibil</div>
+        <a class="details-link" href={href}>Detalii</a>
       {:else if currentQty === 0}
-        <button class="btn-add" type="button" on:click|preventDefault|stopPropagation={addToBasket}>
+        <button class="btn-add" type="button" on:click={addToBasket}>
           <i class="bi bi-basket"></i>
           Adaugă
         </button>
       {:else}
         <div class="stepper" role="group" aria-label="Cantitate în coș">
-          <button class="step-btn" type="button" on:click|preventDefault|stopPropagation={dec} aria-label="Scade cantitatea">
+          <button class="step-btn" type="button" on:click={dec} aria-label="Scade cantitatea">
             <i class="bi bi-dash"></i>
           </button>
           <div class="qty-wrap" aria-label="Cantitate">
@@ -126,14 +130,14 @@
               </div>
             {/key}
           </div>
-          <button class="step-btn" type="button" on:click|preventDefault|stopPropagation={inc} aria-label="Crește cantitatea">
+          <button class="step-btn" type="button" on:click={inc} aria-label="Crește cantitatea">
             <i class="bi bi-plus"></i>
           </button>
         </div>
       {/if}
     </div>
   </div>
-</a>
+</article>
 
 <style>
   .card {
@@ -146,7 +150,6 @@
     border: 1px solid rgba(0, 0, 0, 0.08);
     overflow: hidden;
     background: #fff;
-    text-decoration: none;
     color: inherit;
     transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
   }
@@ -157,16 +160,23 @@
     border-color: rgba(0, 0, 0, 0.12);
   }
 
-  .card[aria-disabled='true'] {
-    opacity: 0.62;
-    filter: grayscale(0.05);
+  .card[data-available='false'] {
+    opacity: 0.78;
   }
 
-  .media {
+  .media-link,
+  .content-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .media-link {
     position: relative;
+    display: block;
     height: 160px;
     flex: 0 0 auto;
     background: rgba(0, 0, 0, 0.03);
+    overflow: hidden;
   }
 
   .img {
@@ -174,6 +184,11 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    transition: transform 0.18s ease;
+  }
+
+  .card:hover .img {
+    transform: scale(1.03);
   }
 
   .badges {
@@ -193,10 +208,10 @@
     gap: 6px;
     padding: 0.28rem 0.6rem;
     border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 800;
+    font-size: 0.76rem;
+    font-weight: 850;
     border: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(255, 255, 255, 0.88);
+    background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(6px);
     white-space: nowrap;
   }
@@ -205,7 +220,8 @@
   .tone-amber { border-color: rgba(255, 193, 7, 0.28); background: rgba(255, 193, 7, 0.14); }
   .tone-blue { border-color: rgba(13, 110, 253, 0.22); background: rgba(13, 110, 253, 0.12); }
   .tone-purple { border-color: rgba(111, 66, 193, 0.22); background: rgba(111, 66, 193, 0.12); }
-  .tone-warning { border-color: rgba(255, 193, 7, 0.35); background: rgba(255, 193, 7, 0.22); }
+  .tone-warning { border-color: rgba(255, 193, 7, 0.35); background: rgba(255, 193, 7, 0.24); }
+  .tone-stock { border-color: rgba(25, 135, 84, 0.22); background: rgba(255, 255, 255, 0.92); }
 
   .body {
     flex: 1;
@@ -214,15 +230,19 @@
     padding: 12px 12px 14px;
   }
 
-  .content {
+  .content-link {
     flex: 1;
     min-height: 0;
   }
 
+  .content-link:hover .title {
+    color: var(--desaga-blue);
+  }
+
   .title {
     margin: 0;
-    font-weight: 900;
-    font-size: 0.98rem;
+    font-weight: 950;
+    font-size: 1rem;
     line-height: 1.2;
     color: #222;
     display: -webkit-box;
@@ -245,7 +265,7 @@
   }
 
   .footer {
-    margin-top: 10px;
+    margin-top: 12px;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
@@ -266,7 +286,8 @@
     margin-left: 3px;
   }
 
-  .btn-add {
+  .btn-add,
+  .details-link {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -278,6 +299,13 @@
     border-radius: 12px;
     cursor: pointer;
     white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .details-link {
+    color: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.08);
   }
 
   .stepper {
@@ -325,16 +353,4 @@
     60% { transform: scale(1.12); opacity: 1; }
     100% { transform: scale(1); opacity: 1; }
   }
-
-  .cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 800;
-    font-size: 0.86rem;
-    white-space: nowrap;
-  }
-
-  .cta-off { color: rgba(0, 0, 0, 0.55); }
 </style>
-

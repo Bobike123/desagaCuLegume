@@ -22,6 +22,19 @@
     lastMessage: { body: string; createdAt: string } | null;
   };
 
+  type ServerCartItem = {
+    productId: string | number;
+    name?: string;
+    price?: number | string;
+    quantity?: number | string;
+    image_url?: string | null;
+  };
+
+  const SUPPORT_PHONE = '+40 729 969 822';
+  const SUPPORT_PHONE_HREF = 'tel:+40729969822';
+  const FREE_DELIVERY_THRESHOLD = 150;
+  const DELIVERY_FEE = 20;
+
   let authMode: 'login' | 'register' = 'login';
   let authError = '';
   let checkoutError = '';
@@ -31,7 +44,12 @@
   let loadingMessages = false;
   let syncingCart = false;
   let serverSynced = false;
+  let localCartChanged = false;
   let loadedDataForUserId = '';
+  let authSubmitting = false;
+  let checkoutSubmitting = false;
+  let supportSubmitting = false;
+  let clearingCart = false;
 
   let loginForm = {
     identity: '',
@@ -53,7 +71,7 @@
     paymentMethod: 'CASH_ON_DELIVERY',
     addressLine1: '',
     addressLine2: '',
-    city: '',
+    city: 'Cluj-Napoca',
     stateRegion: 'Cluj',
     postalCode: '',
     countryCode: 'RO',
@@ -66,22 +84,79 @@
   let conversations: ConversationItem[] = [];
 
   function formatMoney(value: number) {
-    return `${value.toFixed(2)} RON`;
+    return `${Number(value || 0).toFixed(2)} RON`;
+  }
+
+  function formatDate(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Dată indisponibilă';
+    return date.toLocaleString('ro-RO', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  }
+
+  function statusLabel(value: string) {
+    const labels: Record<string, string> = {
+      PLACED: 'Plasată',
+      PENDING: 'În așteptare',
+      PAID: 'Plătită',
+      CANCELLED: 'Anulată',
+      COMPLETED: 'Finalizată',
+      UNFULFILLED: 'Nepregătită',
+      FULFILLED: 'Livrată',
+      OPEN: 'Deschisă',
+      CLOSED: 'Închisă',
+    };
+
+    return labels[value] ?? value;
+  }
+
+  function markLocalCartChanged() {
+    localCartChanged = true;
+    serverSynced = false;
   }
 
   function setQty(productId: string, quantity: number) {
     cart.setQuantity(productId, quantity);
-    serverSynced = false;
+    markLocalCartChanged();
   }
 
   function remove(productId: string) {
     cart.remove(productId);
-    serverSynced = false;
+    markLocalCartChanged();
+  }
+
+  async function clearCart() {
+    checkoutError = '';
+    checkoutSuccess = '';
+    clearingCart = true;
+
+    try {
+      cart.clear();
+
+      if ($auth.isAuthenticated && !$auth.isAdmin) {
+        const res = await fetch('/api/cart', { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error ?? 'Nu am putut goli coșul salvat.');
+      }
+
+      localCartChanged = false;
+      serverSynced = true;
+    } catch (err) {
+      checkoutError = err instanceof Error ? err.message : 'Nu am putut goli coșul.';
+      localCartChanged = true;
+      serverSynced = false;
+    } finally {
+      clearingCart = false;
+    }
   }
 
   async function submitLogin(event: Event) {
     event.preventDefault();
     authError = '';
+    authSubmitting = true;
+
     try {
       await auth.login({ identity: loginForm.identity, password: loginForm.password });
       serverSynced = false;
@@ -89,21 +164,28 @@
       await Promise.all([loadOrders(), loadMessages()]);
     } catch (err) {
       authError = err instanceof Error ? err.message : 'Autentificarea a eșuat.';
+    } finally {
+      authSubmitting = false;
     }
   }
 
   async function submitRegister(event: Event) {
     event.preventDefault();
     authError = '';
+    authSubmitting = true;
+
     try {
       await auth.register(registerForm);
       checkoutForm.fullName = registerForm.fullName;
       checkoutForm.phone = registerForm.phone;
       serverSynced = false;
+      localCartChanged = true;
       await syncServerCart();
       await Promise.all([loadOrders(), loadMessages()]);
     } catch (err) {
       authError = err instanceof Error ? err.message : 'Înregistrarea a eșuat.';
+    } finally {
+      authSubmitting = false;
     }
   }
 
@@ -112,7 +194,7 @@
 
     syncingCart = true;
     try {
-      if ($cart.items.length > 0) {
+      if (localCartChanged || $cart.items.length > 0) {
         const res = await fetch('/api/cart', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -122,14 +204,15 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error ?? 'Nu am putut sincroniza coșul.');
+        localCartChanged = false;
       } else {
         const res = await fetch('/api/cart');
         const data = await res.json().catch(() => ({}));
         if (res.ok && Array.isArray(data?.items) && data.items.length > 0) {
           cart.replace(
-            data.items.map((item: any) => ({
+            data.items.map((item: ServerCartItem) => ({
               productId: String(item.productId),
-              name: item.name,
+              name: item.name ?? 'Produs',
               price: Number(item.price ?? 0),
               quantity: Number(item.quantity ?? 0),
               image_url: item.image_url ?? '',
@@ -152,6 +235,7 @@
       orders = [];
       return;
     }
+
     loadingOrders = true;
     try {
       const res = await fetch('/api/orders');
@@ -170,6 +254,7 @@
       conversations = [];
       return;
     }
+
     loadingMessages = true;
     try {
       const res = await fetch('/api/messages');
@@ -184,22 +269,26 @@
   }
 
   async function submitSupport() {
-    if (!$auth.isAuthenticated || $auth.isAdmin || !supportMessage.trim()) return;
+    if (!$auth.isAuthenticated || $auth.isAdmin || !supportMessage.trim() || supportSubmitting) return;
     supportError = '';
+    supportSubmitting = true;
 
-    const res = await fetch('/api/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject: supportSubject, message: supportMessage }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      supportError = data?.error ?? 'Nu am putut trimite mesajul.';
-      return;
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: supportSubject, message: supportMessage }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut trimite mesajul.');
+
+      supportMessage = '';
+      await loadMessages();
+    } catch (err) {
+      supportError = err instanceof Error ? err.message : 'Nu am putut trimite mesajul.';
+    } finally {
+      supportSubmitting = false;
     }
-
-    supportMessage = '';
-    await loadMessages();
   }
 
   async function submitCheckout(event: Event) {
@@ -207,8 +296,14 @@
     checkoutError = '';
     checkoutSuccess = '';
 
+    if ($cart.items.length === 0) {
+      checkoutError = 'Coșul este gol.';
+      return;
+    }
+
     if (!$auth.isAuthenticated) {
-      checkoutError = 'Autentifică-te sau creează un cont înainte de checkout.';
+      authMode = 'register';
+      checkoutError = 'Creează un cont sau autentifică-te pentru finalizarea comenzii.';
       return;
     }
 
@@ -217,30 +312,40 @@
       return;
     }
 
-    const res = await fetch('/api/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...checkoutForm,
-        items: $cart.items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      checkoutError = data?.error ?? 'Checkout-ul a eșuat.';
-      return;
-    }
+    checkoutSubmitting = true;
 
-    checkoutSuccess = `Comanda ${data.order.orderNumber} a fost creată.`;
-    cart.clear();
-    serverSynced = false;
-    checkoutForm.customerMessage = '';
-    await Promise.all([loadOrders(), loadMessages()]);
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...checkoutForm,
+          items: $cart.items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Checkout-ul a eșuat.');
+
+      checkoutSuccess = `Comanda ${data.order.orderNumber} a fost creată. Vei fi contactat pentru confirmare.`;
+      cart.clear();
+      localCartChanged = false;
+      serverSynced = true;
+      checkoutForm.customerMessage = '';
+      await Promise.all([loadOrders(), loadMessages()]);
+    } catch (err) {
+      checkoutError = err instanceof Error ? err.message : 'Checkout-ul a eșuat.';
+    } finally {
+      checkoutSubmitting = false;
+    }
   }
 
+  $: itemCount = $cart.items.reduce((sum, item) => sum + item.quantity, 0);
   $: subtotal = $cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  $: shippingFee = checkoutForm.deliveryMethod === 'delivery' ? (subtotal >= 150 ? 0 : subtotal > 0 ? 20 : 0) : 0;
+  $: shippingFee = checkoutForm.deliveryMethod === 'delivery' ? (subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : subtotal > 0 ? DELIVERY_FEE : 0) : 0;
+  $: remainingForFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
   $: total = subtotal + shippingFee;
+  $: hasItems = $cart.items.length > 0;
+  $: checkoutDisabled = !hasItems || checkoutSubmitting || syncingCart || !$auth.isAuthenticated || $auth.isAdmin;
 
   $: if ($auth.user) {
     checkoutForm.fullName = checkoutForm.fullName || $auth.user.fullName || '';
@@ -268,64 +373,113 @@
   <title>Coș - DeSaga cu Legume</title>
 </svelte:head>
 
-<section class="py-4 pb-5">
+<section class="cart-page py-4 pb-5">
   <div class="container">
     <div class="page-head">
       <div>
-        <h1 class="h3 fw-bold m-0"><i class="bi bi-cart3"></i> Coș</h1>
-        <div class="muted mt-1">Coș local sincronizat în baza de date după autentificare și folosit la checkout.</div>
+        <p class="eyebrow m-0">Comandă DeSaga</p>
+        <h1 class="h3 fw-bold m-0"><i class="bi bi-cart3"></i> Coșul tău</h1>
+        <div class="muted mt-1">
+          Verificăm stocul la finalizare. Pentru întrebări rapide: <a href={SUPPORT_PHONE_HREF}>{SUPPORT_PHONE}</a>.
+        </div>
       </div>
-      <div class="d-flex gap-2 flex-wrap">
+      <div class="head-actions">
         <a href="/produse" class="btn btn-outline-accent">
           <i class="bi bi-arrow-left"></i> Continuă cumpărăturile
         </a>
-        <button class="btn btn-outline-accent" type="button" on:click={() => { cart.clear(); serverSynced = false; }} disabled={$cart.items.length === 0}>
-          <i class="bi bi-trash3"></i> Golește coșul
+        <button class="btn btn-outline-danger" type="button" on:click={clearCart} disabled={!hasItems || clearingCart}>
+          <i class="bi bi-trash3"></i> {clearingCart ? 'Se golește…' : 'Golește coșul'}
         </button>
       </div>
     </div>
 
-    {#if authError}<div class="alert alert-danger">{authError}</div>{/if}
-    {#if checkoutError}<div class="alert alert-danger">{checkoutError}</div>{/if}
-    {#if checkoutSuccess}<div class="alert alert-success">{checkoutSuccess}</div>{/if}
-    {#if supportError}<div class="alert alert-danger">{supportError}</div>{/if}
+    {#if authError}<div class="alert alert-danger" role="alert">{authError}</div>{/if}
+    {#if checkoutError}<div class="alert alert-danger" role="alert">{checkoutError}</div>{/if}
+    {#if checkoutSuccess}<div class="alert alert-success" role="alert">{checkoutSuccess}</div>{/if}
+    {#if supportError}<div class="alert alert-danger" role="alert">{supportError}</div>{/if}
 
-    <div class="row g-4 align-items-stretch">
+    <div class="checkout-steps" aria-label="Pași checkout">
+      <div class:done={hasItems} class="step">
+        <span>1</span>
+        <strong>Produse</strong>
+      </div>
+      <div class:done={$auth.isAuthenticated && !$auth.isAdmin} class="step">
+        <span>2</span>
+        <strong>Date client</strong>
+      </div>
+      <div class:done={checkoutSuccess} class="step">
+        <span>3</span>
+        <strong>Confirmare</strong>
+      </div>
+    </div>
+
+    <div class="row g-4 align-items-start">
       <div class="col-lg-8">
         <div class="panel">
           <div class="panel-head">
-            <h2 class="h5 fw-bold m-0"><i class="bi bi-basket"></i> Produse</h2>
-            <span class="badge-soft">{$cart.items.length} poziții</span>
+            <div>
+              <h2 class="h5 fw-bold m-0"><i class="bi bi-basket"></i> Produse selectate</h2>
+              {#if hasItems}
+                <div class="muted small mt-1">{itemCount} produse în coș</div>
+              {/if}
+            </div>
+            {#if syncingCart}
+              <span class="badge-soft"><i class="bi bi-arrow-repeat"></i> Se salvează</span>
+            {:else if serverSynced && $auth.isAuthenticated && !$auth.isAdmin}
+              <span class="badge-soft"><i class="bi bi-check2-circle"></i> Salvat</span>
+            {/if}
           </div>
 
-          {#if $cart.items.length === 0}
+          {#if !hasItems}
             <div class="empty-state">
-              <div class="empty-title">Coșul este gol</div>
-              <div class="empty-sub">Adaugă produse din listă.</div>
-              <a href="/produse" class="btn btn-accent mt-3"><i class="bi bi-box"></i> Vezi produsele</a>
+              <div class="empty-icon"><i class="bi bi-basket"></i></div>
+              <div>
+                <div class="empty-title">Coșul este gol</div>
+                <div class="empty-sub">
+                  Alege produse disponibile azi sau sună pentru stocul actual. Produsele din coș pot fi finalizate cu ridicare sau livrare.
+                </div>
+                <div class="empty-actions">
+                  <a href="/produse" class="btn btn-accent"><i class="bi bi-box"></i> Vezi produsele</a>
+                  <a href={SUPPORT_PHONE_HREF} class="btn btn-outline-accent"><i class="bi bi-telephone"></i> Sună acum</a>
+                </div>
+              </div>
             </div>
           {:else}
             <div class="cart-list" role="list">
               {#each $cart.items as item (item.productId)}
                 <div class="cart-row" role="listitem">
                   <div class="cart-main">
-                    <div class="thumb">
+                    <a class="thumb" href={`/produse/${item.productId}`} aria-label={`Vezi ${item.name}`}>
                       {#if item.image_url}
                         <img src={item.image_url} alt={item.name} />
                       {:else}
                         <i class="bi bi-bag"></i>
                       {/if}
-                    </div>
+                    </a>
                     <div class="cart-info">
-                      <div class="cart-title">{item.name}</div>
+                      <a class="cart-title" href={`/produse/${item.productId}`}>{item.name}</a>
                       <div class="cart-sub">{formatMoney(item.price)} / buc</div>
                       <div class="cart-actions">
-                        <div class="qty">
-                          <button class="qty-btn" type="button" aria-label="Scade cantitatea" on:click={() => setQty(item.productId, item.quantity - 1)}><i class="bi bi-dash"></i></button>
-                          <input class="qty-input" inputmode="numeric" value={item.quantity} on:input={(e) => setQty(item.productId, Number((e.target as HTMLInputElement).value))} />
-                          <button class="qty-btn" type="button" aria-label="Crește cantitatea" on:click={() => setQty(item.productId, item.quantity + 1)}><i class="bi bi-plus"></i></button>
+                        <div class="qty" aria-label={`Cantitate pentru ${item.name}`}>
+                          <button class="qty-btn" type="button" aria-label="Scade cantitatea" on:click={() => setQty(item.productId, item.quantity - 1)}>
+                            <i class="bi bi-dash"></i>
+                          </button>
+                          <input
+                            class="qty-input"
+                            inputmode="numeric"
+                            min="0"
+                            max="999"
+                            aria-label="Cantitate"
+                            value={item.quantity}
+                            on:input={(e) => setQty(item.productId, Number((e.target as HTMLInputElement).value))}
+                          />
+                          <button class="qty-btn" type="button" aria-label="Crește cantitatea" on:click={() => setQty(item.productId, item.quantity + 1)}>
+                            <i class="bi bi-plus"></i>
+                          </button>
                         </div>
-                        <button class="link-danger" type="button" on:click={() => remove(item.productId)}><i class="bi bi-x-lg"></i> Elimină</button>
+                        <button class="remove-btn" type="button" on:click={() => remove(item.productId)}>
+                          <i class="bi bi-x-lg"></i> Elimină
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -339,31 +493,59 @@
           {/if}
         </div>
 
-        {#if !$auth.isAuthenticated}
-          <div class="panel panel-soft mt-4">
+        {#if hasItems && !$auth.isAuthenticated}
+          <div class="panel panel-soft mt-4" id="auth-panel">
             <div class="panel-head">
-              <h2 class="h5 fw-bold m-0"><i class="bi bi-person-lock"></i> Autentificare client</h2>
+              <div>
+                <h2 class="h5 fw-bold m-0"><i class="bi bi-person-lock"></i> Date client</h2>
+                <div class="muted small mt-1">Contul păstrează coșul, comenzile și conversația cu adminul.</div>
+              </div>
             </div>
 
-            <div class="authTabs">
-              <button class:active={authMode === 'login'} on:click={() => (authMode = 'login')}>Login</button>
-              <button class:active={authMode === 'register'} on:click={() => (authMode = 'register')}>Înregistrare</button>
+            <div class="authTabs" role="tablist" aria-label="Autentificare sau înregistrare">
+              <button type="button" class:active={authMode === 'login'} on:click={() => (authMode = 'login')}>Am cont</button>
+              <button type="button" class:active={authMode === 'register'} on:click={() => (authMode = 'register')}>Creez cont</button>
             </div>
 
             {#if authMode === 'login'}
               <form class="authGrid" on:submit={submitLogin}>
-                <input class="form-control" placeholder="Email sau username" bind:value={loginForm.identity} required />
-                <input class="form-control" type="password" placeholder="Parolă" bind:value={loginForm.password} required />
-                <button class="btn btn-primary" type="submit">Autentificare</button>
+                <label>
+                  <span>Email sau username</span>
+                  <input class="form-control" autocomplete="username" bind:value={loginForm.identity} required />
+                </label>
+                <label>
+                  <span>Parolă</span>
+                  <input class="form-control" type="password" autocomplete="current-password" bind:value={loginForm.password} required />
+                </label>
+                <button class="btn btn-primary" type="submit" disabled={authSubmitting}>
+                  {authSubmitting ? 'Se autentifică…' : 'Autentificare'}
+                </button>
               </form>
             {:else}
               <form class="authGrid" on:submit={submitRegister}>
-                <input class="form-control" placeholder="Nume complet" bind:value={registerForm.fullName} required />
-                <input class="form-control" placeholder="Telefon" bind:value={registerForm.phone} required />
-                <input class="form-control" placeholder="Username" bind:value={registerForm.username} />
-                <input class="form-control" type="email" placeholder="Email" bind:value={registerForm.email} required />
-                <input class="form-control" type="password" placeholder="Parolă" bind:value={registerForm.password} required />
-                <button class="btn btn-primary" type="submit">Creează cont</button>
+                <label>
+                  <span>Nume complet</span>
+                  <input class="form-control" autocomplete="name" bind:value={registerForm.fullName} required />
+                </label>
+                <label>
+                  <span>Telefon</span>
+                  <input class="form-control" autocomplete="tel" bind:value={registerForm.phone} required />
+                </label>
+                <label>
+                  <span>Username</span>
+                  <input class="form-control" autocomplete="username" bind:value={registerForm.username} />
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input class="form-control" type="email" autocomplete="email" bind:value={registerForm.email} required />
+                </label>
+                <label>
+                  <span>Parolă</span>
+                  <input class="form-control" type="password" autocomplete="new-password" bind:value={registerForm.password} required />
+                </label>
+                <button class="btn btn-primary" type="submit" disabled={authSubmitting}>
+                  {authSubmitting ? 'Se creează contul…' : 'Creează cont'}
+                </button>
               </form>
             {/if}
           </div>
@@ -372,16 +554,22 @@
         {#if $auth.isAuthenticated && !$auth.isAdmin}
           <div class="panel mt-4">
             <div class="panel-head">
-              <h2 class="h5 fw-bold m-0"><i class="bi bi-chat-dots"></i> Suport</h2>
-              <span class="badge-soft">mesaje utilizator-admin</span>
+              <div>
+                <h2 class="h5 fw-bold m-0"><i class="bi bi-chat-dots"></i> Mesaj pentru comandă</h2>
+                <div class="muted small mt-1">Trimite o întrebare legată de stoc, livrare sau o comandă existentă.</div>
+              </div>
             </div>
 
             <div class="supportGrid">
               <div>
-                <input class="form-control mb-2" bind:value={supportSubject} placeholder="Subiect" />
-                <textarea class="form-control" rows="4" bind:value={supportMessage} placeholder="Scrie un mesaj pentru admin..."></textarea>
+                <label class="field-label" for="support-subject">Subiect</label>
+                <input id="support-subject" class="form-control mb-2" bind:value={supportSubject} />
+                <label class="field-label" for="support-message">Mesaj</label>
+                <textarea id="support-message" class="form-control" rows="4" bind:value={supportMessage} placeholder="Scrie un mesaj pentru admin..."></textarea>
                 <div class="text-end mt-2">
-                  <button class="btn btn-outline-accent" type="button" on:click={submitSupport}>Trimite mesaj</button>
+                  <button class="btn btn-outline-accent" type="button" on:click={submitSupport} disabled={!supportMessage.trim() || supportSubmitting}>
+                    {supportSubmitting ? 'Se trimite…' : 'Trimite mesaj'}
+                  </button>
                 </div>
               </div>
               <div>
@@ -395,7 +583,7 @@
                     {#each conversations as conversation (conversation.id)}
                       <div class="conversationCard">
                         <div class="fw-bold">{conversation.subject}</div>
-                        <div class="muted small">{conversation.status}</div>
+                        <div class="muted small">{statusLabel(conversation.status)}</div>
                         {#if conversation.lastMessage}
                           <div class="small mt-1">{conversation.lastMessage.body}</div>
                         {/if}
@@ -410,42 +598,107 @@
       </div>
 
       <div class="col-lg-4">
-        <div class="panel sticky-summary">
+        <div class="panel">
           <div class="panel-head">
-            <h2 class="h5 fw-bold m-0"><i class="bi bi-receipt"></i> Sumar</h2>
-            {#if syncingCart}<span class="badge-soft">sync…</span>{/if}
+            <div>
+              <h2 class="h5 fw-bold m-0"><i class="bi bi-receipt"></i> Sumar comandă</h2>
+              <div class="muted small mt-1">Prețurile sunt recalculate pe server la finalizare.</div>
+            </div>
           </div>
 
           <div class="summary-row"><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div>
-          <div class="summary-row"><span>Livrare</span><strong>{formatMoney(shippingFee)}</strong></div>
-          <div class="summary-row summary-row--total"><span>Total</span><strong>{formatMoney(total)}</strong></div>
+          <div class="summary-row">
+            <span>{checkoutForm.deliveryMethod === 'delivery' ? 'Livrare' : 'Ridicare'}</span>
+            <strong>{formatMoney(shippingFee)}</strong>
+          </div>
+          <div class="summary-row summary-row--total"><span>Total estimat</span><strong>{formatMoney(total)}</strong></div>
+
+          {#if checkoutForm.deliveryMethod === 'delivery' && subtotal > 0 && remainingForFreeDelivery > 0}
+            <div class="delivery-hint">
+              Adaugă produse de {formatMoney(remainingForFreeDelivery)} pentru livrare gratuită.
+            </div>
+          {:else if checkoutForm.deliveryMethod === 'delivery' && subtotal >= FREE_DELIVERY_THRESHOLD}
+            <div class="delivery-hint success">Livrare gratuită aplicată.</div>
+          {/if}
 
           {#if $auth.isAdmin}
             <div class="alert alert-warning mt-3 mb-0">Administratorii nu pot plasa comenzi.</div>
-          {:else if $cart.items.length > 0}
+          {:else if hasItems}
             <form class="checkoutForm mt-3" on:submit={submitCheckout}>
-              <input class="form-control" placeholder="Nume complet" bind:value={checkoutForm.fullName} required />
-              <input class="form-control" placeholder="Telefon" bind:value={checkoutForm.phone} required />
-              <select class="form-select" bind:value={checkoutForm.deliveryMethod}>
-                <option value="pickup">Ridicare</option>
-                <option value="delivery">Livrare</option>
-              </select>
-              <select class="form-select" bind:value={checkoutForm.paymentMethod}>
-                <option value="CASH_ON_DELIVERY">Plată la livrare / ridicare</option>
-                <option value="CARD">Card</option>
-              </select>
+              <label>
+                <span>Nume complet</span>
+                <input class="form-control" autocomplete="name" bind:value={checkoutForm.fullName} required />
+              </label>
+              <label>
+                <span>Telefon</span>
+                <input class="form-control" autocomplete="tel" bind:value={checkoutForm.phone} required />
+              </label>
+              <label>
+                <span>Metodă primire</span>
+                <select class="form-select" bind:value={checkoutForm.deliveryMethod}>
+                  <option value="pickup">Ridicare de la rulota DeSaga</option>
+                  <option value="delivery">Livrare în Cluj-Napoca</option>
+                </select>
+              </label>
+              <input type="hidden" bind:value={checkoutForm.paymentMethod} />
 
-              {#if checkoutForm.deliveryMethod === 'delivery'}
-                <input class="form-control" placeholder="Adresa" bind:value={checkoutForm.addressLine1} required />
-                <input class="form-control" placeholder="Detalii adresă" bind:value={checkoutForm.addressLine2} />
-                <input class="form-control" placeholder="Oraș" bind:value={checkoutForm.city} required />
-                <input class="form-control" placeholder="Județ" bind:value={checkoutForm.stateRegion} />
-                <input class="form-control" placeholder="Cod poștal" bind:value={checkoutForm.postalCode} required />
+              {#if checkoutForm.deliveryMethod === 'pickup'}
+                <div class="pickup-box">
+                  <strong>Ridicare:</strong> Str. Constantin Brâncuși nr. 153, Cluj-Napoca. Program L–V, 9:00–18:00.
+                </div>
+              {:else}
+                <label>
+                  <span>Adresa</span>
+                  <input class="form-control" autocomplete="street-address" bind:value={checkoutForm.addressLine1} required />
+                </label>
+                <label>
+                  <span>Detalii adresă</span>
+                  <input class="form-control" placeholder="Bloc, scară, etaj, reper" bind:value={checkoutForm.addressLine2} />
+                </label>
+                <label>
+                  <span>Oraș</span>
+                  <input class="form-control" autocomplete="address-level2" bind:value={checkoutForm.city} required />
+                </label>
+                <label>
+                  <span>Județ</span>
+                  <input class="form-control" autocomplete="address-level1" bind:value={checkoutForm.stateRegion} />
+                </label>
+                <label>
+                  <span>Cod poștal</span>
+                  <input class="form-control" autocomplete="postal-code" bind:value={checkoutForm.postalCode} required />
+                </label>
               {/if}
 
-              <textarea class="form-control" rows="3" bind:value={checkoutForm.customerMessage} placeholder="Observații pentru comandă sau mesaj pentru admin"></textarea>
-              <button class="btn btn-accent w-100" type="submit" disabled={$cart.items.length === 0}>Finalizează comanda</button>
+              <label>
+                <span>Observații</span>
+                <textarea class="form-control" rows="3" bind:value={checkoutForm.customerMessage} placeholder="Interval preferat, produse alternative, mesaj pentru admin"></textarea>
+              </label>
+
+              {#if !$auth.isAuthenticated}
+                <div class="checkout-note">
+                  Autentificarea este necesară pentru finalizare. Datele comenzii rămân în coș după login sau înregistrare.
+                </div>
+              {/if}
+
+              <button class="btn btn-accent w-100" type="submit" disabled={checkoutDisabled}>
+                {#if checkoutSubmitting}
+                  Se finalizează…
+                {:else if !$auth.isAuthenticated}
+                  Autentifică-te pentru finalizare
+                {:else}
+                  Finalizează comanda
+                {/if}
+              </button>
+
+              <a class="phone-fallback" href={SUPPORT_PHONE_HREF}>
+                <i class="bi bi-telephone"></i> Comandă telefonic: {SUPPORT_PHONE}
+              </a>
             </form>
+          {:else}
+            <div class="summary-empty">
+              <div class="fw-bold">Adaugă produse pentru checkout.</div>
+              <a href="/produse" class="btn btn-outline-accent btn-sm mt-2">Vezi stocul</a>
+            </div>
           {/if}
         </div>
 
@@ -462,10 +715,15 @@
               <div class="orderList">
                 {#each orders as order (order.id)}
                   <div class="orderCard">
-                    <div class="fw-bold">{order.orderNumber}</div>
-                    <div class="small muted">{new Date(order.createdAt).toLocaleString('ro-RO')}</div>
+                    <div class="orderTop">
+                      <div class="fw-bold">{order.orderNumber}</div>
+                      <span>{statusLabel(order.status)}</span>
+                    </div>
+                    <div class="small muted">{formatDate(order.createdAt)}</div>
                     <div class="mt-2">Total: {order.total.toFixed(2)} {order.currency}</div>
-                    <div class="small mt-1">Status: {order.status} · Plată: {order.paymentStatus} · Livrare: {order.fulfillmentStatus}</div>
+                    <div class="small mt-1 muted">
+                      Plată: {statusLabel(order.paymentStatus)} · Livrare: {statusLabel(order.fulfillmentStatus)}
+                    </div>
                   </div>
                 {/each}
               </div>
@@ -478,13 +736,31 @@
 </section>
 
 <style>
+  .cart-page {
+    background: linear-gradient(180deg, rgba(36, 146, 204, 0.05), rgba(255, 255, 255, 0));
+  }
+
   .page-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 16px;
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+  }
+
+  .eyebrow {
+    color: var(--desaga-blue);
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .head-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
   .panel {
@@ -502,22 +778,74 @@
 
   .panel-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
   }
 
+  .muted,
+  .cart-sub {
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  .muted a {
+    color: var(--desaga-blue);
+    font-weight: 800;
+    text-decoration: none;
+  }
+
   .badge-soft {
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     font-size: 0.78rem;
-    padding: 0.2rem 0.5rem;
+    padding: 0.28rem 0.6rem;
     border-radius: 999px;
     background: rgba(36, 146, 204, 0.14);
     border: 1px solid rgba(36, 146, 204, 0.25);
     color: #2492cc;
     white-space: nowrap;
+    font-weight: 800;
+  }
+
+  .checkout-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    background: rgba(255, 255, 255, 0.78);
+    color: rgba(0, 0, 0, 0.62);
+  }
+
+  .step span {
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.08);
+    font-weight: 900;
+  }
+
+  .step.done {
+    color: var(--desaga-blue);
+    border-color: rgba(36, 146, 204, 0.24);
+    background: rgba(36, 146, 204, 0.08);
+  }
+
+  .step.done span {
+    color: #fff;
+    background: var(--desaga-blue);
   }
 
   .cart-list {
@@ -530,8 +858,9 @@
     justify-content: space-between;
     gap: 14px;
     padding: 12px;
-    border-radius: 14px;
+    border-radius: 16px;
     background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.04);
   }
 
   .cart-main {
@@ -541,13 +870,16 @@
   }
 
   .thumb {
-    width: 72px;
-    height: 72px;
-    border-radius: 14px;
+    width: 78px;
+    height: 78px;
+    border-radius: 16px;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.05);
     display: grid;
     place-items: center;
+    color: rgba(0, 0, 0, 0.45);
+    flex: 0 0 auto;
+    text-decoration: none;
   }
 
   .thumb img {
@@ -561,11 +893,14 @@
   }
 
   .cart-title {
+    display: inline-block;
     font-weight: 900;
+    color: inherit;
+    text-decoration: none;
   }
 
-  .cart-sub, .muted {
-    color: rgba(0, 0, 0, 0.65);
+  .cart-title:hover {
+    color: var(--desaga-blue);
   }
 
   .cart-actions {
@@ -582,26 +917,31 @@
     overflow: hidden;
     border-radius: 12px;
     border: 1px solid rgba(36, 146, 204, 0.35);
+    background: #fff;
   }
 
   .qty-btn {
     border: 0;
     background: rgba(36, 146, 204, 0.1);
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
+    color: var(--desaga-blue);
+    font-weight: 900;
   }
 
   .qty-input {
-    width: 58px;
+    width: 56px;
     border: 0;
     text-align: center;
-    height: 34px;
+    height: 36px;
+    font-weight: 900;
   }
 
-  .link-danger {
+  .remove-btn {
     border: 0;
     background: transparent;
     color: #dc3545;
+    font-weight: 800;
   }
 
   .cart-price {
@@ -625,7 +965,25 @@
     border-top: 1px solid rgba(0, 0, 0, 0.08);
     margin-top: 6px;
     padding-top: 12px;
-    font-size: 1.05rem;
+    font-size: 1.08rem;
+  }
+
+  .delivery-hint,
+  .checkout-note,
+  .pickup-box,
+  .summary-empty {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(36, 146, 204, 0.08);
+    border: 1px solid rgba(36, 146, 204, 0.16);
+    color: rgba(0, 0, 0, 0.72);
+    font-size: 0.9rem;
+  }
+
+  .delivery-hint.success {
+    background: rgba(25, 135, 84, 0.08);
+    border-color: rgba(25, 135, 84, 0.18);
   }
 
   .checkoutForm,
@@ -634,23 +992,41 @@
     gap: 10px;
   }
 
+  .checkoutForm label,
+  .authGrid label {
+    display: grid;
+    gap: 5px;
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+
+  .field-label {
+    display: inline-block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+
   .authTabs {
     display: inline-flex;
     gap: 8px;
     margin-bottom: 12px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(0, 0, 0, 0.06);
   }
 
   .authTabs button {
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    background: #fff;
+    border: 0;
+    background: transparent;
     border-radius: 999px;
     padding: 8px 12px;
-    font-weight: 700;
+    font-weight: 800;
   }
 
   .authTabs button.active {
-    background: rgba(36, 146, 204, 0.1);
-    border-color: rgba(36, 146, 204, 0.35);
+    background: rgba(36, 146, 204, 0.14);
     color: #2492cc;
   }
 
@@ -671,28 +1047,106 @@
     padding: 12px;
     border-radius: 14px;
     background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.04);
   }
 
-  .sticky-summary {
-    position: sticky;
-    top: 100px;
+  .orderTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
+
+  .orderTop span {
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(36, 146, 204, 0.1);
+    color: var(--desaga-blue);
+    font-size: 0.75rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .phone-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--desaga-blue);
+    font-weight: 900;
+    text-decoration: none;
+    margin-top: 2px;
+  }
+
+
 
   .empty-state {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
     border-radius: 18px;
     border: 1px solid rgba(0, 0, 0, 0.06);
     background: rgba(0, 0, 0, 0.02);
     padding: 18px;
   }
 
+  .empty-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    background: rgba(36, 146, 204, 0.12);
+    color: var(--desaga-blue);
+    flex: 0 0 auto;
+    font-size: 1.25rem;
+  }
+
   .empty-title {
     font-weight: 900;
-    font-size: 1.05rem;
+    font-size: 1.08rem;
   }
 
   .empty-sub {
-    opacity: 0.75;
+    opacity: 0.78;
     margin-top: 4px;
   }
-</style>
 
+  .empty-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  @media (max-width: 991.98px) {}
+
+  @media (max-width: 767.98px) {
+    .checkout-steps {
+      grid-template-columns: 1fr;
+    }
+
+    .cart-row,
+    .empty-state {
+      flex-direction: column;
+    }
+
+    .cart-price {
+      width: 100%;
+      text-align: left;
+      min-width: 0;
+    }
+
+    .supportGrid {
+      grid-template-columns: 1fr;
+    }
+
+    .head-actions {
+      width: 100%;
+    }
+
+    .head-actions .btn {
+      flex: 1 1 auto;
+    }
+  }
+</style>

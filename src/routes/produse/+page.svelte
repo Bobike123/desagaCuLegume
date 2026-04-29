@@ -1,60 +1,49 @@
-<!-- FILE: src/routes/produse/+page.svelte -->
 <script lang="ts">
-  import Hero from "$lib/components/Hero.svelte";
-  import ProductCard from "$lib/components/ProductCard.svelte";
-  import { onMount } from "svelte";
-  import { getAllProducts, type Product } from "$lib/stores/products";
+  import Hero from '$lib/components/Hero.svelte';
+  import ProductCard from '$lib/components/ProductCard.svelte';
+  import { onMount } from 'svelte';
+  import { getAllProducts, type Product } from '$lib/stores/products';
 
   let products: Product[] = [];
-  let selectedCategory: string = "all";
   let filteredProducts: Product[] = [];
   let loading = true;
+  let q = '';
 
-  // UI-only search
-  let q = "";
-
-  const categories = [
-    { key: "all", label: "Toate", icon: "bi-list-ul" },
-    { key: "de-sezon", label: "De Sezon", icon: "bi-leaf" },
-    { key: "la-borcan", label: "La Borcan", icon: "bi-jar" },
-  ];
+  const phoneHref = 'tel:+40729969822';
+  const phoneLabel = '+40 729 969 822';
 
   onMount(async () => {
-    try {
-      loading = true;
-      products = await getAllProducts();
-    } finally {
-      loading = false;
-    }
+    loading = true;
+    products = await getAllProducts();
+    loading = false;
   });
 
   function normalizeText(value: string) {
     return value
       .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/ă/g, "a")
-      .replace(/â/g, "a")
-      .replace(/î/g, "i")
-      .replace(/ș/g, "s")
-      .replace(/ț/g, "t");
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ă/g, 'a')
+      .replace(/â/g, 'a')
+      .replace(/î/g, 'i')
+      .replace(/ș|ş/g, 's')
+      .replace(/ț|ţ/g, 't');
   }
 
-  $: filteredProducts = products
-    .filter((p) => p.in_stock === true)
-    .filter(
-      (p) => selectedCategory === "all" || p.category === selectedCategory,
-    )
-    .filter((p) => {
-      const needle = normalizeText(q.trim());
-      if (!needle) return true;
+  function clearSearch() {
+    q = '';
+  }
 
-      const haystack = normalizeText(
-        `${p.name ?? ""} ${p.description ?? ""} ${p.category ?? ""}`,
-      );
+  $: availableProducts = products.filter((p) => p.in_stock === true && p.category !== 'horeca');
+  $: totalProducts = products.filter((p) => p.category !== 'horeca').length;
+  $: totalAvailable = availableProducts.length;
+  $: filteredProducts = availableProducts.filter((p) => {
+    const needle = normalizeText(q.trim());
+    if (!needle) return true;
 
-      return haystack.includes(needle);
-    });
+    const haystack = normalizeText(`${p.name ?? ''} ${p.description ?? ''} ${p.category ?? ''}`);
+    return haystack.includes(needle);
+  });
 </script>
 
 <svelte:head>
@@ -62,61 +51,83 @@
 </svelte:head>
 
 <Hero
-  title="Produse"
-  subtitle="Din fermă direct la tine"
+  title="Produse disponibile"
+  subtitle="Stocul se schimbă în funcție de recoltă. Verifică lista sau sună pentru confirmare."
   backgroundImage=""
-  height="340px"
+  height="300px"
 />
 
-<section class="py-5">
+<section class="products-page py-5">
   <div class="container">
-    <div class="head">
-      <h2 class="head__title">Consumă local. Gustos. Sănătos.</h2>
+    <div class="toolbar">
+      <div>
+        <p class="eyebrow mb-2">Stoc de azi</p>
+        <h2 class="toolbar-title">Alege produse disponibile acum</h2>
+        <p class="toolbar-subtitle mb-0">
+          {totalAvailable} produse disponibile din {totalProducts} afișate. Pentru stocul exact de la rulotă, sună la {phoneLabel}.
+        </p>
+      </div>
 
-      <div class="search">
+      <div class="toolbar-actions">
+        <a href={phoneHref} class="btn btn-primary">
+          <i class="bi bi-telephone"></i> Sună pentru stoc
+        </a>
+        <a href="/contact" class="btn btn-outline-primary">
+          <i class="bi bi-geo-alt"></i> Unde ne găsești
+        </a>
+      </div>
+    </div>
+
+    <div class="search-panel">
+      <div class="search" role="search">
         <i class="bi bi-search" aria-hidden="true"></i>
         <input
           class="search__input"
           type="search"
-          placeholder="Caută produs…"
+          placeholder="Caută roșii, zacuscă, miere…"
+          aria-label="Caută produs"
           bind:value={q}
         />
         {#if q.trim()}
-          <!-- svelte-ignore a11y_consider_explicit_label -->
-          <button class="search__clear" on:click={() => (q = "")}>
+          <button class="search__clear" type="button" aria-label="Șterge căutarea" on:click={clearSearch}>
             <i class="bi bi-x-lg"></i>
           </button>
         {/if}
       </div>
     </div>
 
-    <div class="filters">
-      {#each categories as c (c.key)}
-        <button
-          class={`chip ${selectedCategory === c.key ? "chip--active" : ""}`}
-          on:click={() => (selectedCategory = c.key)}
-        >
-          <i class={`bi ${c.icon}`}></i>
-          {c.label}
-        </button>
-      {/each}
-    </div>
-
     {#if loading}
-      <div class="products-grid">
+      <div class="products-grid" aria-label="Se încarcă produsele">
         {#each Array(10) as _}
           <div class="skeleton"></div>
         {/each}
       </div>
     {:else if filteredProducts.length === 0}
-      <div class="empty">
-        <i class="bi bi-info-circle"></i>
-        <div>
-          <strong>Nu sunt produse disponibile</strong>
-          <div>Schimbă categoria sau caută alt produs.</div>
+      <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-basket"></i></div>
+        <div class="empty-copy">
+          <h3>Nu sunt produse disponibile pentru căutarea curentă</h3>
+          <p>
+            Produsele se actualizează în funcție de recoltă și stoc. Caută alt produs sau sună pentru lista disponibilă azi.
+          </p>
+          <div class="empty-actions">
+            <button type="button" class="btn btn-primary" on:click={clearSearch}>
+              <i class="bi bi-arrow-counterclockwise"></i> Șterge căutarea
+            </button>
+            <a href={phoneHref} class="btn btn-outline-primary">
+              <i class="bi bi-telephone"></i> Sună acum
+            </a>
+          </div>
         </div>
       </div>
     {:else}
+      <div class="results-head">
+        <div>
+          <strong>{filteredProducts.length}</strong> produse disponibile
+        </div>
+        <div class="results-note">Afișăm doar produse disponibile în stoc.</div>
+      </div>
+
       <div class="products-grid">
         {#each filteredProducts as product (product.id)}
           <ProductCard {product} />
@@ -127,29 +138,70 @@
 </section>
 
 <style>
-  .head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
+  .products-page {
+    background: linear-gradient(180deg, #fff 0%, rgba(var(--desaga-accent-rgb), 0.05) 100%);
   }
 
-  .head__title {
+  .toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+    padding: 18px;
+    border-radius: 22px;
+    border: 1px solid rgba(var(--desaga-accent-rgb), 0.14);
+    background: #fff;
+    box-shadow: var(--desaga-shadow-sm);
+  }
+
+  @media (min-width: 992px) {
+    .toolbar {
+      grid-template-columns: 1fr auto;
+      align-items: center;
+    }
+  }
+
+  .eyebrow {
+    color: var(--desaga-blue);
     font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.78rem;
+  }
+
+  .toolbar-title {
+    margin: 0 0 0.4rem;
+    font-weight: 950;
     color: var(--desaga-brown);
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
+  }
+
+  .toolbar-subtitle {
+    color: rgba(0, 0, 0, 0.68);
+    max-width: 680px;
+  }
+
+  .toolbar-actions,
+  .empty-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .search-panel {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 20px;
   }
 
   .search {
     position: relative;
-    width: min(420px, 100%);
+    width: 100%;
   }
 
-  .search i {
+  .search > i {
     position: absolute;
-    left: 12px;
+    left: 14px;
     top: 50%;
     transform: translateY(-50%);
     opacity: 0.5;
@@ -157,9 +209,17 @@
 
   .search__input {
     width: 100%;
-    padding: 10px 38px;
-    border-radius: 14px;
+    padding: 12px 42px;
+    border-radius: 16px;
     border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.04);
+  }
+
+  .search__input:focus {
+    outline: none;
+    border-color: rgba(var(--desaga-accent-rgb), 0.5);
+    box-shadow: var(--desaga-focus-ring);
   }
 
   .search__clear {
@@ -167,32 +227,28 @@
     right: 8px;
     top: 50%;
     transform: translateY(-50%);
-    border: none;
-    background: transparent;
-    opacity: 0.6;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    opacity: 0.75;
   }
 
-  .filters {
+  .results-head {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
+    color: rgba(0, 0, 0, 0.7);
   }
 
-  .chip {
-    padding: 8px 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    background: #fff;
-    font-weight: 700;
+  .results-note {
+    font-size: 0.9rem;
   }
 
-  .chip--active {
-    background: rgba(36, 146, 204, 0.14);
-    border-color: rgba(36, 146, 204, 0.4);
-  }
-
-  /* COLUMN-BASED GRID (no fixed 4-per-row) */
   .products-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -214,32 +270,59 @@
 
   .skeleton {
     height: 360px;
-    border-radius: 16px;
-    background: linear-gradient(
-      90deg,
-      rgba(0, 0, 0, 0.05),
-      rgba(0, 0, 0, 0.1),
-      rgba(0, 0, 0, 0.05)
-    );
+    border-radius: 18px;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
     background-size: 200% 100%;
     animation: shimmer 1.2s infinite linear;
   }
 
   @keyframes shimmer {
-    from {
-      background-position: 200% 0;
-    }
-    to {
-      background-position: -200% 0;
-    }
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
   }
 
-  .empty {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    padding: 18px;
+  .empty-state {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 22px;
+    border-radius: 22px;
+    background: #fff;
+    border: 1px solid rgba(var(--desaga-accent-rgb), 0.14);
+    box-shadow: var(--desaga-shadow-sm);
+  }
+
+  .empty-icon {
+    width: 48px;
+    height: 48px;
     border-radius: 16px;
-    background: rgba(0, 0, 0, 0.03);
+    display: grid;
+    place-items: center;
+    color: var(--desaga-blue);
+    background: rgba(var(--desaga-accent-rgb), 0.12);
+    font-size: 1.25rem;
+  }
+
+  .empty-copy h3 {
+    margin: 0 0 0.4rem;
+    font-weight: 950;
+    color: var(--desaga-brown);
+  }
+
+  .empty-copy p {
+    margin: 0 0 1rem;
+    color: rgba(0, 0, 0, 0.68);
+  }
+
+  @media (max-width: 576px) {
+    .empty-state {
+      grid-template-columns: 1fr;
+    }
+
+    .toolbar-actions .btn,
+    .empty-actions .btn {
+      width: 100%;
+    }
   }
 </style>

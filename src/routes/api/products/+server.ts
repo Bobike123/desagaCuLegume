@@ -5,7 +5,7 @@ import {
   fetchCategoryMap,
   findCategoryBySlug,
   formatProductRow,
-  uniqueProductSlug
+  uniqueProductSlug,
 } from '$lib/server/catalog';
 
 function cleanString(value: unknown) {
@@ -27,7 +27,11 @@ function cleanStatus(value: unknown) {
 export async function GET({ locals, url }) {
   try {
     const admin = createAdminClient();
-    const categorySlug = url.searchParams.get('category');
+    const categorySlug = cleanString(url.searchParams.get('category'));
+
+    if (categorySlug === 'horeca') {
+      return json({ items: [] }, { status: 200 });
+    }
 
     let query = admin
       .from('products')
@@ -48,9 +52,9 @@ export async function GET({ locals, url }) {
     if (error) throw error;
 
     const categoryMap = await fetchCategoryMap((data ?? []).map((row) => row.category_id));
-    const items = (data ?? []).map((row) =>
-      formatProductRow(row, categoryMap.get(Number(row.category_id))?.slug)
-    );
+    const items = (data ?? [])
+      .map((row) => formatProductRow(row, categoryMap.get(Number(row.category_id))?.slug))
+      .filter((item) => locals.isAdmin || item.category !== 'horeca');
 
     return json({ items }, { status: 200 });
   } catch (error) {
@@ -70,7 +74,9 @@ export async function POST({ locals, request }) {
     const name = cleanString(body.name);
     if (!name) return json({ error: 'Numele produsului este obligatoriu.' }, { status: 400 });
 
-    const category = await ensureCategory(cleanString(body.category || 'de-sezon'));
+    const requestedCategory = cleanString(body.category || 'de-sezon');
+    const categorySlug = requestedCategory === 'horeca' ? 'de-sezon' : requestedCategory;
+    const category = await ensureCategory(categorySlug);
     const slug = body.slug ? cleanString(body.slug) : await uniqueProductSlug(name);
     const sku = cleanString(body.sku) || `PROD-${Date.now()}`;
 

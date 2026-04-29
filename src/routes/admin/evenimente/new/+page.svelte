@@ -1,6 +1,7 @@
 <!-- src/routes/admin/evenimente/new/+page.svelte -->
 <script lang="ts">
   import { enhance } from "$app/forms";
+  import AdminNav from "$lib/components/AdminNav.svelte";
 
   export let form: {
     success?: boolean;
@@ -26,6 +27,8 @@
 <svelte:head>
   <title>Eveniment nou · Admin</title>
 </svelte:head>
+
+<AdminNav />
 
 <div class="page">
   <header class="page__header">
@@ -262,7 +265,10 @@
 <style>
 
   .page {
-    padding: 10px 0 22px;
+    margin-left: 240px;
+    min-height: 100vh;
+    padding: 24px;
+    background: #f8fafc;
   }
 
   .page__header {
@@ -453,6 +459,13 @@
     }
     .panel__hint {
       display: none;
+    }
+  }
+
+  @media (max-width: 991.98px) {
+    .page {
+      margin-left: 0;
+      padding-top: 84px;
     }
   }
 </style>

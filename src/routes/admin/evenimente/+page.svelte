@@ -1,6 +1,7 @@
 <!-- src/routes/admin/evenimente/+page.svelte -->
 <script lang="ts">
   import { onMount } from "svelte";
+  import AdminNav from "$lib/components/AdminNav.svelte";
 
   type EventItem = {
     id: string;
@@ -108,6 +109,8 @@
 <svelte:head>
   <title>Gestionare Evenimente - Admin DeSaga</title>
 </svelte:head>
+
+<AdminNav />
 
 <div class="page">
   <header class="page__header">
@@ -278,7 +281,10 @@
 
 <style>
   .page {
-    padding: 10px 0 22px;
+    margin-left: 240px;
+    min-height: 100vh;
+    padding: 24px;
+    background: #f8fafc;
   }
 
   .page__header {
@@ -445,6 +451,13 @@
     }
     .title__main {
       max-width: 240px;
+    }
+  }
+
+  @media (max-width: 991.98px) {
+    .page {
+      margin-left: 0;
+      padding-top: 84px;
     }
   }
 </style>
