@@ -1,7 +1,9 @@
+
 <script lang="ts">
   import { onMount } from 'svelte';
   import { auth } from '$lib/stores/auth';
   import { cart } from '$lib/stores/cart';
+  import MessageThread from '$lib/components/MessageThread.svelte';
 
   type OrderItem = {
     id: string;
@@ -14,13 +16,6 @@
     createdAt: string;
   };
 
-  type ConversationItem = {
-    id: string;
-    subject: string;
-    status: string;
-    unreadCount: number;
-    lastMessage: { body: string; createdAt: string } | null;
-  };
 
   type ServerCartItem = {
     productId: string | number;
@@ -39,16 +34,13 @@
   let authError = '';
   let checkoutError = '';
   let checkoutSuccess = '';
-  let supportError = '';
   let loadingOrders = false;
-  let loadingMessages = false;
   let syncingCart = false;
   let serverSynced = false;
   let localCartChanged = false;
   let loadedDataForUserId = '';
   let authSubmitting = false;
   let checkoutSubmitting = false;
-  let supportSubmitting = false;
   let clearingCart = false;
 
   let loginForm = {
@@ -78,10 +70,7 @@
     customerMessage: '',
   };
 
-  let supportSubject = 'Întrebare comandă';
-  let supportMessage = '';
   let orders: OrderItem[] = [];
-  let conversations: ConversationItem[] = [];
 
   function formatMoney(value: number) {
     return `${Number(value || 0).toFixed(2)} RON`;
@@ -161,7 +150,7 @@
       await auth.login({ identity: loginForm.identity, password: loginForm.password });
       serverSynced = false;
       await syncServerCart();
-      await Promise.all([loadOrders(), loadMessages()]);
+      await loadOrders();
     } catch (err) {
       authError = err instanceof Error ? err.message : 'Autentificarea a eșuat.';
     } finally {
@@ -181,7 +170,7 @@
       serverSynced = false;
       localCartChanged = true;
       await syncServerCart();
-      await Promise.all([loadOrders(), loadMessages()]);
+      await loadOrders();
     } catch (err) {
       authError = err instanceof Error ? err.message : 'Înregistrarea a eșuat.';
     } finally {
@@ -249,48 +238,6 @@
     }
   }
 
-  async function loadMessages() {
-    if (!$auth.isAuthenticated || $auth.isAdmin) {
-      conversations = [];
-      return;
-    }
-
-    loadingMessages = true;
-    try {
-      const res = await fetch('/api/messages');
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca conversațiile.');
-      conversations = Array.isArray(data?.items) ? data.items : [];
-    } catch (err) {
-      supportError = err instanceof Error ? err.message : 'Nu am putut încărca conversațiile.';
-    } finally {
-      loadingMessages = false;
-    }
-  }
-
-  async function submitSupport() {
-    if (!$auth.isAuthenticated || $auth.isAdmin || !supportMessage.trim() || supportSubmitting) return;
-    supportError = '';
-    supportSubmitting = true;
-
-    try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject: supportSubject, message: supportMessage }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut trimite mesajul.');
-
-      supportMessage = '';
-      await loadMessages();
-    } catch (err) {
-      supportError = err instanceof Error ? err.message : 'Nu am putut trimite mesajul.';
-    } finally {
-      supportSubmitting = false;
-    }
-  }
-
   async function submitCheckout(event: Event) {
     event.preventDefault();
     checkoutError = '';
@@ -331,7 +278,7 @@
       localCartChanged = false;
       serverSynced = true;
       checkoutForm.customerMessage = '';
-      await Promise.all([loadOrders(), loadMessages()]);
+      await loadOrders();
     } catch (err) {
       checkoutError = err instanceof Error ? err.message : 'Checkout-ul a eșuat.';
     } finally {
@@ -358,13 +305,13 @@
 
   $: if ($auth.isAuthenticated && !$auth.isAdmin && String($auth.user?.id ?? '') !== loadedDataForUserId) {
     loadedDataForUserId = String($auth.user?.id ?? '');
-    void Promise.all([loadOrders(), loadMessages()]);
+    void loadOrders();
   }
 
   onMount(() => {
     if ($auth.isAuthenticated && !$auth.isAdmin) {
       loadedDataForUserId = String($auth.user?.id ?? '');
-      void Promise.all([loadOrders(), loadMessages()]);
+      void loadOrders();
     }
   });
 </script>
@@ -384,6 +331,8 @@
         </div>
       </div>
       <div class="head-actions">
+        <div class="head-pill"><strong>{itemCount}</strong><span>produse</span></div>
+        <div class="head-pill"><strong>{formatMoney(total)}</strong><span>estimat</span></div>
         <a href="/produse" class="btn btn-outline-accent">
           <i class="bi bi-arrow-left"></i> Continuă cumpărăturile
         </a>
@@ -396,7 +345,6 @@
     {#if authError}<div class="alert alert-danger" role="alert">{authError}</div>{/if}
     {#if checkoutError}<div class="alert alert-danger" role="alert">{checkoutError}</div>{/if}
     {#if checkoutSuccess}<div class="alert alert-success" role="alert">{checkoutSuccess}</div>{/if}
-    {#if supportError}<div class="alert alert-danger" role="alert">{supportError}</div>{/if}
 
     <div class="checkout-steps" aria-label="Pași checkout">
       <div class:done={hasItems} class="step">
@@ -552,53 +500,21 @@
         {/if}
 
         {#if $auth.isAuthenticated && !$auth.isAdmin}
-          <div class="panel mt-4">
-            <div class="panel-head">
-              <div>
-                <h2 class="h5 fw-bold m-0"><i class="bi bi-chat-dots"></i> Mesaj pentru comandă</h2>
-                <div class="muted small mt-1">Trimite o întrebare legată de stoc, livrare sau o comandă existentă.</div>
-              </div>
-            </div>
-
-            <div class="supportGrid">
-              <div>
-                <label class="field-label" for="support-subject">Subiect</label>
-                <input id="support-subject" class="form-control mb-2" bind:value={supportSubject} />
-                <label class="field-label" for="support-message">Mesaj</label>
-                <textarea id="support-message" class="form-control" rows="4" bind:value={supportMessage} placeholder="Scrie un mesaj pentru admin..."></textarea>
-                <div class="text-end mt-2">
-                  <button class="btn btn-outline-accent" type="button" on:click={submitSupport} disabled={!supportMessage.trim() || supportSubmitting}>
-                    {supportSubmitting ? 'Se trimite…' : 'Trimite mesaj'}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <h3 class="h6 fw-bold">Conversațiile mele</h3>
-                {#if loadingMessages}
-                  <div class="muted">Se încarcă conversațiile…</div>
-                {:else if conversations.length === 0}
-                  <div class="muted">Nu ai conversații încă.</div>
-                {:else}
-                  <div class="conversationList">
-                    {#each conversations as conversation (conversation.id)}
-                      <div class="conversationCard">
-                        <div class="fw-bold">{conversation.subject}</div>
-                        <div class="muted small">{statusLabel(conversation.status)}</div>
-                        {#if conversation.lastMessage}
-                          <div class="small mt-1">{conversation.lastMessage.body}</div>
-                        {/if}
-                      </div>
-                    {/each}
-                  </div>
-                {/if}
-              </div>
-            </div>
+          <div class="panel panel-messages mt-4">
+            <MessageThread
+              mode="user"
+              expanded={true}
+              collapsible={false}
+              {orders}
+              title="Mesaje cu adminul"
+              subtitle="Alege o comandă sau începe un mesaj general. Răspunsurile apar în același fir."
+            />
           </div>
         {/if}
       </div>
 
       <div class="col-lg-4">
-        <div class="panel">
+        <div class="panel summary-panel">
           <div class="panel-head">
             <div>
               <h2 class="h5 fw-bold m-0"><i class="bi bi-receipt"></i> Sumar comandă</h2>
@@ -769,6 +685,37 @@
     border: 1px solid rgba(0, 0, 0, 0.06);
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
     padding: 16px;
+  }
+
+
+
+  .head-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 38px;
+    padding: 0.4rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(36, 146, 204, 0.18);
+    background: rgba(36, 146, 204, 0.08);
+    color: rgba(0, 0, 0, 0.66);
+    font-size: 0.86rem;
+    font-weight: 850;
+  }
+
+  .head-pill strong {
+    color: var(--desaga-heading);
+    font-weight: 950;
+  }
+
+  .panel-messages {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .summary-panel {
+    position: sticky;
+    top: 1rem;
   }
 
   .panel-soft {
@@ -1030,19 +977,11 @@
     color: #2492cc;
   }
 
-  .supportGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-
-  .conversationList,
   .orderList {
     display: grid;
     gap: 10px;
   }
 
-  .conversationCard,
   .orderCard {
     padding: 12px;
     border-radius: 14px;
@@ -1137,16 +1076,18 @@
       min-width: 0;
     }
 
-    .supportGrid {
-      grid-template-columns: 1fr;
-    }
-
     .head-actions {
       width: 100%;
     }
 
-    .head-actions .btn {
+    .head-actions .btn,
+    .head-pill {
       flex: 1 1 auto;
+      justify-content: center;
+    }
+
+    .summary-panel {
+      position: static;
     }
   }
 </style>

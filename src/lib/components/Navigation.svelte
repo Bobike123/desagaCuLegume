@@ -24,6 +24,59 @@
   let offcanvasInstance: any = null;
   let isOpen = false;
 
+  let productsMenuState: 'closed' | 'opening' | 'open' | 'closing' = 'closed';
+  let productsMenuCloseTimer: ReturnType<typeof setTimeout> | null = null;
+  let productsMenuAnimationTimer: ReturnType<typeof setTimeout> | null = null;
+
+  $: productsMenuVisible = productsMenuState !== 'closed';
+
+  function clearProductsMenuTimers() {
+    if (productsMenuCloseTimer) {
+      clearTimeout(productsMenuCloseTimer);
+      productsMenuCloseTimer = null;
+    }
+
+    if (productsMenuAnimationTimer) {
+      clearTimeout(productsMenuAnimationTimer);
+      productsMenuAnimationTimer = null;
+    }
+  }
+
+  function openProductsMenu() {
+    clearProductsMenuTimers();
+
+    if (productsMenuState === 'open') return;
+
+    productsMenuState = 'opening';
+
+    productsMenuAnimationTimer = setTimeout(() => {
+      productsMenuState = 'open';
+      productsMenuAnimationTimer = null;
+    }, 20);
+  }
+
+  function scheduleProductsMenuClose() {
+    if (productsMenuCloseTimer) {
+      clearTimeout(productsMenuCloseTimer);
+    }
+
+    productsMenuCloseTimer = setTimeout(() => {
+      productsMenuState = 'closing';
+
+      productsMenuAnimationTimer = setTimeout(() => {
+        productsMenuState = 'closed';
+        productsMenuAnimationTimer = null;
+      }, 240);
+
+      productsMenuCloseTimer = null;
+    }, 200);
+  }
+
+  function closeProductsMenuNow() {
+    clearProductsMenuTimers();
+    productsMenuState = 'closed';
+  }
+
   function openMenu() {
     offcanvasInstance?.show();
   }
@@ -61,6 +114,8 @@
   });
 
   onDestroy(() => {
+    clearProductsMenuTimers();
+
     if (!offcanvasEl) return;
     offcanvasEl.removeEventListener('shown.bs.offcanvas', handleShown);
     offcanvasEl.removeEventListener('hidden.bs.offcanvas', handleHidden);
@@ -150,14 +205,38 @@
           <a class={`nav-link ${navActive('/')}`} href="/" aria-current={isActive('/') ? 'page' : undefined}>Acasă</a>
         </li>
 
-        <li class="nav-item dropdown desktop-dropdown">
-          <a class={`nav-link dropdown-toggle ${navActiveStarts('/produse')}`} href="/produse" aria-current={navActiveStarts('/produse') ? 'page' : undefined}>
+        <li
+          class="nav-item dropdown desktop-dropdown"
+          on:mouseenter={openProductsMenu}
+          on:mouseleave={scheduleProductsMenuClose}
+          on:focusin={openProductsMenu}
+          on:focusout={scheduleProductsMenuClose}
+        >
+          <a
+            class={`nav-link dropdown-toggle ${navActiveStarts('/produse')}`}
+            href="/produse"
+            aria-current={navActiveStarts('/produse') ? 'page' : undefined}
+            aria-expanded={productsMenuVisible}
+          >
             Produse
           </a>
-          <ul class="dropdown-menu">
+
+          <ul
+            class="dropdown-menu products-dropdown"
+            class:visible={productsMenuVisible}
+            class:opening={productsMenuState === 'opening'}
+            class:open={productsMenuState === 'open'}
+            class:closing={productsMenuState === 'closing'}
+            on:mouseenter={openProductsMenu}
+            on:mouseleave={scheduleProductsMenuClose}
+          >
             {#each productLinks as item}
               <li>
-                <a class={`dropdown-item ${navActive(item.href)}`} href={item.href}>
+                <a
+                  class={`dropdown-item ${navActive(item.href)}`}
+                  href={item.href}
+                  on:click={closeProductsMenuNow}
+                >
                   <i class={'bi ' + item.icon}></i>
                   <span>{item.label}</span>
                 </a>
@@ -476,18 +555,112 @@
     position: relative;
   }
 
-  .desktop-dropdown:hover > .dropdown-menu,
-  .desktop-dropdown:focus-within > .dropdown-menu {
-    display: block;
+  .desktop-dropdown::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 14px;
   }
 
-  .dropdown-menu {
-    margin-top: 8px;
+  .products-dropdown {
+    display: block;
+    margin-top: 10px;
     border: 1px solid var(--desaga-border);
-    border-radius: 16px;
-    padding: 8px;
-    min-width: 220px;
-    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.13);
+    border-radius: 18px;
+    padding: 0.55rem;
+    min-width: 230px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+    box-shadow:
+      0 18px 45px rgba(15, 23, 42, 0.14),
+      0 4px 14px rgba(15, 23, 42, 0.08);
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(14px) scale(0.96);
+    transform-origin: top center;
+    clip-path: inset(0 0 100% 0 round 18px);
+
+    transition:
+      opacity 180ms ease,
+      transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+      clip-path 240ms cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0s linear 240ms;
+  }
+
+  .products-dropdown.visible {
+    visibility: visible;
+  }
+
+  .products-dropdown.opening,
+  .products-dropdown.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+    clip-path: inset(0 0 0 0 round 18px);
+    transition:
+      opacity 180ms ease,
+      transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      clip-path 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0s linear 0s;
+  }
+
+  .products-dropdown.closing {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px) scale(0.98);
+    clip-path: inset(0 0 100% 0 round 18px);
+    transition:
+      opacity 160ms ease,
+      transform 220ms cubic-bezier(0.7, 0, 0.84, 0),
+      clip-path 220ms cubic-bezier(0.7, 0, 0.84, 0),
+      visibility 0s linear 220ms;
+  }
+
+  .products-dropdown.visible .dropdown-item {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  .products-dropdown.opening .dropdown-item,
+  .products-dropdown.open .dropdown-item {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 180ms ease,
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .products-dropdown.opening li:nth-child(1) .dropdown-item,
+  .products-dropdown.open li:nth-child(1) .dropdown-item {
+    transition-delay: 40ms;
+  }
+
+  .products-dropdown.opening li:nth-child(2) .dropdown-item,
+  .products-dropdown.open li:nth-child(2) .dropdown-item {
+    transition-delay: 75ms;
+  }
+
+  .products-dropdown.opening li:nth-child(3) .dropdown-item,
+  .products-dropdown.open li:nth-child(3) .dropdown-item {
+    transition-delay: 110ms;
+  }
+
+  .products-dropdown.opening li:nth-child(4) .dropdown-item,
+  .products-dropdown.open li:nth-child(4) .dropdown-item {
+    transition-delay: 145ms;
+  }
+
+  .products-dropdown.closing .dropdown-item {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity 110ms ease,
+      transform 160ms ease;
   }
 
   .dropdown-item {
@@ -808,6 +981,18 @@
     gap: 8px;
     padding: 8px 2px;
     font-weight: 800;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .products-dropdown,
+    .products-dropdown.opening,
+    .products-dropdown.open,
+    .products-dropdown.closing,
+    .products-dropdown .dropdown-item {
+      transition: none !important;
+      transform: none !important;
+      clip-path: none !important;
+    }
   }
 
   @media (max-width: 1199.98px) {

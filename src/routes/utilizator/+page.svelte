@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import MessageThread from '$lib/components/MessageThread.svelte';
   import { auth } from '$lib/stores/auth';
 
   type OrderItem = {
@@ -17,51 +18,15 @@
     placedAt?: string | null;
   };
 
-  type ConversationItem = {
-    id: string;
-    subject: string;
-    status: string;
-    unreadCount: number;
-    createdAt?: string;
-    updatedAt?: string;
-    lastMessage: {
-      id?: string;
-      body: string;
-      senderType?: string;
-      createdAt: string;
-    } | null;
-  };
-
-  type ConversationDetail = {
-    id: string;
-    subject: string;
-    status: string;
-    messages: Array<{
-      id: string;
-      senderType: string;
-      body: string;
-      createdAt: string;
-      isRead: boolean;
-    }>;
-  };
-
   let loading = true;
   let ordersLoading = false;
-  let messagesLoading = false;
   let profileSaving = false;
   let passwordSaving = false;
-  let messageSending = false;
-  let replying = false;
   let error = '';
   let success = '';
 
   let orders: OrderItem[] = [];
-  let conversations: ConversationItem[] = [];
-  let currentConversation: ConversationDetail | null = null;
-  let selectedConversationId = '';
   let selectedOrderId = '';
-  let orderMessage = '';
-  let replyMessage = '';
   let profileSeedUserId = '';
 
   let profileForm = {
@@ -104,56 +69,34 @@
       REFUNDED: 'Rambursată',
       UNFULFILLED: 'Nepregătită',
       FULFILLED: 'Livrată',
-      OPEN: 'Deschisă',
-      CLOSED: 'Închisă',
-      ARCHIVED: 'Arhivată',
     };
 
-    return labels[String(value ?? '')] ?? String(value ?? '—').replaceAll('_', ' ');
-  }
-
-  function conversationMatchesOrder(conversation: ConversationItem, order: OrderItem) {
-    const subject = conversation.subject.toLowerCase();
-    return subject.includes(order.orderNumber.toLowerCase()) || subject.includes(order.id.toLowerCase());
-  }
-
-  function conversationsForOrder(order: OrderItem) {
-    return conversations.filter((conversation) => conversationMatchesOrder(conversation, order));
+    const normalized = String(value ?? '').trim().toUpperCase();
+    return labels[normalized] ?? String(value ?? '—').replaceAll('_', ' ');
   }
 
   async function loadOrders() {
     ordersLoading = true;
+    error = '';
 
     try {
       const res = await fetch('/api/orders');
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca comenzile.');
       orders = Array.isArray(data?.items) ? data.items : [];
+
+      if (!selectedOrderId && orders.length > 0) {
+        selectedOrderId = orders[0].id;
+      }
+
+      if (selectedOrderId && !orders.some((order) => order.id === selectedOrderId)) {
+        selectedOrderId = orders[0]?.id ?? '';
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Nu am putut încărca comenzile.';
     } finally {
       ordersLoading = false;
     }
-  }
-
-  async function loadMessages() {
-    messagesLoading = true;
-
-    try {
-      const res = await fetch('/api/messages');
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca mesajele.');
-      conversations = Array.isArray(data?.items) ? data.items : [];
-    } catch (err) {
-      error = err instanceof Error ? err.message : 'Nu am putut încărca mesajele.';
-    } finally {
-      messagesLoading = false;
-    }
-  }
-
-  async function loadAccountData() {
-    error = '';
-    await Promise.all([loadOrders(), loadMessages()]);
   }
 
   async function saveProfile(event: Event) {
@@ -203,76 +146,6 @@
     }
   }
 
-  async function loadConversation(id: string) {
-    selectedConversationId = id;
-    currentConversation = null;
-    error = '';
-
-    try {
-      const res = await fetch(`/api/messages/${id}`);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca conversația.');
-      currentConversation = data.item;
-    } catch (err) {
-      error = err instanceof Error ? err.message : 'Nu am putut încărca conversația.';
-    }
-  }
-
-  async function sendReply() {
-    if (!selectedConversationId || !replyMessage.trim()) return;
-    error = '';
-    replying = true;
-
-    try {
-      const res = await fetch(`/api/messages/${selectedConversationId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: replyMessage }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut trimite răspunsul.');
-
-      replyMessage = '';
-      await Promise.all([loadConversation(selectedConversationId), loadMessages()]);
-    } catch (err) {
-      error = err instanceof Error ? err.message : 'Nu am putut trimite răspunsul.';
-    } finally {
-      replying = false;
-    }
-  }
-
-  async function sendOrderMessage(order: OrderItem) {
-    if (!orderMessage.trim()) return;
-    error = '';
-    success = '';
-    messageSending = true;
-
-    try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: `Comandă ${order.orderNumber}`,
-          message: orderMessage,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut trimite mesajul.');
-
-      orderMessage = '';
-      success = 'Mesajul a fost trimis.';
-      await loadMessages();
-
-      if (data?.item?.id) {
-        await loadConversation(String(data.item.id));
-      }
-    } catch (err) {
-      error = err instanceof Error ? err.message : 'Nu am putut trimite mesajul.';
-    } finally {
-      messageSending = false;
-    }
-  }
-
   async function logout() {
     await auth.logout();
     await goto('/cont');
@@ -291,7 +164,7 @@
       return;
     }
 
-    await loadAccountData();
+    await loadOrders();
     loading = false;
   });
 
@@ -307,7 +180,7 @@
 
   $: selectedOrder = orders.find((order) => order.id === selectedOrderId) ?? orders[0] ?? null;
   $: totalSpent = orders.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
-  $: unreadMessages = conversations.reduce((sum, conversation) => sum + Number(conversation.unreadCount ?? 0), 0);
+  $: lastOrder = orders[0] ?? null;
 </script>
 
 <svelte:head>
@@ -354,8 +227,8 @@
           <strong>{formatMoney(totalSpent)}</strong>
         </div>
         <div class="stat-card surface">
-          <span>Mesaje necitite</span>
-          <strong>{unreadMessages}</strong>
+          <span>Ultima comandă</span>
+          <strong>{lastOrder ? lastOrder.orderNumber : '—'}</strong>
         </div>
       </div>
 
@@ -367,7 +240,7 @@
                 <h2><i class="bi bi-receipt"></i> Comenzile mele</h2>
                 <p>Comenzile sunt încărcate din istoricul tău de utilizator.</p>
               </div>
-              <button class="btn btn-sm btn-outline-accent" type="button" on:click={loadAccountData} disabled={ordersLoading || messagesLoading}>
+              <button class="btn btn-sm btn-outline-accent" type="button" on:click={loadOrders} disabled={ordersLoading}>
                 <i class="bi bi-arrow-clockwise"></i> Reîncarcă
               </button>
             </div>
@@ -402,26 +275,12 @@
                       <div class="order-detail">
                         <div class="detail-row"><span>Plată</span><strong>{statusLabel(order.paymentStatus)}</strong></div>
                         <div class="detail-row"><span>Livrare</span><strong>{statusLabel(order.fulfillmentStatus)}</strong></div>
-
-                        <div class="order-messages">
-                          <h3>Mesaje pentru această comandă</h3>
-                          {#if conversationsForOrder(order).length === 0}
-                            <p class="muted">Nu există conversații pentru această comandă.</p>
-                          {:else}
-                            {#each conversationsForOrder(order) as conversation (conversation.id)}
-                              <button class="conversation-row" type="button" on:click={() => loadConversation(conversation.id)}>
-                                <span>{conversation.subject}</span>
-                                <small>{conversation.lastMessage?.body ?? 'Fără mesaje'}</small>
-                              </button>
-                            {/each}
-                          {/if}
-
-                          <textarea class="form-control" rows="3" bind:value={orderMessage} placeholder="Scrie un mesaj despre comanda aceasta..."></textarea>
-                          <div class="text-end mt-2">
-                            <button class="btn btn-outline-accent btn-sm" type="button" on:click={() => sendOrderMessage(order)} disabled={!orderMessage.trim() || messageSending}>
-                              {messageSending ? 'Se trimite…' : 'Trimite mesaj'}
-                            </button>
-                          </div>
+                        {#if order.placedAt}
+                          <div class="detail-row"><span>Plasată</span><strong>{formatDate(order.placedAt)}</strong></div>
+                        {/if}
+                        <div class="order-help-note">
+                          <i class="bi bi-chat-dots"></i>
+                          <span>Mesajele pentru comenzi sunt în panoul de conversații de mai jos.</span>
                         </div>
                       </div>
                     {/if}
@@ -431,62 +290,12 @@
             {/if}
           </section>
 
-          <section class="surface panel">
-            <div class="panel-head">
-              <div>
-                <h2><i class="bi bi-chat-dots"></i> Conversații</h2>
-                <p>Mesajele tale către admin și răspunsurile primite.</p>
-              </div>
-            </div>
-
-            <div class="messages-grid">
-              <div class="conversation-list">
-                {#if messagesLoading}
-                  <div class="muted">Se încarcă mesajele…</div>
-                {:else if conversations.length === 0}
-                  <div class="muted">Nu ai conversații încă.</div>
-                {:else}
-                  {#each conversations as conversation (conversation.id)}
-                    <button class:selected={selectedConversationId === conversation.id} class="conversation-button" type="button" on:click={() => loadConversation(conversation.id)}>
-                      <div>
-                        <strong>{conversation.subject}</strong>
-                        <span>{statusLabel(conversation.status)}</span>
-                      </div>
-                      {#if conversation.unreadCount > 0}
-                        <span class="unread-badge">{conversation.unreadCount}</span>
-                      {/if}
-                      <small>{conversation.lastMessage?.body ?? 'Fără mesaje'}</small>
-                    </button>
-                  {/each}
-                {/if}
-              </div>
-
-              <div class="conversation-detail">
-                {#if currentConversation}
-                  <h3>{currentConversation.subject}</h3>
-                  <div class="thread">
-                    {#each currentConversation.messages as message (message.id)}
-                      <div class={`thread-message ${message.senderType === 'ADMIN' ? 'admin' : 'user'}`}>
-                        <small>{message.senderType === 'ADMIN' ? 'Admin' : 'Tu'} · {formatDate(message.createdAt)}</small>
-                        <p>{message.body}</p>
-                      </div>
-                    {/each}
-                  </div>
-                  <textarea class="form-control" rows="3" bind:value={replyMessage} placeholder="Scrie răspunsul tău..."></textarea>
-                  <div class="text-end mt-2">
-                    <button class="btn btn-primary btn-sm" type="button" on:click={sendReply} disabled={!replyMessage.trim() || replying}>
-                      {replying ? 'Se trimite…' : 'Trimite răspuns'}
-                    </button>
-                  </div>
-                {:else}
-                  <div class="empty-box compact">
-                    <i class="bi bi-chat-square-text"></i>
-                    <div>Selectează o conversație pentru detalii.</div>
-                  </div>
-                {/if}
-              </div>
-            </div>
-          </section>
+          <MessageThread
+            mode="user"
+            orders={orders}
+            title="Conversații"
+            subtitle="Mesajele tale către admin și răspunsurile primite."
+          />
         </div>
 
         <aside class="side-column">
@@ -667,52 +476,39 @@
   }
 
   .orders-list,
-  .conversation-list,
   .stack-form {
     display: grid;
     gap: 0.75rem;
   }
 
-  .order-card,
-  .conversation-button,
-  .conversation-row {
+  .order-card {
     border: 1px solid var(--desaga-border);
     border-radius: var(--desaga-radius-md);
     background: #fff;
   }
 
-  .order-card.selected,
-  .conversation-button.selected {
+  .order-card.selected {
     border-color: rgba(var(--desaga-accent-rgb), 0.36);
     box-shadow: var(--desaga-shadow-sm);
   }
 
-  .order-main,
-  .conversation-button,
-  .conversation-row {
+  .order-main {
     width: 100%;
     border: 0;
     background: transparent;
     text-align: left;
-  }
-
-  .order-main {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
     padding: 0.9rem;
   }
 
-  .order-main strong,
-  .conversation-button strong {
+  .order-main strong {
     display: block;
     color: var(--desaga-heading);
   }
 
-  .order-main span,
-  .conversation-button span,
-  .conversation-button small,
-  .conversation-row small {
+  .order-main span {
     color: var(--desaga-muted);
   }
 
@@ -734,96 +530,20 @@
     padding-top: 0.75rem;
   }
 
-  .order-messages {
+  .order-help-note {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
     margin-top: 0.9rem;
-    padding-top: 0.9rem;
-    border-top: 1px solid var(--desaga-border);
-  }
-
-  .order-messages h3,
-  .conversation-detail h3 {
-    margin: 0 0 0.75rem;
-    font-size: 1rem;
-    font-weight: 950;
-    color: var(--desaga-heading);
-  }
-
-  .conversation-row {
-    display: grid;
-    gap: 0.15rem;
-    padding: 0.65rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .messages-grid {
-    display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
-    gap: 1rem;
-  }
-
-  .conversation-button {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.35rem 0.6rem;
-    padding: 0.75rem;
-  }
-
-  .conversation-button small {
-    grid-column: 1 / -1;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .unread-badge {
-    min-width: 1.45rem;
-    height: 1.45rem;
-    border-radius: 999px;
-    display: inline-grid;
-    place-items: center;
-    background: var(--desaga-red);
-    color: #fff;
-    font-size: 0.78rem;
-    font-weight: 950;
-  }
-
-  .conversation-detail {
-    min-width: 0;
-  }
-
-  .thread {
-    display: grid;
-    gap: 0.65rem;
-    max-height: 360px;
-    overflow: auto;
-    margin-bottom: 0.75rem;
-    padding-right: 0.25rem;
-  }
-
-  .thread-message {
-    width: min(92%, 620px);
     padding: 0.75rem;
     border-radius: var(--desaga-radius-md);
-    background: rgba(15, 23, 42, 0.045);
-    white-space: pre-wrap;
-  }
-
-  .thread-message.user {
-    margin-left: auto;
-    background: rgba(var(--desaga-accent-rgb), 0.1);
-  }
-
-  .thread-message small {
-    display: block;
-    margin-bottom: 0.35rem;
+    background: rgba(var(--desaga-accent-rgb), 0.08);
     color: var(--desaga-muted);
     font-weight: 800;
   }
 
-  .thread-message p {
-    margin: 0;
+  .order-help-note i {
+    color: var(--desaga-blue);
   }
 
   .empty-box {
@@ -834,10 +554,6 @@
     border-radius: var(--desaga-radius-md);
     background: rgba(15, 23, 42, 0.035);
     border: 1px dashed var(--desaga-border-strong);
-  }
-
-  .empty-box.compact {
-    align-items: center;
   }
 
   .empty-box i {
@@ -880,7 +596,6 @@
       justify-items: start;
     }
 
-    .messages-grid,
     .side-column,
     .stats-grid {
       grid-template-columns: 1fr;

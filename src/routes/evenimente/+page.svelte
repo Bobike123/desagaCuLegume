@@ -22,45 +22,74 @@
   let filterKey: FilterKey = "all";
 
   const pageSize = 9;
-  const filters: Array<{ key: FilterKey; label: string; icon: string }> = [
-    { key: "all", label: "Toate", icon: "" },
-    { key: "upcoming", label: "Urmează", icon: "bi-calendar-check" },
-    { key: "past", label: "Trecute", icon: "bi-clock-history" },
-  ];
 
-  function eventTimestamp(event: EventItem) {
-    if (!event.date) return Number.POSITIVE_INFINITY;
+  function parseEventDate(event: EventItem) {
+    const value = String(event.date ?? "").trim();
+    if (!value) return null;
 
-    const timestamp = new Date(event.date).getTime();
-    return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
+    const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      const localDate = new Date(Number(year), Number(month) - 1, Number(day));
+      return Number.isFinite(localDate.getTime()) ? localDate : null;
+    }
+
+    const parsed = new Date(value);
+    return Number.isFinite(parsed.getTime()) ? parsed : null;
+  }
+
+  function eventDayTimestamp(event: EventItem) {
+    const date = parseEventDate(event);
+    if (!date) return null;
+
+    const day = new Date(date);
+    day.setHours(0, 0, 0, 0);
+    return day.getTime();
+  }
+
+  function eventSortTimestamp(event: EventItem) {
+    const date = parseEventDate(event);
+    return date ? date.getTime() : null;
+  }
+
+  function todayTimestamp() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.getTime();
   }
 
   function isPastEvent(event: EventItem) {
-    const timestamp = eventTimestamp(event);
-    if (!Number.isFinite(timestamp)) return false;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return timestamp < today.getTime();
+    const timestamp = eventDayTimestamp(event);
+    return timestamp !== null && timestamp < todayTimestamp();
   }
 
-  function matchesFilter(event: EventItem) {
-    if (filterKey === "upcoming") return !isPastEvent(event);
-    if (filterKey === "past") return isPastEvent(event);
-    return true;
+  function isUpcomingEvent(event: EventItem) {
+    const timestamp = eventDayTimestamp(event);
+    return timestamp !== null && timestamp >= todayTimestamp();
   }
 
   function sortEvents(a: EventItem, b: EventItem) {
+    const aDay = eventDayTimestamp(a);
+    const bDay = eventDayTimestamp(b);
+
+    if (aDay === null && bDay === null) {
+      return String(a.title ?? "").localeCompare(String(b.title ?? ""), "ro");
+    }
+
+    if (aDay === null) return 1;
+    if (bDay === null) return -1;
+
     const aPast = isPastEvent(a);
     const bPast = isPastEvent(b);
 
     if (aPast !== bPast) return aPast ? 1 : -1;
 
-    const aTime = eventTimestamp(a);
-    const bTime = eventTimestamp(b);
+    const aSort = eventSortTimestamp(a) ?? aDay;
+    const bSort = eventSortTimestamp(b) ?? bDay;
 
-    if (aPast && bPast) return bTime - aTime;
-    return aTime - bTime;
+    if (aPast && bPast) return bSort - aSort;
+    return aSort - bSort;
   }
 
   function selectFilter(next: FilterKey) {
@@ -69,12 +98,20 @@
   }
 
   $: allEvents = (data?.events ?? []).filter((event) => String(event?.title ?? "").trim().length > 0);
-  $: visibleEvents = [...allEvents].filter(matchesFilter).sort(sortEvents);
+
+  $: visibleEvents = [...allEvents]
+    .filter((event) => {
+      if (filterKey === "upcoming") return isUpcomingEvent(event);
+      if (filterKey === "past") return isPastEvent(event);
+      return true;
+    })
+    .sort(sortEvents);
+
   $: totalPages = Math.max(1, Math.ceil(visibleEvents.length / pageSize));
   $: if (currentPage > totalPages) currentPage = totalPages;
   $: paginatedEvents = visibleEvents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  $: upcomingCount = allEvents.filter((event) => !isPastEvent(event)).length;
-  $: pastCount = allEvents.filter(isPastEvent).length;
+  $: upcomingCount = allEvents.filter((event) => isUpcomingEvent(event)).length;
+  $: pastCount = allEvents.filter((event) => isPastEvent(event)).length;
 </script>
 
 <svelte:head>
@@ -116,18 +153,38 @@
 
     <div class="toolbar">
       <div class="filter-group" aria-label="Filtru evenimente">
-        {#each filters as filter (filter.key)}
-          <button
-            type="button"
-            class="filter-chip"
-            class:active={filterKey === filter.key}
-            aria-pressed={filterKey === filter.key}
-            on:click={() => selectFilter(filter.key)}
-          >
-            <i class={"bi " + filter.icon}></i>
-            <span>{filter.label}</span>
-          </button>
-        {/each}
+        <button
+          type="button"
+          class="filter-chip"
+          class:active={filterKey === "all"}
+          aria-pressed={filterKey === "all"}
+          on:click={() => selectFilter("all")}
+        >
+          <i class="bi bi-grid-3x3-gap"></i>
+          <span>Toate</span>
+        </button>
+
+        <button
+          type="button"
+          class="filter-chip"
+          class:active={filterKey === "upcoming"}
+          aria-pressed={filterKey === "upcoming"}
+          on:click={() => selectFilter("upcoming")}
+        >
+          <i class="bi bi-calendar-check"></i>
+          <span>Evenimente viitoare</span>
+        </button>
+
+        <button
+          type="button"
+          class="filter-chip"
+          class:active={filterKey === "past"}
+          aria-pressed={filterKey === "past"}
+          on:click={() => selectFilter("past")}
+        >
+          <i class="bi bi-clock-history"></i>
+          <span>Evenimente trecute</span>
+        </button>
       </div>
 
       <div class="counts" aria-label="Rezumat evenimente">

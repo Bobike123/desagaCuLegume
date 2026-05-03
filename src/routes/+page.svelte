@@ -1,4 +1,3 @@
-<!-- FILE: src/routes/+page.svelte -->
 <script lang="ts">
   import Hero from '$lib/components/Hero.svelte';
   import ProductCard from '$lib/components/ProductCard.svelte';
@@ -12,10 +11,12 @@
   let loadingProducts = true;
   let loadingEvents = true;
 
+  const heroTitle = 'Legume locale, proaspete, în\u00A0Cluj\u2011Napoca';
+
   const contact = {
     phone: '+40 729 969 822',
     phoneHref: 'tel:+40729969822',
-    address: 'Str. Constantin Brâncuși nr. 153, Cluj-Napoca',
+    address: 'Str. Constantin Brâncuși nr. 153, Cluj\u2011Napoca',
     shortAddress: 'Brâncuși 153',
     schedule: 'L–V: 9:00–18:00',
   };
@@ -47,7 +48,7 @@
     },
     {
       href: '/produse/de-sezon',
-      icon: '',
+      icon: 'bi-flower1',
       label: 'Produse de sezon',
       text: 'Alegi ce este disponibil acum',
     },
@@ -64,7 +65,7 @@
     },
     {
       title: 'Ridici sau primești livrarea',
-      text: 'Ridicare de la rulota DeSaga sau livrare în Cluj-Napoca, confirmată telefonic.',
+      text: 'Ridicare de la rulota DeSaga sau livrare în Cluj\u2011Napoca, confirmată telefonic.',
     },
   ];
 
@@ -105,6 +106,7 @@
   $: featured = [...products]
     .sort((a, b) => Number(Boolean(b.in_stock)) - Number(Boolean(a.in_stock)))
     .slice(0, 12);
+
   $: availableCount = products.filter((product) => product.in_stock).length;
   $: upcoming = events.slice(0, 3);
 </script>
@@ -119,7 +121,7 @@
 
 <Hero
   eyebrow="DeSaga cu Legume"
-  title="Legume locale, proaspete, în Cluj-Napoca"
+  title={heroTitle}
   subtitle="Vezi stocul de azi, adaugă produsele în coș și ridică de la rulota DeSaga. Pentru confirmare rapidă, sună direct."
   backgroundImage="https://www.pngall.com/wp-content/uploads/2016/03/Vegetable-Free-Download-PNG.png"
   height="430px"
@@ -282,7 +284,7 @@
           <div class="list-row">
             <span class="list-icon"><i class="bi bi-truck"></i></span>
             <div class="list-text">
-              <div class="list-title">Livrare în Cluj-Napoca</div>
+              <div class="list-title">Livrare în Cluj\u2011Napoca</div>
               <div class="list-sub">Costul și intervalul se confirmă telefonic în funcție de comandă.</div>
             </div>
           </div>
@@ -319,7 +321,7 @@
 
         <div class="actions">
           <a href="/produse" class="btn btn-accent">
-            <i class="bi"></i> Vezi produsele
+            <i class="bi bi-basket"></i> Vezi produsele
           </a>
           <a href="/despre-noi" class="btn btn-outline-accent">
             <i class="bi bi-info-circle"></i> Despre noi
@@ -342,10 +344,10 @@
       </div>
 
       <div class="category-pills">
-        <a href="/produse/de-sezon" class="category-pill"><i class="bi "></i> De sezon</a>
-        <a href="/produse/la-borcan" class="category-pill"><i class="bi "></i> La borcan</a>
-        <a href="/produse/colaboratori" class="category-pill"><i class="bi "></i> Colaboratori</a>
-        <a href="/produse/horeca" class="category-pill"><i class="bi "></i> HORECA</a>
+        <a href="/produse/de-sezon" class="category-pill"><i class="bi bi-flower1"></i> De sezon</a>
+        <a href="/produse/la-borcan" class="category-pill"><i class="bi bi-jar"></i> La borcan</a>
+        <a href="/produse/colaboratori" class="category-pill"><i class="bi bi-people"></i> Colaboratori</a>
+        <a href="/produse/horeca" class="category-pill"><i class="bi bi-shop"></i> HORECA</a>
       </div>
     </div>
   </div>
@@ -395,6 +397,12 @@
   :global(:root) {
     --accent: var(--desaga-blue, #2492cc);
     --accent-rgb: 36, 146, 204;
+  }
+
+  :global(.hero h1),
+  :global(.hero-title),
+  :global(.hero__title) {
+    line-height: 1.08 !important;
   }
 
   .section {
@@ -776,6 +784,7 @@
     0% {
       background-position: 200% 0;
     }
+
     100% {
       background-position: -200% 0;
     }
@@ -825,6 +834,12 @@
   }
 
   @media (max-width: 575.98px) {
+    :global(.hero h1),
+    :global(.hero-title),
+    :global(.hero__title) {
+      line-height: 1.1 !important;
+    }
+
     .section-head {
       align-items: flex-start;
       flex-direction: column;
