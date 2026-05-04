@@ -112,319 +112,365 @@
 <AdminNav />
 
 <div class="page">
-  <div class="page__head">
+  <header class="topbar">
     <div>
+      <p class="eyebrow">Operațiuni</p>
       <h1>Comenzi</h1>
-      <p>Gestionează statusul, plăți și livrări.</p>
+      <p>Actualizează statusul comenzilor, plăților și livrărilor fără să pierzi contextul clientului.</p>
     </div>
-    <button class="btn btn-outline-secondary" on:click={loadOrders} disabled={loading}>
-      ⟳ Reîncarcă
+    <button class="action" on:click={loadOrders} disabled={loading}>
+      <i class="bi bi-arrow-clockwise"></i>
+      <span>{loading ? 'Se încarcă…' : 'Reîncarcă'}</span>
     </button>
-  </div>
+  </header>
 
   {#if error}
-    <div class="alert alert-danger">
-      <strong>❌ Eroare:</strong> {error}
+    <div class="notice danger" role="alert">
+      <i class="bi bi-exclamation-triangle"></i>
+      <span>{error}</span>
     </div>
   {/if}
 
   {#if successMessage}
-    <div class="alert alert-success">
-      <strong>✓ Succes:</strong> {successMessage}
+    <div class="notice success" role="status">
+      <i class="bi bi-check-circle"></i>
+      <span>{successMessage}</span>
     </div>
   {/if}
 
   {#if loading}
-    <div class="panel text-center">
-      <div class="spinner mb-3">⟳</div>
-      <p>Se încarcă comenzile…</p>
-    </div>
+    <section class="stateCard">
+      <span class="spinner" aria-hidden="true"></span>
+      <strong>Se încarcă comenzile…</strong>
+    </section>
   {:else if items.length === 0}
-    <div class="panel text-center empty-state">
-      <p>Nu sunt comenzi disponibile.</p>
-    </div>
+    <section class="emptyCard">
+      <i class="bi bi-receipt"></i>
+      <h2>Nu sunt comenzi disponibile</h2>
+      <p>Comenzile noi vor apărea aici după plasare.</p>
+    </section>
   {:else}
-    <div class="panel table-responsive">
-      <table class="table align-middle mb-0">
-        <thead>
-          <tr class="table-header">
-            <th>Comandă</th>
-            <th>Client</th>
-            <th>Total</th>
-            <th>Status comandă</th>
-            <th>Plată</th>
-            <th>Livrare</th>
-            <th class="text-end">Acțiune</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each items as item (item.id)}
-            <tr class="table-row">
-              <td>
-                <div><strong>#{item.orderNumber}</strong></div>
-                <div class="muted text-sm">{new Date(item.createdAt).toLocaleString('ro-RO')}</div>
-              </td>
-              <td>
-                <div><strong>{item.customerFullName}</strong></div>
-                <div class="muted text-sm">{item.customerEmail}</div>
-              </td>
-              <td>
-                <strong>{item.total.toFixed(2)} {item.currency}</strong>
-              </td>
-              <td>
-                <div class="status-control">
-                  <select class="form-select form-select-sm" bind:value={item.status}>
-                    {#each orderStatuses as status}
-                      <option value={status.value}>{status.label}</option>
-                    {/each}
-                  </select>
-                  <span class="badge {getStatusBadgeClass(item.status, 'order')} ms-2">
-                    {getStatusLabel(item.status, orderStatuses)}
-                  </span>
-                </div>
-              </td>
-              <td>
-                <div class="status-control">
-                  <select class="form-select form-select-sm" bind:value={item.paymentStatus}>
-                    {#each paymentStatuses as status}
-                      <option value={status.value}>{status.label}</option>
-                    {/each}
-                  </select>
-                  <span class="badge {getStatusBadgeClass(item.paymentStatus, 'payment')} ms-2">
-                    {getStatusLabel(item.paymentStatus, paymentStatuses)}
-                  </span>
-                </div>
-              </td>
-              <td>
-                <div class="status-control">
-                  <select class="form-select form-select-sm" bind:value={item.fulfillmentStatus}>
-                    {#each fulfillmentStatuses as status}
-                      <option value={status.value}>{status.label}</option>
-                    {/each}
-                  </select>
-                  <span class="badge {getStatusBadgeClass(item.fulfillmentStatus, 'fulfillment')} ms-2">
-                    {getStatusLabel(item.fulfillmentStatus, fulfillmentStatuses)}
-                  </span>
-                </div>
-              </td>
-              <td class="text-end">
-                <button class="btn btn-sm btn-primary" on:click={() => saveOrder(item)}>
-                  💾 Salvează
-                </button>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+    <section class="ordersGrid" aria-label="Lista comenzilor">
+      {#each items as item (item.id)}
+        <article class="orderCard">
+          <header class="orderHead">
+            <div>
+              <span class="orderNumber">#{item.orderNumber}</span>
+              <time>{new Date(item.createdAt).toLocaleString('ro-RO')}</time>
+            </div>
+            <strong class="total">{item.total.toFixed(2)} {item.currency}</strong>
+          </header>
+
+          <div class="customerBlock">
+            <span>Client</span>
+            <strong>{item.customerFullName}</strong>
+            <small>{item.customerEmail}</small>
+          </div>
+
+          <div class="statusGrid">
+            <label>
+              <span>Status comandă</span>
+              <select bind:value={item.status}>
+                {#each orderStatuses as status}
+                  <option value={status.value}>{status.label}</option>
+                {/each}
+              </select>
+              <em class={`badge ${getStatusBadgeClass(item.status, 'order')}`}>{getStatusLabel(item.status, orderStatuses)}</em>
+            </label>
+
+            <label>
+              <span>Plată</span>
+              <select bind:value={item.paymentStatus}>
+                {#each paymentStatuses as status}
+                  <option value={status.value}>{status.label}</option>
+                {/each}
+              </select>
+              <em class={`badge ${getStatusBadgeClass(item.paymentStatus, 'payment')}`}>{getStatusLabel(item.paymentStatus, paymentStatuses)}</em>
+            </label>
+
+            <label>
+              <span>Livrare</span>
+              <select bind:value={item.fulfillmentStatus}>
+                {#each fulfillmentStatuses as status}
+                  <option value={status.value}>{status.label}</option>
+                {/each}
+              </select>
+              <em class={`badge ${getStatusBadgeClass(item.fulfillmentStatus, 'fulfillment')}`}>{getStatusLabel(item.fulfillmentStatus, fulfillmentStatuses)}</em>
+            </label>
+          </div>
+
+          <button class="saveBtn" on:click={() => saveOrder(item)}>
+            <i class="bi bi-save"></i>
+            Salvează modificările
+          </button>
+        </article>
+      {/each}
+    </section>
   {/if}
 </div>
 
 <style>
   .page {
+    --bg: #f6f1e7;
+    --surface: #fffdf7;
+    --ink: #1d241b;
+    --muted: #6b7165;
+    --line: rgba(31, 42, 28, 0.12);
+    --accent: #274f2a;
+    --green: #8bd450;
     margin-left: 240px;
     min-height: 100vh;
-    padding: 24px;
-    background: #f8fafc;
+    padding: clamp(18px, 3vw, 34px);
+    background: radial-gradient(900px 420px at 8% -5%, rgba(139, 212, 80, 0.2), transparent 60%), var(--bg);
+    color: var(--ink);
   }
 
-  .page__head {
+  .topbar {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
+    align-items: end;
+    gap: 20px;
+    margin-bottom: 18px;
   }
 
-  .page__head h1 {
-    margin: 0;
-    font-weight: 900;
-    font-size: 28px;
-    color: #0f172a;
-  }
-
-  .page__head p {
-    margin: 6px 0 0;
-    color: rgba(0, 0, 0, 0.6);
-    font-size: 14px;
-  }
-
-  .panel {
-    background: white;
-    border-radius: 18px;
-    padding: 18px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-  }
-
-  .panel.empty-state {
-    text-align: center;
-    padding: 48px 24px;
-    color: rgba(0, 0, 0, 0.5);
-  }
-
-  .alert {
-    border-radius: 12px;
-    padding: 12px 16px;
-    margin-bottom: 16px;
-    font-size: 14px;
-  }
-
-  .alert-danger {
-    background: #fee2e2;
-    border: 1px solid #fca5a5;
-    color: #7f1d1d;
-  }
-
-  .alert-success {
-    background: #dcfce7;
-    border: 1px solid #86efac;
-    color: #166534;
-  }
-
-  .spinner {
-    display: inline-block;
-    font-size: 24px;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  .muted {
-    color: rgba(0, 0, 0, 0.6);
-  }
-
-  .text-sm {
-    font-size: 12px;
-  }
-
-  .table-responsive {
-    overflow-x: auto;
-  }
-
-  .table {
-    margin-bottom: 0;
-  }
-
-  .table-header {
-    background: #f1f5f9;
-    border-bottom: 2px solid #e2e8f0;
-  }
-
-  .table-header th {
-    font-weight: 600;
-    color: #475569;
-    font-size: 13px;
-    padding: 12px 8px;
+  .eyebrow {
+    margin: 0 0 6px;
+    color: var(--accent);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.13em;
+    font-size: 0.75rem;
+    font-weight: 950;
   }
 
-  .table-row {
-    border-bottom: 1px solid #e2e8f0;
-    transition: background-color 0.2s ease;
+  h1 {
+    margin: 0;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 0.94;
+    letter-spacing: -0.07em;
+    font-weight: 950;
   }
 
-  .table-row:hover {
-    background-color: #f8fafc;
+  .topbar p:not(.eyebrow) {
+    max-width: 700px;
+    margin: 12px 0 0;
+    color: var(--muted);
   }
 
-  .table-row td {
-    padding: 14px 8px;
-    vertical-align: middle;
-  }
-
-  .status-control {
-    display: flex;
+  .action,
+  .saveBtn {
+    min-height: 46px;
+    border: 0;
+    border-radius: 999px;
+    padding: 0 18px;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 9px;
+    font-weight: 950;
+    cursor: pointer;
   }
 
-  .form-select-sm {
-    font-size: 12px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    flex: 1;
-    max-width: 150px;
+  .action {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 12px 30px rgba(35, 51, 30, 0.08);
   }
 
-  .badge {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
+  .action:disabled {
+    opacity: 0.6;
+  }
+
+  .notice {
+    margin-bottom: 14px;
+    border-radius: 18px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-weight: 850;
+  }
+
+  .notice.danger {
+    background: #fff1f1;
+    border: 1px solid #facaca;
+    color: #842029;
+  }
+
+  .notice.success {
+    background: #ecf8df;
+    border: 1px solid #b9e58d;
+    color: #285b20;
+  }
+
+  .ordersGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 390px), 1fr));
+    gap: 14px;
+  }
+
+  .orderCard,
+  .stateCard,
+  .emptyCard {
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    background: rgba(255, 253, 247, 0.9);
+    box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
+  }
+
+  .orderCard {
+    padding: 18px;
+    display: grid;
+    gap: 16px;
+  }
+
+  .orderHead {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .orderNumber {
+    display: block;
+    font-size: 1.15rem;
+    font-weight: 950;
+    letter-spacing: -0.03em;
+  }
+
+  time,
+  .customerBlock span,
+  .customerBlock small,
+  label span {
+    color: var(--muted);
+  }
+
+  time,
+  .customerBlock small {
+    display: block;
+    margin-top: 4px;
+  }
+
+  .total {
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: rgba(139, 212, 80, 0.2);
+    color: var(--accent);
     white-space: nowrap;
   }
 
-  .badge-success {
-    background: #dcfce7;
-    color: #166534;
+  .customerBlock {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.5);
   }
 
-  .badge-warning {
-    background: #fef3c7;
-    color: #92400e;
+  .customerBlock strong {
+    display: block;
+    margin-top: 4px;
+    overflow-wrap: anywhere;
   }
 
-  .badge-danger {
-    background: #fee2e2;
-    color: #7f1d1d;
+  .statusGrid {
+    display: grid;
+    gap: 12px;
   }
 
-  .badge-secondary {
-    background: #e2e8f0;
-    color: #334155;
+  label {
+    display: grid;
+    gap: 7px;
   }
 
-  .btn {
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 13px;
-    transition: all 0.2s ease;
+  label span {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 950;
   }
 
-  .btn-outline-secondary {
-    border: 1px solid #cbd5e1;
-    color: #475569;
-    background: white;
+  select {
+    min-height: 46px;
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 0 12px;
+    background: #fff;
+    color: var(--ink);
+    font-weight: 800;
   }
 
-  .btn-outline-secondary:hover:not(:disabled) {
-    background: #f1f5f9;
-    border-color: #94a3b8;
+  .badge {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    border-radius: 999px;
+    padding: 0 10px;
+    font-style: normal;
+    font-size: 0.78rem;
+    font-weight: 950;
   }
 
-  .btn-outline-secondary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .badge-success { background: #e7f7dd; color: #25631c; }
+  .badge-warning { background: #fff1c2; color: #7a5200; }
+  .badge-danger { background: #ffe2e2; color: #842029; }
+  .badge-secondary { background: #ece8dd; color: #5b5f52; }
+
+  .saveBtn {
+    background: var(--accent);
+    color: #fffdf7;
   }
 
-  .btn-primary {
-    background: #3b82f6;
-    color: white;
-    border: 1px solid #3b82f6;
+  .stateCard,
+  .emptyCard {
+    padding: 36px 20px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    gap: 12px;
+    color: var(--muted);
   }
 
-  .btn-primary:hover {
-    background: #2563eb;
-    border-color: #2563eb;
+  .emptyCard i {
+    font-size: 2rem;
+    color: var(--accent);
   }
 
-  .text-end {
-    text-align: right;
+  .emptyCard h2 {
+    margin: 0;
+    color: var(--ink);
+    font-weight: 950;
   }
 
-  .ms-2 {
-    margin-left: 8px;
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 3px solid rgba(39, 79, 42, 0.18);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
   }
 
-  .mb-0 {
-    margin-bottom: 0;
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 991.98px) {
+    .page {
+      margin-left: 0;
+      padding: 88px 16px 24px;
+    }
   }
 
-  .mb-3 {
-    margin-bottom: 16px;
+  @media (max-width: 640px) {
+    .topbar,
+    .orderHead {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .action,
+    .saveBtn {
+      width: 100%;
+    }
   }
 </style>

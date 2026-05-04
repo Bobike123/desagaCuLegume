@@ -113,351 +113,363 @@
 <AdminNav />
 
 <div class="page">
-  <header class="page__header">
+  <header class="topbar">
     <div>
-      <h1 class="page__title">
-        <span class="page__icon" aria-hidden="true"
-          ><i class="bi bi-calendar-event"></i></span
-        >
-        Evenimente
-      </h1>
-      <p class="page__subtitle">Listă, căutare, publicare, editare, ștergere</p>
+      <p class="eyebrow">Calendar public</p>
+      <h1>Evenimente</h1>
+      <p>Administrează evenimentele publice: publicare, editare, căutare și ștergere.</p>
     </div>
-
-    <div class="page__actions">
-      <button
-        class="btn btn-outline-secondary page__btn"
-        on:click={loadEvents}
-        disabled={loading}
-      >
-        <i class="bi bi-arrow-clockwise"></i>
-        <span>Reîncarcă</span>
-      </button>
-      <a href="/admin/evenimente/new" class="btn btn-primary page__btn">
-        <i class="bi bi-plus-circle"></i>
-        <span>Eveniment nou</span>
-      </a>
+    <div class="actions">
+      <button class="pill" on:click={loadEvents} disabled={loading}><i class="bi bi-arrow-clockwise"></i> Reîncarcă</button>
+      <a href="/admin/evenimente/new" class="pill primary"><i class="bi bi-plus-circle"></i> Eveniment nou</a>
     </div>
   </header>
 
   {#if toast}
-    <div
-      class={`alert alert-${toastType} d-flex align-items-center gap-2 shadow-sm mb-3`}
-      role="alert"
-    >
-      <i class="bi bi-info-circle"></i>
-      <div>{toast}</div>
-    </div>
+    <div class={`notice ${toastType}`} role="status"><i class="bi bi-info-circle"></i>{toast}</div>
   {/if}
 
   {#if errorMsg}
-    <div
-      class="alert alert-danger d-flex align-items-center gap-2 shadow-sm mb-3"
-      role="alert"
-    >
-      <i class="bi bi-exclamation-triangle"></i>
-      <div>{errorMsg}</div>
-    </div>
+    <div class="notice danger" role="alert"><i class="bi bi-exclamation-triangle"></i>{errorMsg}</div>
   {/if}
 
   <section class="toolbar">
-    <div class="toolbar__search">
-      <i class="bi bi-search" aria-hidden="true"></i>
-      <input
-        type="text"
-        class="form-control toolbar__input"
-        placeholder="Caută după titlu..."
-        bind:value={searchQuery}
-      />
-    </div>
-
-    <div class="toolbar__meta">
-      <span class="badge text-bg-light border">
-        {#if loading}…{:else}{filteredEvents.length} rezultate{/if}
-      </span>
-    </div>
+    <label class="search">
+      <i class="bi bi-search"></i>
+      <input type="search" placeholder="Caută după titlu..." bind:value={searchQuery} />
+    </label>
+    <span class="count">{loading ? '…' : filteredEvents.length} rezultate</span>
   </section>
 
   {#if loading}
-    <div class="card border-0 shadow-sm">
-      <div class="card-body py-5 text-center">
-        <div class="spinner-border" role="status" aria-label="Se încarcă"></div>
-        <div class="mt-3 text-muted">Se încarcă evenimentele…</div>
-      </div>
-    </div>
+    <section class="stateCard"><span class="spinner"></span><strong>Se încarcă evenimentele…</strong></section>
   {:else if filteredEvents.length > 0}
-    <div class="card border-0 shadow-sm tablecard">
-      <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-          <thead class="thead">
-            <tr>
-              <th>Titlu</th>
-              <th class="d-none d-md-table-cell">Tip</th>
-              <th>Data</th>
-              <th class="d-none d-lg-table-cell">Locație</th>
-              <th>Status</th>
-              <th class="text-end">Acțiuni</th>
-            </tr>
-          </thead>
+    <section class="eventGrid">
+      {#each filteredEvents as event (event.id)}
+        <article class:unpublished={!event.published} class="eventCard">
+          <header>
+            <div>
+              <span class="typeTag">{event.event_type ?? '-'}</span>
+              <h2>{event.title ?? '-'}</h2>
+            </div>
+            <span class:published={event.published} class="statusTag">{event.published ? 'Public' : 'Draft'}</span>
+          </header>
 
-          <tbody>
-            {#each filteredEvents as event (event.id)}
-              <tr class={!event.published ? "row--draft" : ""}>
-                <td class="title">
-                  <div class="title__main">{event.title ?? "-"}</div>
-                  <div class="title__sub d-md-none">
-                    <span class="badge text-bg-light border"
-                      >{event.event_type ?? "-"}</span
-                    >
-                    <span class="dot">•</span>
-                    <span class="muted">{event.location ?? "-"}</span>
-                  </div>
-                </td>
+          <div class="details">
+            <div><i class="bi bi-calendar-event"></i><span>{roDateTime(event.date)}</span></div>
+            <div><i class="bi bi-geo-alt"></i><span>{event.location ?? '-'}</span></div>
+          </div>
 
-                <td class="d-none d-md-table-cell">
-                  <span class="badge typeBadge">{event.event_type ?? "-"}</span>
-                </td>
-
-                <td class="muted">{roDateTime(event.date)}</td>
-
-                <td class="d-none d-lg-table-cell muted"
-                  >{event.location ?? "-"}</td
-                >
-
-                <td>
-                  <span
-                    class={`badge ${event.published ? "text-bg-success" : "text-bg-secondary"}`}
-                  >
-                    {event.published ? "Public" : "Draft"}
-                  </span>
-                </td>
-
-                <td class="text-end text-nowrap">
-                  <button
-                    class={`btn btn-sm ${event.published ? "btn-outline-secondary" : "btn-success"} me-2`}
-                    on:click={() =>
-                      togglePublished(event.id, event.published ?? false)}
-                    title="Publicare"
-                  >
-                    {event.published
-                      ? "Retrage evenimentul"
-                      : "Publică evenimentul"}
-                  </button>
-
-                  <a
-                    href={`/admin/evenimente/${event.id}`}
-                    class="btn btn-sm btn-primary me-2"
-                  >
-                    <i class="bi bi-pencil"></i>
-                    <span class="d-none d-sm-inline">Edit</span>
-                  </a>
-
-                  <button
-                    class="btn btn-sm btn-outline-danger"
-                    on:click={() => deleteEvent(event.id)}
-                  >
-                    <i class="bi bi-trash"></i>
-                    <span class="d-none d-sm-inline">Șterge</span>
-                  </button>
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          <footer>
+            <button class="cardBtn" on:click={() => togglePublished(event.id, event.published ?? false)}>
+              {event.published ? 'Retrage' : 'Publică'}
+            </button>
+            <a class="cardBtn primary" href={`/admin/evenimente/${event.id}`}>Editează</a>
+            <button class="cardBtn danger" on:click={() => deleteEvent(event.id)}>Șterge</button>
+          </footer>
+        </article>
+      {/each}
+    </section>
   {:else}
-    <div class="empty">
-      <div class="empty__icon"><i class="bi bi-info-circle"></i></div>
-      <div class="empty__text">
-        <div class="fw-bold">Nu sunt evenimente disponibile</div>
-        <div class="text-muted">
-          Creează primul eveniment din butonul „Eveniment nou”.
-        </div>
-      </div>
-    </div>
+    <section class="emptyCard">
+      <i class="bi bi-calendar-event"></i>
+      <h2>Nu sunt evenimente disponibile</h2>
+      <p>Creează primul eveniment din butonul „Eveniment nou”.</p>
+    </section>
   {/if}
 </div>
 
 <style>
   .page {
+    --bg: #f6f1e7;
+    --surface: #fffdf7;
+    --ink: #1d241b;
+    --muted: #6b7165;
+    --line: rgba(31, 42, 28, 0.12);
+    --accent: #274f2a;
+    --green: #8bd450;
     margin-left: 240px;
     min-height: 100vh;
-    padding: 24px;
-    background: #f8fafc;
+    padding: clamp(18px, 3vw, 34px);
+    background: radial-gradient(900px 420px at 8% -5%, rgba(139, 212, 80, 0.2), transparent 60%), var(--bg);
+    color: var(--ink);
   }
 
-  .page__header {
+  .topbar {
     display: flex;
-    align-items: flex-start;
     justify-content: space-between;
-    gap: 14px;
-    margin: 6px 0 14px;
+    align-items: end;
+    gap: 18px;
+    margin-bottom: 16px;
   }
 
-  .page__title {
+  .eyebrow {
+    margin: 0 0 6px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+    font-size: 0.75rem;
+    font-weight: 950;
+  }
+
+  h1 {
     margin: 0;
-    font-weight: 900;
-    letter-spacing: -0.02em;
-    color: var(--desaga-brown);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.6rem;
-    line-height: 1.2;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 0.94;
+    letter-spacing: -0.07em;
+    font-weight: 950;
   }
 
-  .page__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    display: grid;
-    place-items: center;
-    background: rgba(0, 0, 0, 0.04);
+  .topbar p:not(.eyebrow) {
+    margin: 12px 0 0;
+    max-width: 720px;
+    color: var(--muted);
   }
 
-  .page__subtitle {
-    margin: 6px 0 0;
-    color: rgba(0, 0, 0, 0.55);
-  }
-
-  .page__actions {
+  .actions {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
-  .page__btn {
-    border-radius: 12px;
+
+  .pill,
+  .cardBtn {
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0 15px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 950;
+    cursor: pointer;
+  }
+
+  .pill.primary,
+  .cardBtn.primary {
+    background: var(--accent);
+    color: #fffdf7;
+  }
+
+  .pill:disabled {
+    opacity: 0.6;
   }
 
   .toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
-    margin: 10px 0 14px;
+    align-items: center;
   }
 
-  .toolbar__search {
+  .search {
     position: relative;
-    flex: 1 1 auto;
-    max-width: 520px;
+    display: block;
   }
 
-  .toolbar__search > i {
+  .search i {
     position: absolute;
-    left: 12px;
+    left: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: rgba(0, 0, 0, 0.45);
+    color: var(--muted);
   }
 
-  .toolbar__input {
-    padding-left: 38px;
-    border-radius: 14px;
+  .search input {
+    width: 100%;
+    min-height: 54px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 0 18px 0 46px;
+    background: rgba(255, 253, 247, 0.9);
+    color: var(--ink);
+    font-weight: 800;
+    box-shadow: 0 12px 30px rgba(35, 51, 30, 0.07);
   }
 
-  .toolbar__meta {
+  .count {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 12px 16px;
+    background: rgba(255, 253, 247, 0.9);
+    color: var(--muted);
+    font-weight: 950;
+    white-space: nowrap;
+  }
+
+  .eventGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 14px;
+  }
+
+  .eventCard,
+  .stateCard,
+  .emptyCard {
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    background: rgba(255, 253, 247, 0.92);
+    box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
+  }
+
+  .eventCard {
+    padding: 18px;
+    display: grid;
+    gap: 18px;
+  }
+
+  .eventCard.unpublished {
+    background: rgba(255, 249, 232, 0.94);
+  }
+
+  .eventCard header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .typeTag,
+  .statusTag {
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 0.74rem;
+    font-weight: 950;
+  }
+
+  .typeTag {
+    background: rgba(139, 212, 80, 0.18);
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .statusTag {
+    background: #ece8dd;
+    color: #65685d;
     flex: 0 0 auto;
   }
 
-  .tablecard {
-    border-radius: 16px;
-    overflow: hidden;
+  .statusTag.published {
+    background: rgba(139, 212, 80, 0.22);
+    color: var(--accent);
   }
 
-  .thead {
-    background: rgba(0, 0, 0, 0.015);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  .eventCard h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    line-height: 1.08;
+    font-weight: 950;
+    letter-spacing: -0.04em;
+    overflow-wrap: anywhere;
   }
 
-  .title {
-    font-weight: 800;
-    color: rgba(0, 0, 0, 0.78);
-  }
-  .title__main {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 520px;
-  }
-  .title__sub {
-    margin-top: 4px;
-    display: flex;
+  .details {
+    display: grid;
     gap: 8px;
-    align-items: center;
-  }
-  .dot {
-    color: rgba(0, 0, 0, 0.35);
-  }
-  .muted {
-    color: rgba(0, 0, 0, 0.55);
-    font-weight: 600;
   }
 
-  .typeBadge {
-    background: rgba(118, 236, 30, 0.18);
-    color: rgba(0, 0, 0, 0.7);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-  }
-
-  .row--draft {
-    background: rgba(255, 193, 7, 0.12);
-  }
-
-  .empty {
-    border: 1px dashed rgba(0, 0, 0, 0.18);
-    border-radius: 16px;
-    padding: 18px 14px;
+  .details div {
     display: flex;
-    gap: 12px;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.015);
+    gap: 10px;
+    align-items: start;
+    color: var(--muted);
+    font-weight: 800;
   }
 
-  .empty__icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
+  .details i {
+    color: var(--accent);
+  }
+
+  .eventCard footer {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .cardBtn.danger {
+    color: #842029;
+    background: #fff4f4;
+    border-color: #facaca;
+  }
+
+  .notice {
+    margin-bottom: 14px;
+    border-radius: 18px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-weight: 850;
+  }
+
+  .notice.success { background: #ecf8df; border: 1px solid #b9e58d; color: #285b20; }
+  .notice.info { background: #f4f1e8; border: 1px solid var(--line); color: var(--accent); }
+  .notice.danger { background: #fff1f1; border: 1px solid #facaca; color: #842029; }
+
+  .stateCard,
+  .emptyCard {
+    padding: 36px 20px;
     display: grid;
     place-items: center;
-    background: rgba(0, 0, 0, 0.04);
-    color: rgba(0, 0, 0, 0.55);
-    flex: 0 0 auto;
+    text-align: center;
+    gap: 12px;
+    color: var(--muted);
   }
 
-  .form-control:focus,
-  .form-select:focus {
-    border-color: var(--desaga-green);
-    box-shadow: 0 0 0 0.2rem rgba(118, 236, 30, 0.25);
+  .emptyCard i {
+    font-size: 2rem;
+    color: var(--accent);
   }
 
-  @media (max-width: 576px) {
-    .page__actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .page__btn {
-      justify-content: center;
-    }
-    .toolbar {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .toolbar__search {
-      max-width: none;
-    }
-    .title__main {
-      max-width: 240px;
-    }
+  .emptyCard h2 {
+    margin: 0;
+    color: var(--ink);
+    font-weight: 950;
   }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 3px solid rgba(39, 79, 42, 0.18);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   @media (max-width: 991.98px) {
     .page {
       margin-left: 0;
-      padding-top: 84px;
+      padding: 88px 16px 24px;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .topbar,
+    .toolbar,
+    .eventCard header {
+      display: grid;
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+
+    .actions,
+    .pill {
+      width: 100%;
+    }
+
+    .eventCard footer {
+      grid-template-columns: 1fr;
     }
   }
 </style>

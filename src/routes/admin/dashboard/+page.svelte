@@ -76,208 +76,294 @@
 <AdminNav />
 
 <div class="page">
-  <div class="page__head">
+  <header class="topbar">
     <div>
+      <p class="eyebrow">Overview</p>
       <h1>Dashboard</h1>
-      <p>Produse, comenzi, conversații și cereri HORECA.</p>
+      <p>Produse, comenzi, conversații și cereri HORECA într-o singură privire.</p>
     </div>
-    <button class="btn btn-outline-secondary" on:click={loadDashboard} disabled={loading}>
-      <i class="bi bi-arrow-clockwise"></i> Reîncarcă
+    <button class="action" on:click={loadDashboard} disabled={loading}>
+      <i class="bi bi-arrow-clockwise"></i>
+      <span>{loading ? 'Se încarcă…' : 'Reîncarcă'}</span>
     </button>
-  </div>
+  </header>
 
   {#if error}
-    <div class="alert alert-danger">{error}</div>
+    <div class="notice danger" role="alert">
+      <i class="bi bi-exclamation-triangle"></i>
+      <span>{error}</span>
+    </div>
   {/if}
 
-  <div class="cards">
-    <a class="cardStat" href="/admin/produse">
-      <div class="cardStat__icon"><i class="bi bi-box-seam"></i></div>
-      <div>
-        <div class="cardStat__label">Produse</div>
-        <div class="cardStat__value">{loading ? '…' : stats.products}</div>
-      </div>
+  <section class="metricGrid" aria-label="Statistici dashboard">
+    <a class="metric featured" href="/admin/produse">
+      <span class="metric__icon"><i class="bi bi-box-seam"></i></span>
+      <span class="metric__label">Produse</span>
+      <strong>{loading ? '…' : stats.products}</strong>
+      <small>Catalog activ</small>
     </a>
 
-    <a class="cardStat" href="/admin/comenzi">
-      <div class="cardStat__icon"><i class="bi bi-receipt"></i></div>
-      <div>
-        <div class="cardStat__label">Comenzi</div>
-        <div class="cardStat__value">{loading ? '…' : stats.orders}</div>
-      </div>
+    <a class="metric" href="/admin/comenzi">
+      <span class="metric__icon"><i class="bi bi-receipt"></i></span>
+      <span class="metric__label">Comenzi</span>
+      <strong>{loading ? '…' : stats.orders}</strong>
+      <small>Statusuri și livrare</small>
     </a>
 
-    <a class="cardStat" href="/admin/horeca">
-      <div class="cardStat__icon"><i class="bi bi-shop"></i></div>
-      <div>
-        <div class="cardStat__label">Cereri HORECA</div>
-        <div class="cardStat__value">{loading ? '…' : stats.horecaRequests}</div>
-        <div class="cardStat__meta">{loading ? '…' : `${stats.newHorecaRequests} cereri noi`}</div>
-      </div>
+    <a class="metric" href="/admin/horeca">
+      <span class="metric__icon"><i class="bi bi-shop"></i></span>
+      <span class="metric__label">HORECA</span>
+      <strong>{loading ? '…' : stats.horecaRequests}</strong>
+      <small>{loading ? '…' : `${stats.newHorecaRequests} cereri noi`}</small>
     </a>
 
-    <a class="cardStat" href="/admin/messages">
-      <div class="cardStat__icon"><i class="bi bi-chat-dots"></i></div>
-      <div>
-        <div class="cardStat__label">Conversații</div>
-        <div class="cardStat__value">{loading ? '…' : stats.messages}</div>
-        <div class="cardStat__meta">{loading ? '…' : `${stats.unreadMessages} mesaje necitite`}</div>
-      </div>
+    <a class="metric" href="/admin/messages">
+      <span class="metric__icon"><i class="bi bi-chat-dots"></i></span>
+      <span class="metric__label">Conversații</span>
+      <strong>{loading ? '…' : stats.messages}</strong>
+      <small>{loading ? '…' : `${stats.unreadMessages} necitite`}</small>
     </a>
-  </div>
+  </section>
 
-  <section class="quickPanel">
+  <section class="commandPanel">
     <div>
+      <p class="eyebrow">Scurtături</p>
       <h2>Acțiuni rapide</h2>
-      <p>Accesează zonele care cer atenție cel mai des.</p>
+      <p>Zonele pe care le folosești cel mai des sunt la un click distanță.</p>
     </div>
-
     <div class="quickActions">
-      <a class="btn btn-primary" href="/admin/horeca">
-        <i class="bi bi-shop"></i> Vezi cereri HORECA
-      </a>
-      <a class="btn btn-outline-primary" href="/admin/produse/new">
-        <i class="bi bi-plus-circle"></i> Produs nou
-      </a>
-      <a class="btn btn-outline-primary" href="/admin/messages">
-        <i class="bi bi-chat-dots"></i> Mesaje
-      </a>
+      <a href="/admin/horeca" class="quick primary"><i class="bi bi-shop"></i> Cereri HORECA</a>
+      <a href="/admin/produse/new" class="quick"><i class="bi bi-plus-circle"></i> Produs nou</a>
+      <a href="/admin/messages" class="quick"><i class="bi bi-chat-dots"></i> Mesaje</a>
     </div>
   </section>
 </div>
 
 <style>
   .page {
+    --bg: #f6f1e7;
+    --surface: #fffdf7;
+    --ink: #1d241b;
+    --muted: #6b7165;
+    --line: rgba(31, 42, 28, 0.12);
+    --accent: #274f2a;
+    --accent-soft: rgba(139, 212, 80, 0.2);
     margin-left: 240px;
     min-height: 100vh;
-    padding: 24px;
-    background: #f8fafc;
+    padding: clamp(18px, 3vw, 34px);
+    background:
+      radial-gradient(850px 360px at 12% -8%, rgba(139, 212, 80, 0.24), transparent 60%),
+      var(--bg);
+    color: var(--ink);
   }
 
-  .page__head {
+  .topbar {
     display: flex;
+    align-items: end;
     justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 20px;
+    margin-bottom: 18px;
   }
 
-  .page__head h1 {
+  .eyebrow {
+    margin: 0 0 6px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    font-weight: 950;
+  }
+
+  h1,
+  h2 {
     margin: 0;
     font-weight: 950;
-    color: var(--desaga-heading);
+    letter-spacing: -0.055em;
+    color: var(--ink);
   }
 
-  .page__head p {
-    margin: 6px 0 0;
-    color: var(--desaga-muted);
+  h1 {
+    font-size: clamp(2.25rem, 7vw, 4.8rem);
+    line-height: 0.94;
   }
 
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
+  h2 {
+    font-size: clamp(1.5rem, 3vw, 2.35rem);
   }
 
-  .cardStat {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    background: white;
-    border-radius: 18px;
-    padding: 20px;
+  .topbar p:not(.eyebrow),
+  .commandPanel p:not(.eyebrow) {
+    max-width: 680px;
+    margin: 10px 0 0;
+    color: var(--muted);
+  }
+
+  .action,
+  .quick {
+    min-height: 46px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    background: var(--surface);
+    color: var(--ink);
     text-decoration: none;
-    color: inherit;
-    border: 1px solid var(--desaga-border);
-    box-shadow: var(--desaga-shadow-sm);
+    font-weight: 900;
+    box-shadow: 0 12px 30px rgba(35, 51, 30, 0.08);
   }
 
-  .cardStat:hover,
-  .cardStat:focus {
-    color: inherit;
-    transform: translateY(-1px);
-    box-shadow: var(--desaga-shadow-md);
+  .action:disabled {
+    opacity: 0.58;
   }
 
-  .cardStat__icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
+  .notice {
+    margin: 0 0 16px;
+    border-radius: 18px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-weight: 800;
+  }
+
+  .notice.danger {
+    background: #fff1f1;
+    border: 1px solid #facaca;
+    color: #842029;
+  }
+
+  .metricGrid {
+    display: grid;
+    grid-template-columns: 1.25fr repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .metric {
+    min-height: 220px;
+    border: 1px solid var(--line);
+    border-radius: 30px;
+    padding: 20px;
+    display: grid;
+    align-content: space-between;
+    gap: 14px;
+    color: var(--ink);
+    text-decoration: none;
+    background: rgba(255, 253, 247, 0.88);
+    box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .metric:hover,
+  .metric:focus-visible {
+    color: var(--ink);
+    transform: translateY(-3px);
+    box-shadow: 0 30px 70px rgba(35, 51, 30, 0.15);
+  }
+
+  .metric.featured {
+    color: #fffdf7;
+    background: linear-gradient(135deg, #274f2a, #192c1b);
+  }
+
+  .metric__icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 18px;
     display: grid;
     place-items: center;
-    color: var(--desaga-blue);
-    background: rgba(var(--desaga-accent-rgb), 0.11);
-    flex: 0 0 auto;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 1.25rem;
   }
 
-  .cardStat__label {
-    font-weight: 800;
-    color: rgba(0, 0, 0, 0.65);
+  .featured .metric__icon {
+    color: #fffdf7;
+    background: rgba(255, 255, 255, 0.14);
   }
 
-  .cardStat__value {
-    font-size: 2rem;
+  .metric__label {
+    color: var(--muted);
+    font-weight: 900;
+  }
+
+  .featured .metric__label,
+  .featured small {
+    color: rgba(255, 253, 247, 0.72);
+  }
+
+  .metric strong {
+    display: block;
+    font-size: clamp(2.4rem, 6vw, 4.8rem);
+    line-height: 0.9;
+    letter-spacing: -0.08em;
     font-weight: 950;
-    margin-top: 4px;
-    line-height: 1;
-    color: var(--desaga-heading);
   }
 
-  .cardStat__meta {
-    margin-top: 8px;
-    color: rgba(0, 0, 0, 0.65);
+  .metric small {
+    color: var(--muted);
+    font-weight: 750;
   }
 
-  .quickPanel {
-    margin-top: 18px;
-    padding: 20px;
-    border-radius: 18px;
-    background: white;
-    border: 1px solid var(--desaga-border);
-    box-shadow: var(--desaga-shadow-sm);
+  .commandPanel {
+    margin-top: 16px;
+    border: 1px solid var(--line);
+    border-radius: 30px;
+    padding: clamp(18px, 3vw, 28px);
     display: grid;
-    gap: 16px;
-  }
-
-  @media (min-width: 768px) {
-    .quickPanel {
-      grid-template-columns: 1fr auto;
-      align-items: center;
-    }
-  }
-
-  .quickPanel h2 {
-    margin: 0 0 0.35rem;
-    font-weight: 950;
-    color: var(--desaga-heading);
-  }
-
-  .quickPanel p {
-    margin: 0;
-    color: var(--desaga-muted);
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    background: var(--surface);
+    box-shadow: 0 18px 50px rgba(35, 51, 30, 0.08);
   }
 
   .quickActions {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .quick.primary {
+    background: var(--accent);
+    color: #fffdf7;
+  }
+
+  @media (max-width: 1180px) {
+    .metricGrid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 991.98px) {
     .page {
       margin-left: 0;
-      padding: 18px;
+      padding: 88px 16px 24px;
     }
   }
 
-  @media (max-width: 576px) {
-    .page__head {
+  @media (max-width: 720px) {
+    .topbar,
+    .commandPanel {
+      grid-template-columns: 1fr;
+      display: grid;
       align-items: stretch;
-      flex-direction: column;
     }
 
-    .quickActions .btn,
-    .page__head .btn {
+    .metricGrid {
+      grid-template-columns: 1fr;
+    }
+
+    .metric {
+      min-height: 170px;
+    }
+
+    .action,
+    .quick,
+    .quickActions {
       width: 100%;
     }
   }

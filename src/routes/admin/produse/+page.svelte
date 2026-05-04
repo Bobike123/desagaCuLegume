@@ -63,109 +63,355 @@
 <AdminNav />
 
 <div class="page">
-  <div class="page__head">
+  <header class="topbar">
     <div>
+      <p class="eyebrow">Catalog</p>
       <h1>Produse</h1>
-      <p>Catalogul conectat la tabelele products și product_categories.</p>
+      <p>Gestionează produsele, prețurile, categoriile, stocurile și vizibilitatea publică.</p>
     </div>
     <div class="actions">
-      <button class="btn btn-outline-secondary" on:click={loadItems} disabled={loading}>Reîncarcă</button>
-      <a href="/admin/produse/new" class="btn btn-primary">Produs nou</a>
+      <button class="pill" on:click={loadItems} disabled={loading}><i class="bi bi-arrow-clockwise"></i> Reîncarcă</button>
+      <a href="/admin/produse/new" class="pill primary"><i class="bi bi-plus-circle"></i> Produs nou</a>
     </div>
-  </div>
+  </header>
 
-  <div class="toolbar">
-    <input class="form-control" type="search" placeholder="Caută produse..." bind:value={searchQuery} />
-  </div>
+  <section class="toolbar">
+    <label class="search">
+      <i class="bi bi-search"></i>
+      <input type="search" placeholder="Caută după nume, SKU sau categorie..." bind:value={searchQuery} />
+    </label>
+    <span class="count">{loading ? '…' : filtered.length} produse</span>
+  </section>
 
   {#if error}
-    <div class="alert alert-danger">{error}</div>
+    <div class="notice danger" role="alert"><i class="bi bi-exclamation-triangle"></i>{error}</div>
   {/if}
 
   {#if loading}
-    <div class="panel">Se încarcă produsele…</div>
+    <section class="stateCard"><span class="spinner"></span><strong>Se încarcă produsele…</strong></section>
+  {:else if filtered.length === 0}
+    <section class="emptyCard">
+      <i class="bi bi-box-seam"></i>
+      <h2>Nu există produse pentru filtrul curent</h2>
+      <p>Schimbă căutarea sau adaugă un produs nou.</p>
+    </section>
   {:else}
-    <div class="panel table-responsive">
-      <table class="table align-middle mb-0">
-        <thead>
-          <tr>
-            <th>Nume</th>
-            <th>SKU</th>
-            <th>Categorie</th>
-            <th>Preț</th>
-            <th>Stoc</th>
-            <th>Status</th>
-            <th class="text-end">Acțiuni</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each filtered as item (item.id)}
-            <tr>
-              <td>{item.name}</td>
-              <td>{item.sku ?? '—'}</td>
-              <td>{item.category}</td>
-              <td>{item.price.toFixed(2)} RON</td>
-              <td>{item.stock_quantity}</td>
-              <td>{item.status ?? (item.in_stock ? 'ACTIVE' : 'OUT_OF_STOCK')}</td>
-              <td class="text-end">
-                <div class="rowActions">
-                  <a class="btn btn-sm btn-outline-secondary" href={`/admin/produse/${item.id}`}>Editează</a>
-                  <button class="btn btn-sm btn-outline-danger" on:click={() => remove(item.id)}>Șterge</button>
-                </div>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+    <section class="productGrid" aria-label="Lista produselor">
+      {#each filtered as item (item.id)}
+        <article class="productCard">
+          <header>
+            <div>
+              <h2>{item.name}</h2>
+              <p>{item.sku ?? 'Fără SKU'}</p>
+            </div>
+            <span class:mutedBadge={!item.in_stock} class="stockBadge">{item.status ?? (item.in_stock ? 'ACTIVE' : 'OUT_OF_STOCK')}</span>
+          </header>
+
+          <div class="metaGrid">
+            <div><span>Categorie</span><strong>{item.category}</strong></div>
+            <div><span>Preț</span><strong>{item.price.toFixed(2)} RON</strong></div>
+            <div><span>Stoc</span><strong>{item.stock_quantity}</strong></div>
+          </div>
+
+          <footer>
+            <a class="cardBtn" href={`/admin/produse/${item.id}`}>Editează</a>
+            <button class="cardBtn danger" on:click={() => remove(item.id)}>Șterge</button>
+          </footer>
+        </article>
+      {/each}
+    </section>
   {/if}
 </div>
 
 <style>
   .page {
+    --bg: #f6f1e7;
+    --surface: #fffdf7;
+    --ink: #1d241b;
+    --muted: #6b7165;
+    --line: rgba(31, 42, 28, 0.12);
+    --accent: #274f2a;
+    --green: #8bd450;
     margin-left: 240px;
     min-height: 100vh;
-    padding: 24px;
-    background: #f8fafc;
+    padding: clamp(18px, 3vw, 34px);
+    background: radial-gradient(900px 420px at 8% -5%, rgba(139, 212, 80, 0.2), transparent 60%), var(--bg);
+    color: var(--ink);
   }
 
-  .page__head {
+  .topbar {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 18px;
+    align-items: end;
+    gap: 18px;
+    margin-bottom: 16px;
   }
 
-  .page__head h1 {
+  .eyebrow {
+    margin: 0 0 6px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+    font-size: 0.75rem;
+    font-weight: 950;
+  }
+
+  h1 {
     margin: 0;
-    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 0.94;
+    letter-spacing: -0.07em;
+    font-weight: 950;
   }
 
-  .page__head p {
-    margin: 6px 0 0;
-    color: rgba(0, 0, 0, 0.65);
+  .topbar p:not(.eyebrow) {
+    margin: 12px 0 0;
+    max-width: 740px;
+    color: var(--muted);
   }
 
   .actions {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .pill,
+  .cardBtn {
+    min-height: 46px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 950;
+    cursor: pointer;
+  }
+
+  .pill.primary {
+    background: var(--accent);
+    color: #fffdf7;
+  }
+
+  .pill:disabled {
+    opacity: 0.6;
   }
 
   .toolbar {
     margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
   }
 
-  .panel {
-    background: white;
-    border-radius: 18px;
+  .search {
+    position: relative;
+    display: block;
+  }
+
+  .search i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+  }
+
+  .search input {
+    width: 100%;
+    min-height: 54px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 0 18px 0 46px;
+    background: rgba(255, 253, 247, 0.9);
+    color: var(--ink);
+    font-weight: 800;
+    box-shadow: 0 12px 30px rgba(35, 51, 30, 0.07);
+  }
+
+  .count {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 12px 16px;
+    background: rgba(255, 253, 247, 0.9);
+    color: var(--muted);
+    font-weight: 950;
+    white-space: nowrap;
+  }
+
+  .productGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
+    gap: 14px;
+  }
+
+  .productCard,
+  .stateCard,
+  .emptyCard {
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    background: rgba(255, 253, 247, 0.92);
+    box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
+  }
+
+  .productCard {
     padding: 18px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    display: grid;
+    gap: 18px;
   }
 
-  .rowActions {
+  .productCard header,
+  .productCard footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .productCard h2 {
+    margin: 0;
+    font-size: 1.18rem;
+    font-weight: 950;
+    letter-spacing: -0.03em;
+    overflow-wrap: anywhere;
+  }
+
+  .productCard p {
+    margin: 4px 0 0;
+    color: var(--muted);
+  }
+
+  .stockBadge {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 7px 10px;
+    background: rgba(139, 212, 80, 0.22);
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 950;
+  }
+
+  .stockBadge.mutedBadge {
+    background: #eee9dd;
+    color: #65685d;
+  }
+
+  .metaGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  .metaGrid div {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.48);
+  }
+
+  .metaGrid span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 900;
+  }
+
+  .metaGrid strong {
+    display: block;
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .cardBtn {
+    width: 100%;
+  }
+
+  .cardBtn.danger {
+    color: #842029;
+    background: #fff4f4;
+    border-color: #facaca;
+  }
+
+  .notice,
+  .stateCard,
+  .emptyCard {
+    padding: 28px 20px;
+  }
+
+  .notice.danger {
+    margin-bottom: 14px;
+    border-radius: 18px;
+    background: #fff1f1;
+    border: 1px solid #facaca;
+    color: #842029;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 850;
+  }
+
+  .stateCard,
+  .emptyCard {
+    display: grid;
+    place-items: center;
+    gap: 12px;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .emptyCard i {
+    font-size: 2rem;
+    color: var(--accent);
+  }
+
+  .emptyCard h2 {
+    margin: 0;
+    color: var(--ink);
+    font-weight: 950;
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 3px solid rgba(39, 79, 42, 0.18);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 991.98px) {
+    .page {
+      margin-left: 0;
+      padding: 88px 16px 24px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .topbar,
+    .toolbar,
+    .productCard header,
+    .productCard footer {
+      grid-template-columns: 1fr;
+      display: grid;
+      align-items: stretch;
+    }
+
+    .actions,
+    .pill {
+      width: 100%;
+    }
+
+    .metaGrid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>

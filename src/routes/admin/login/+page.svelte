@@ -28,170 +28,276 @@
 </svelte:head>
 
 <div class="auth">
-  <div class="auth__card">
-    <header class="auth__head">
-      <div class="auth__brand">
-        <div class="auth__logo" aria-hidden="true">
-          <i class="bi bi-shield-lock"></i>
-        </div>
-        <div>
-          <h1 class="auth__title">Admin Panel</h1>
-          <p class="auth__sub">Autentificare administratori</p>
-        </div>
+  <section class="visualPanel" aria-hidden="true">
+    <p class="eyebrow">DeSaga</p>
+    <h1>Admin access</h1>
+    <p>Intrare securizată pentru administrarea catalogului, comenzilor și conversațiilor.</p>
+  </section>
+
+  <section class="authCard">
+    <header>
+      <div class="logo"><i class="bi bi-shield-lock"></i></div>
+      <div>
+        <p class="eyebrow">Autentificare</p>
+        <h2>Admin Panel</h2>
       </div>
     </header>
 
-    <div class="auth__body">
-      {#if error}
-        <div class="alert alert-danger d-flex align-items-center gap-2 shadow-sm mb-3" role="alert">
-          <i class="bi bi-exclamation-triangle"></i>
-          <div>{error}</div>
-        </div>
-      {/if}
+    {#if error}
+      <div class="notice" role="alert">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span>{error}</span>
+      </div>
+    {/if}
 
-      <form class="auth__form" on:submit={handleLogin}>
-        <div class="field">
-          <label class="field__label" for="identity">Email sau username</label>
-          <div class="field__controlWrap">
-            <i class="bi bi-envelope" aria-hidden="true"></i>
-            <input
-              id="identity"
-              class="form-control form-control-lg field__control"
-              type="text"
-              bind:value={identity}
-              required
-              autocomplete="username"
-              placeholder="admin@exemplu.ro"
-              disabled={loading}
-            />
-          </div>
+    <form on:submit={handleLogin}>
+      <label>
+        <span>Email sau username</span>
+        <div class="inputWrap">
+          <i class="bi bi-person"></i>
+          <input type="text" bind:value={identity} required autocomplete="username" placeholder="admin@exemplu.ro" disabled={loading} />
         </div>
+      </label>
 
-        <div class="field">
-          <label class="field__label" for="password">Parolă</label>
-          <div class="field__controlWrap">
-            <i class="bi bi-key" aria-hidden="true"></i>
-            <input
-              id="password"
-              class="form-control form-control-lg field__control"
-              type="password"
-              bind:value={password}
-              required
-              autocomplete="current-password"
-              placeholder="introdu parola"
-              disabled={loading}
-            />
-          </div>
+      <label>
+        <span>Parolă</span>
+        <div class="inputWrap">
+          <i class="bi bi-key"></i>
+          <input type="password" bind:value={password} required autocomplete="current-password" placeholder="introdu parola" disabled={loading} />
         </div>
+      </label>
 
-        <button class="btn btn-primary btn-lg w-100 auth__submit" type="submit" disabled={loading}>
-          {#if loading}
-            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-            Se autentifică…
-          {:else}
-            <i class="bi bi-box-arrow-in-right"></i>
-            Autentificare
-          {/if}
-        </button>
-      </form>
-    </div>
-  </div>
+      <button type="submit" disabled={loading}>
+        {#if loading}
+          <span class="spinner" aria-hidden="true"></span>
+          Se autentifică…
+        {:else}
+          <i class="bi bi-box-arrow-in-right"></i>
+          Autentificare
+        {/if}
+      </button>
+    </form>
+  </section>
 </div>
 
 <style>
   .auth {
+    --bg: #f6f1e7;
+    --surface: #fffdf7;
+    --ink: #1d241b;
+    --muted: #6b7165;
+    --line: rgba(31, 42, 28, 0.12);
+    --accent: #274f2a;
     min-height: 100vh;
+    padding: clamp(16px, 3vw, 34px);
     display: grid;
-    place-items: center;
-    padding: 18px 12px;
-    background: radial-gradient(900px 500px at 20% 10%, rgba(118, 236, 30, 0.12), transparent 60%),
-      radial-gradient(700px 420px at 90% 30%, rgba(0, 0, 0, 0.06), transparent 60%),
-      #f6f0e6;
+    grid-template-columns: minmax(0, 1fr) minmax(380px, 520px);
+    gap: 18px;
+    background:
+      radial-gradient(900px 420px at 8% -5%, rgba(139, 212, 80, 0.23), transparent 60%),
+      var(--bg);
+    color: var(--ink);
   }
 
-  .auth__card {
-    width: min(560px, 100%);
-    border-radius: 18px;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+  .visualPanel,
+  .authCard {
+    border: 1px solid var(--line);
+    border-radius: 34px;
+    box-shadow: 0 28px 80px rgba(35, 51, 30, 0.14);
   }
 
-  .auth__head {
-    padding: 18px 18px 14px;
-    background: rgba(0, 0, 0, 0.015);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  }
-
-  .auth__brand {
+  .visualPanel {
+    min-height: calc(100vh - 68px);
+    padding: clamp(28px, 6vw, 62px);
     display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .auth__logo {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: rgba(0, 0, 0, 0.04);
-    color: var(--desaga-brown);
-    font-size: 1.2rem;
-  }
-
-  .auth__title {
-    margin: 0;
-    font-weight: 900;
-    color: var(--desaga-brown);
-  }
-
-  .auth__sub {
-    margin: 4px 0 0;
-    color: rgba(0, 0, 0, 0.55);
-    font-weight: 600;
-  }
-
-  .auth__body {
-    padding: 18px;
-  }
-
-  .auth__form {
-    display: grid;
-    gap: 12px;
-  }
-
-  .field__label {
-    display: block;
-    font-weight: 800;
-    color: rgba(0, 0, 0, 0.78);
-    margin-bottom: 6px;
-  }
-
-  .field__controlWrap {
+    flex-direction: column;
+    justify-content: end;
+    background: linear-gradient(135deg, rgba(39, 79, 42, 0.96), rgba(25, 44, 27, 0.94));
+    color: #fffdf7;
+    overflow: hidden;
     position: relative;
   }
 
-  .field__controlWrap > i {
+  .visualPanel::before {
+    content: '';
     position: absolute;
-    left: 12px;
+    inset: -120px -90px auto auto;
+    width: 360px;
+    height: 360px;
+    border-radius: 999px;
+    background: rgba(139, 212, 80, 0.22);
+  }
+
+  .eyebrow {
+    margin: 0 0 8px;
+    color: #3e6a35;
+    font-size: 0.75rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    font-weight: 950;
+  }
+
+  .visualPanel .eyebrow {
+    color: #bdf48a;
+  }
+
+  h1,
+  h2 {
+    margin: 0;
+    font-weight: 950;
+    letter-spacing: -0.065em;
+  }
+
+  h1 {
+    max-width: 760px;
+    font-size: clamp(3rem, 9vw, 7rem);
+    line-height: 0.9;
+  }
+
+  h2 {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    color: var(--ink);
+  }
+
+  .visualPanel p:not(.eyebrow) {
+    max-width: 620px;
+    margin: 18px 0 0;
+    color: rgba(255, 253, 247, 0.74);
+    font-size: clamp(1rem, 2vw, 1.2rem);
+  }
+
+  .authCard {
+    align-self: center;
+    padding: clamp(20px, 4vw, 34px);
+    background: rgba(255, 253, 247, 0.92);
+  }
+
+  .authCard header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .logo {
+    width: 58px;
+    height: 58px;
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    color: var(--accent);
+    background: rgba(139, 212, 80, 0.22);
+    font-size: 1.35rem;
+  }
+
+  form {
+    display: grid;
+    gap: 15px;
+  }
+
+  label span {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--ink);
+    font-weight: 950;
+  }
+
+  .inputWrap {
+    position: relative;
+  }
+
+  .inputWrap i {
+    position: absolute;
+    left: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: rgba(0, 0, 0, 0.45);
+    color: var(--muted);
   }
 
-  .field__control {
-    padding-left: 40px;
-    border-radius: 14px;
+  input {
+    width: 100%;
+    min-height: 56px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 0 16px 0 46px;
+    background: #fff;
+    color: var(--ink);
+    font-weight: 850;
   }
 
-  .auth__submit {
-    border-radius: 14px;
+  input:focus {
+    outline: 3px solid rgba(139, 212, 80, 0.32);
+    border-color: rgba(39, 79, 42, 0.42);
+  }
+
+  button {
+    min-height: 56px;
+    border: 0;
+    border-radius: 999px;
+    margin-top: 6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    margin-top: 4px;
+    color: #fffdf7;
+    background: var(--accent);
+    font-weight: 950;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  .notice {
+    margin-bottom: 16px;
+    border-radius: 18px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff1f1;
+    border: 1px solid #facaca;
+    color: #842029;
+    font-weight: 850;
+  }
+
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.38);
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 900px) {
+    .auth {
+      grid-template-columns: 1fr;
+      align-content: center;
+    }
+
+    .visualPanel {
+      min-height: auto;
+      padding: 28px;
+      border-radius: 28px;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .auth {
+      padding: 12px;
+    }
+
+    .visualPanel {
+      display: none;
+    }
+
+    .authCard {
+      border-radius: 26px;
+    }
   }
 </style>
