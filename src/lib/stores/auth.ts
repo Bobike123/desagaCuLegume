@@ -190,6 +190,33 @@ function createAuthStore() {
       }
     },
 
+    async deleteAccount(payload: { currentPassword: string; confirmation: string }) {
+      update((state) => ({ ...state, loading: true, error: null }));
+
+      try {
+        const response = await fetch('/api/user', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const message = data?.error ?? 'Ștergerea contului a eșuat.';
+          update((state) => ({ ...state, loading: false, error: message }));
+          throw new Error(message);
+        }
+
+        set({ ...initialState, loading: false });
+        return data;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Ștergerea contului a eșuat.';
+        update((state) => ({ ...state, loading: false, error: message }));
+        throw error;
+      }
+    },
+
     async logout() {
       try {
         await fetch('/api/auth/logout', { method: 'POST' });

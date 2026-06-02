@@ -13,6 +13,7 @@ export default defineConfig({
 		expect: { requireAssertions: true },
 		projects: [
 			{
+				extends: true,
 				test: {
 					name: 'client',
 					browser: {
@@ -25,6 +26,7 @@ export default defineConfig({
 				}
 			},
 			{
+				extends: true,
 				test: {
 					name: 'server',
 					environment: 'node',

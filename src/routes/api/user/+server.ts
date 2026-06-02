@@ -1,6 +1,26 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
-import { normalizeEmail, normalizeUsername } from '$lib/server/auth';
+import {
+  clearSessionCookie,
+  createSessionToken,
+  getRequestMeta,
+  hashPassword,
+  insertAuthLog,
+  normalizeEmail,
+  normalizeUsername,
+  verifyPassword,
+} from '$lib/server/auth';
+import {
+  LIMITS,
+  nullableStringField,
+  readJsonBody,
+  stringField,
+  validationErrorResponse,
+} from '$lib/server/validation';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,80}$/;
+const DELETE_CONFIRMATION = 'STERGE CONTUL';
 
 function mapUser(row: any) {
   return {
@@ -11,11 +31,6 @@ function mapUser(row: any) {
     phone: row.phone ?? null,
     status: row.status,
   };
-}
-
-function cleanNullable(value: unknown) {
-  const cleaned = String(value ?? '').trim();
-  return cleaned || null;
 }
 
 export async function GET({ locals }) {
@@ -31,23 +46,37 @@ export async function PATCH({ locals, request }) {
     return json({ error: 'Autentificarea este necesară.' }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const admin = createAdminClient();
-
-  const email = normalizeEmail(String(body.email ?? locals.user.email ?? ''));
-  const username = normalizeUsername(String(body.username ?? locals.user.username ?? ''));
-  const fullName = cleanNullable(body.fullName);
-  const phone = cleanNullable(body.phone);
-
-  if (!email) {
-    return json({ error: 'Emailul este obligatoriu.' }, { status: 400 });
-  }
-
-  if (!username) {
-    return json({ error: 'Username-ul este obligatoriu.' }, { status: 400 });
-  }
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
+    const admin = createAdminClient();
+
+    const email = normalizeEmail(
+      stringField(body, 'email', {
+        max: 120,
+        defaultValue: locals.user.email,
+        pattern: EMAIL_PATTERN,
+        fieldLabel: 'Emailul',
+      })
+    );
+    const username = normalizeUsername(
+      stringField(body, 'username', {
+        max: 80,
+        defaultValue: locals.user.username,
+        pattern: USERNAME_PATTERN,
+        fieldLabel: 'Username-ul',
+      })
+    );
+    const fullName = nullableStringField(body, 'fullName', { max: 120, fieldLabel: 'Numele complet' });
+    const phone = nullableStringField(body, 'phone', { max: 30, fieldLabel: 'Telefonul' });
+
+    if (!email) {
+      return json({ error: 'Emailul este obligatoriu.' }, { status: 400 });
+    }
+
+    if (!username) {
+      return json({ error: 'Username-ul este obligatoriu.' }, { status: 400 });
+    }
+
     const emailCheck = await admin
       .from('users')
       .select('user_id')
@@ -89,7 +118,129 @@ export async function PATCH({ locals, request }) {
 
     return json({ item: mapUser(data) }, { status: 200 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Nu am putut actualiza profilul.';
+    return json({ error: message }, { status: 400 });
+  }
+}
+
+export async function DELETE({ locals, request, cookies }) {
+  if (!locals.isAuthenticated || !locals.user) {
+    return json({ error: 'Autentificarea este necesară.' }, { status: 401 });
+  }
+
+  if (locals.isAdmin) {
+    return json({ error: 'Conturile de administrator nu pot fi șterse din pagina clientului.' }, { status: 403 });
+  }
+
+  try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.tinyJson });
+    const currentPassword = stringField(body, 'currentPassword', {
+      required: true,
+      max: 200,
+      fieldLabel: 'Parola curentă',
+    });
+    const confirmation = stringField(body, 'confirmation', {
+      required: true,
+      max: 40,
+      fieldLabel: 'Confirmarea',
+    }).toUpperCase();
+
+    if (confirmation !== DELETE_CONFIRMATION) {
+      return json({ error: `Pentru ștergere trebuie să confirmați cu textul ${DELETE_CONFIRMATION}.` }, { status: 400 });
+    }
+
+    const admin = createAdminClient();
+    const userId = locals.user.id;
+    const deletedAt = new Date().toISOString();
+    const suffix = `${userId}-${Date.now()}`;
+
+    const { data: userRow, error: userError } = await admin
+      .from('users')
+      .select('user_id, password_hash, status')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (userError) throw userError;
+    if (!userRow || userRow.status === 'DELETED') {
+      clearSessionCookie(cookies);
+      return json({ success: true }, { status: 200 });
+    }
+
+    if (!userRow.password_hash || !verifyPassword(currentPassword, String(userRow.password_hash))) {
+      return json({ error: 'Parola curentă este incorectă.' }, { status: 400 });
+    }
+
+    const { error: updateError } = await admin
+      .from('users')
+      .update({
+        email: `cont-sters-${suffix}@deleted.local`,
+        username: `cont_sters_${suffix}`,
+        full_name: null,
+        phone: null,
+        password_hash: hashPassword(createSessionToken()),
+        status: 'DELETED',
+        updated_at: deletedAt,
+      })
+      .eq('user_id', userId);
+
+    if (updateError) throw updateError;
+
+    try {
+      const carts = await admin
+        .from('carts')
+        .select('cart_id')
+        .eq('user_id', userId)
+        .eq('status', 'ACTIVE');
+
+      if (carts.error) throw carts.error;
+
+      const activeCartIds = (carts.data ?? []).map((cart: any) => cart.cart_id).filter(Boolean);
+      if (activeCartIds.length > 0) {
+        const { error: cartItemsError } = await admin.from('cart_items').delete().in('cart_id', activeCartIds);
+        if (cartItemsError) throw cartItemsError;
+      }
+    } catch (cartError) {
+      console.error('Account deletion cart cleanup failed', cartError);
+    }
+
+    try {
+      const { error: sessionError } = await admin
+        .from('sessions')
+        .update({
+          status: 'LOGGED_OUT',
+          ended_at: deletedAt,
+          last_activity_at: deletedAt,
+        })
+        .eq('user_id', userId)
+        .eq('status', 'ACTIVE');
+
+      if (sessionError) throw sessionError;
+    } catch (sessionError) {
+      console.error('Account deletion session cleanup failed', sessionError);
+    }
+
+    try {
+      await insertAuthLog({
+        userId,
+        sessionId: locals.session?.sessionId ?? null,
+        eventType: 'DELETE_ACCOUNT',
+        meta: getRequestMeta(request),
+        details: { deletedAt },
+      });
+    } catch (logError) {
+      console.error('Account deletion audit log failed', logError);
+    }
+
+    clearSessionCookie(cookies);
+    return json({ success: true }, { status: 200 });
+  } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
+    const message = error instanceof Error ? error.message : 'Nu am putut șterge contul.';
     return json({ error: message }, { status: 400 });
   }
 }

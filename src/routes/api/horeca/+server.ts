@@ -1,17 +1,22 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import {
+  enumField,
+  LIMITS,
+  nullableStringField,
+  readJsonBody,
+  requireNumericId,
+  stringField,
+  validationErrorResponse,
+} from '$lib/server/validation';
 
 const allowedStatuses = ['NEW', 'CONTACTED', 'OFFER_SENT', 'CLOSED'] as const;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type HorecaStatus = (typeof allowedStatuses)[number];
 
 function cleanString(value: unknown) {
   return String(value ?? '').trim();
-}
-
-function cleanOptional(value: unknown) {
-  const cleaned = cleanString(value);
-  return cleaned || null;
 }
 
 function normalizeStatus(value: unknown): HorecaStatus {
@@ -70,43 +75,42 @@ export async function GET({ locals, url }) {
 }
 
 export async function POST({ request }) {
-  const body = await request.json().catch(() => ({}));
-
-  const businessName = cleanString(body.businessName ?? body.business_name);
-  const contactName = cleanString(body.contactName ?? body.contact_name);
-  const phone = cleanString(body.phone);
-  const productsNeeded = cleanString(body.productsNeeded ?? body.products_needed);
-
-  if (!businessName) {
-    return json({ error: 'Numele business-ului este obligatoriu.' }, { status: 400 });
-  }
-
-  if (!contactName) {
-    return json({ error: 'Persoana de contact este obligatorie.' }, { status: 400 });
-  }
-
-  if (!phone) {
-    return json({ error: 'Telefonul este obligatoriu.' }, { status: 400 });
-  }
-
-  if (!productsNeeded) {
-    return json({ error: 'Lista de produse dorite este obligatorie.' }, { status: 400 });
-  }
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
+    const businessNameField = 'businessName' in body ? 'businessName' : 'business_name';
+    const contactNameField = 'contactName' in body ? 'contactName' : 'contact_name';
+    const productsNeededField = 'productsNeeded' in body ? 'productsNeeded' : 'products_needed';
+
+    const businessName = stringField(body, businessNameField, {
+      required: true,
+      max: 140,
+      fieldLabel: 'Numele business-ului',
+    });
+    const contactName = stringField(body, contactNameField, {
+      required: true,
+      max: 120,
+      fieldLabel: 'Persoana de contact',
+    });
+    const phone = stringField(body, 'phone', { required: true, max: 30, fieldLabel: 'Telefonul' });
+    const productsNeeded = stringField(body, productsNeededField, {
+      required: true,
+      max: LIMITS.longText,
+      fieldLabel: 'Lista de produse dorite',
+    });
+
     const payload = {
       business_name: businessName,
       contact_name: contactName,
       phone,
-      email: cleanOptional(body.email),
-      business_type: cleanOptional(body.businessType ?? body.business_type),
-      city: cleanOptional(body.city),
-      address: cleanOptional(body.address),
+      email: nullableStringField(body, 'email', { max: 120, pattern: EMAIL_PATTERN, fieldLabel: 'Emailul' }),
+      business_type: nullableStringField(body, 'businessType', { max: 80, fieldLabel: 'Tipul business-ului' }) ?? nullableStringField(body, 'business_type', { max: 80, fieldLabel: 'Tipul business-ului' }),
+      city: nullableStringField(body, 'city', { max: 90, fieldLabel: 'Orașul' }),
+      address: nullableStringField(body, 'address', { max: 180, fieldLabel: 'Adresa' }),
       products_needed: productsNeeded,
-      estimated_quantity: cleanOptional(body.estimatedQuantity ?? body.estimated_quantity),
-      frequency: cleanOptional(body.frequency),
-      preferred_contact: cleanString(body.preferredContact ?? body.preferred_contact) || 'phone',
-      message: cleanOptional(body.message),
+      estimated_quantity: nullableStringField(body, 'estimatedQuantity', { max: 120, fieldLabel: 'Cantitatea estimată' }) ?? nullableStringField(body, 'estimated_quantity', { max: 120, fieldLabel: 'Cantitatea estimată' }),
+      frequency: nullableStringField(body, 'frequency', { max: 80, fieldLabel: 'Frecvența' }),
+      preferred_contact: stringField(body, 'preferredContact', { max: 40, fieldLabel: 'Contact preferat' }) || stringField(body, 'preferred_contact', { max: 40, fieldLabel: 'Contact preferat' }) || 'phone',
+      message: nullableStringField(body, 'message', { max: LIMITS.message, fieldLabel: 'Mesajul' }),
       status: 'NEW',
     };
 
@@ -122,6 +126,9 @@ export async function POST({ request }) {
 
     return json({ item: mapRequest(data) }, { status: 201 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Nu am putut trimite cererea HORECA.';
     return json({ error: message }, { status: 400 });
   }
@@ -132,20 +139,19 @@ export async function PATCH({ locals, request }) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const requestId = cleanString(body.id ?? body.requestId ?? body.request_id);
-
-  if (!requestId) {
-    return json({ error: 'ID-ul cererii este obligatoriu.' }, { status: 400 });
-  }
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
+    const requestId = requireNumericId(body.id ?? body.requestId ?? body.request_id, 'ID cerere');
     const patch: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
 
-    if ('status' in body) patch.status = normalizeStatus(body.status);
-    if ('adminNote' in body || 'admin_note' in body) patch.admin_note = cleanOptional(body.adminNote ?? body.admin_note);
+    if ('status' in body) patch.status = enumField(body, 'status', allowedStatuses, 'NEW');
+    if ('adminNote' in body || 'admin_note' in body) {
+      patch.admin_note =
+        nullableStringField(body, 'adminNote', { max: LIMITS.message, fieldLabel: 'Nota admin' }) ??
+        nullableStringField(body, 'admin_note', { max: LIMITS.message, fieldLabel: 'Nota admin' });
+    }
 
     const { data, error } = await createAdminClient()
       .from('horeca_requests')
@@ -160,6 +166,9 @@ export async function PATCH({ locals, request }) {
 
     return json({ item: mapRequest(data) }, { status: 200 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Nu am putut actualiza cererea HORECA.';
     return json({ error: message }, { status: 400 });
   }

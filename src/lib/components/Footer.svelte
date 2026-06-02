@@ -1,6 +1,7 @@
 <script lang="ts">
   let openMenu = false;
   let openLocation = false;
+  let openLegal = false;
 
   const menuLinks = [
     { href: '/', label: 'Acasă' },
@@ -10,6 +11,17 @@
     { href: '/produse/colaboratori', label: 'Colaboratori' },
     { href: '/horeca', label: 'HORECA' },
     { href: '/contact', label: 'Contact' },
+  ];
+
+  const legalLinks = [
+    { href: '/legal', label: 'Legal și conformitate' },
+    { href: '/politica-de-confidentialitate', label: 'Politica de confidențialitate' },
+    { href: '/politica-cookies', label: 'Politica de cookie-uri' },
+    { href: '/termeni-si-conditii', label: 'Termeni și condiții' },
+    { href: '/livrare-ridicare', label: 'Livrare și ridicare' },
+    { href: '/retururi-rambursari-reclamatii', label: 'Retururi și reclamații' },
+    { href: '/informatii-companie', label: 'Informații companie' },
+    { href: '/calitate-produse', label: 'Calitatea produselor' },
   ];
 
   const phoneHref = 'tel:+40729969822';
@@ -106,6 +118,26 @@
             ></iframe>
           </div>
         </section>
+
+        <section class="footer-group">
+          <button
+            type="button"
+            class="footer-title"
+            on:click={() => (openLegal = !openLegal)}
+            aria-expanded={openLegal}
+          >
+            <span>Legal</span>
+            <i class="bi bi-chevron-down footer-caret" class:rotated={openLegal} aria-hidden="true"></i>
+          </button>
+
+          <div class="footer-panel" class:open={openLegal}>
+            <nav aria-label="Documente legale">
+              {#each legalLinks as item}
+                <a href={item.href}>{item.label}</a>
+              {/each}
+            </nav>
+          </div>
+        </section>
       </div>
     </div>
   </div>
@@ -138,7 +170,7 @@
 
   @media (min-width: 768px) {
     .footer-grid {
-      grid-template-columns: minmax(0, 1.2fr) minmax(170px, 0.75fr) minmax(260px, 1fr);
+      grid-template-columns: minmax(0, 1.15fr) minmax(150px, 0.6fr) minmax(230px, 0.85fr) minmax(210px, 0.85fr);
       align-items: start;
     }
   }

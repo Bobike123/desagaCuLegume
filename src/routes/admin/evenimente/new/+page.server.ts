@@ -1,6 +1,17 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import {
+  booleanField,
+  enumField,
+  LIMITS,
+  parseIsoDate,
+  safeUrl,
+  stringField,
+  validationErrorResponse,
+} from '$lib/server/validation';
+
+const EVENT_TYPES = ['FESTIVAL', 'PIATA', 'ATELIER'] as const;
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.isAdmin) throw redirect(303, '/admin/login');
@@ -13,34 +24,48 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
+    const contentLength = Number(request.headers.get('content-length') ?? 0);
+    if (Number.isFinite(contentLength) && contentLength > LIMITS.largeJson) {
+      return fail(413, { error: 'Payload prea mare.' });
+    }
+
     const form = await request.formData();
+    const payload = Object.fromEntries(form.entries());
 
-    const title = String(form.get('title') ?? '').trim();
-    const description = String(form.get('description') ?? '').trim();
-    const date = String(form.get('date') ?? '').trim();
-    const location = String(form.get('location') ?? '').trim();
-    const event_type = String(form.get('event_type') ?? '').trim();
-    const image_url = String(form.get('image_url') ?? '').trim();
-    const published = form.get('published') === 'true';
+    let row;
+    try {
+      const published = booleanField(payload, 'published', false);
+      const date = parseIsoDate(stringField(payload, 'date', { required: true, max: 80, fieldLabel: 'Data' }), 'Data');
 
-    if (!title || !description || !date || !location || !event_type) {
-      return fail(400, { error: 'Câmpuri obligatorii lipsă' });
+      row = {
+        title: stringField(payload, 'title', { required: true, max: 180, fieldLabel: 'Titlul' }),
+        description: stringField(payload, 'description', {
+          required: true,
+          max: LIMITS.longText,
+          fieldLabel: 'Descrierea',
+        }),
+        date,
+        location: stringField(payload, 'location', { required: true, max: 180, fieldLabel: 'Locația' }),
+        event_type: enumField(payload, 'event_type', EVENT_TYPES, 'FESTIVAL').toLowerCase(),
+        image_url: safeUrl(payload.image_url),
+        published,
+        published_at: published ? new Date().toISOString() : null
+      };
+    } catch (error) {
+      const validation = validationErrorResponse(error);
+      if (validation) {
+        const body = await validation.json().catch(() => ({ error: 'Payload invalid.' }));
+        return fail(validation.status, { error: body?.error ?? 'Payload invalid.' });
+      }
+
+      return fail(400, { error: 'Payload invalid.' });
     }
 
     const admin = createAdminClient();
 
     const { data, error } = await admin
       .from('events')
-      .insert({
-        title,
-        description,
-        date: new Date(date).toISOString(),
-        location,
-        event_type,
-        image_url: image_url || null,
-        published,
-        published_at: published ? new Date().toISOString() : null
-      })
+      .insert(row)
       .select('*')
       .single();
 

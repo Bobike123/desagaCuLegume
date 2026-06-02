@@ -1,8 +1,20 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { slide } from 'svelte/transition';
   import MessageThread from '$lib/components/MessageThread.svelte';
   import { auth } from '$lib/stores/auth';
+  import { cart } from '$lib/stores/cart';
+
+  type OrderItemProduct = {
+    productId: string;
+    sku?: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+    currency: string;
+  };
 
   type OrderItem = {
     id: string;
@@ -10,23 +22,31 @@
     customerFullName?: string;
     customerEmail?: string;
     total: number;
+    subtotalAmount?: number;
+    shippingAmount?: number;
     currency: string;
     status: string;
     paymentStatus: string;
     fulfillmentStatus: string;
+    deliveryMethod?: 'pickup' | 'delivery';
+    items?: OrderItemProduct[];
     createdAt: string;
     placedAt?: string | null;
   };
 
   let loading = true;
   let ordersLoading = false;
+  let detailsLoading = false;
   let profileSaving = false;
   let passwordSaving = false;
+  let deleteSaving = false;
   let error = '';
   let success = '';
+  const DELETE_CONFIRMATION = 'STERGE CONTUL';
 
   let orders: OrderItem[] = [];
   let selectedOrderId = '';
+  let selectedOrderDetails: OrderItem | null = null;
   let profileSeedUserId = '';
 
   let profileForm = {
@@ -40,6 +60,11 @@
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+  };
+
+  let deleteForm = {
+    currentPassword: '',
+    confirmation: '',
   };
 
   function formatMoney(value: number, currency = 'RON') {
@@ -75,6 +100,34 @@
     return labels[normalized] ?? String(value ?? '—').replaceAll('_', ' ');
   }
 
+  async function loadOrderDetails(orderId: string) {
+    if (!orderId) return;
+    detailsLoading = true;
+    error = '';
+    selectedOrderDetails = null;
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca detaliile comenzii.');
+      selectedOrderDetails = data?.item ?? null;
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Nu am putut încărca detaliile comenzii.';
+    } finally {
+      detailsLoading = false;
+    }
+  }
+
+  function selectOrder(orderId: string) {
+    if (selectedOrderId === orderId) {
+      selectedOrderId = '';
+      selectedOrderDetails = null;
+    } else {
+      selectedOrderId = orderId;
+      void loadOrderDetails(orderId);
+    }
+  }
+
   async function loadOrders() {
     ordersLoading = true;
     error = '';
@@ -91,6 +144,10 @@
 
       if (selectedOrderId && !orders.some((order) => order.id === selectedOrderId)) {
         selectedOrderId = orders[0]?.id ?? '';
+      }
+
+      if (selectedOrderId) {
+        await loadOrderDetails(selectedOrderId);
       }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Nu am putut încărca comenzile.';
@@ -143,6 +200,38 @@
       error = err instanceof Error ? err.message : 'Nu am putut schimba parola.';
     } finally {
       passwordSaving = false;
+    }
+  }
+
+  async function deleteAccount(event: Event) {
+    event.preventDefault();
+    error = '';
+    success = '';
+
+    if (deleteForm.confirmation.trim().toUpperCase() !== DELETE_CONFIRMATION) {
+      error = `Pentru confirmare, scrie exact ${DELETE_CONFIRMATION}.`;
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Ești sigur că vrei să ștergi contul? Această acțiune îți va închide accesul la cont.'
+    );
+
+    if (!confirmed) return;
+
+    deleteSaving = true;
+
+    try {
+      await auth.deleteAccount({
+        currentPassword: deleteForm.currentPassword,
+        confirmation: deleteForm.confirmation,
+      });
+      cart.clear();
+      await goto('/cont');
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Nu am putut șterge contul.';
+    } finally {
+      deleteSaving = false;
     }
   }
 
@@ -259,29 +348,64 @@
             {:else}
               <div class="orders-list">
                 {#each orders as order (order.id)}
-                  <article class:selected={selectedOrderId === order.id} class="order-card">
-                    <button type="button" class="order-main" on:click={() => (selectedOrderId = order.id)}>
+                  <article class="order-card" class:expanded={selectedOrderId === order.id}>
+                    <button 
+                      type="button" 
+                      class="order-card-header" 
+                      on:click={() => selectOrder(order.id)}
+                    >
                       <div>
                         <strong>{order.orderNumber}</strong>
                         <span>{formatDate(order.createdAt)}</span>
                       </div>
                       <div class="order-meta">
-                        <span class="badge-soft">{statusLabel(order.status)}</span>
                         <strong>{formatMoney(order.total, order.currency)}</strong>
+                        <i class="bi bi-chevron-down"></i>
                       </div>
                     </button>
 
-                    {#if selectedOrderId === order.id}
-                      <div class="order-detail">
-                        <div class="detail-row"><span>Plată</span><strong>{statusLabel(order.paymentStatus)}</strong></div>
-                        <div class="detail-row"><span>Livrare</span><strong>{statusLabel(order.fulfillmentStatus)}</strong></div>
-                        {#if order.placedAt}
-                          <div class="detail-row"><span>Plasată</span><strong>{formatDate(order.placedAt)}</strong></div>
+                    {#if selectedOrderId === order.id && selectedOrderDetails}
+                      <div class="order-card-details" transition:slide={{ duration: 300 }}>
+                        {#if detailsLoading}
+                          <div class="muted">Se încarcă detaliile…</div>
+                        {:else}
+                          <div class="order-summary-grid">
+                            <div class="summary-row"><span>Comandă</span><strong>#{selectedOrderDetails.orderNumber}</strong></div>
+                            <div class="summary-row"><span>Data comenzii</span><strong>{formatDate(selectedOrderDetails.createdAt)}</strong></div>
+                            <div class="summary-row"><span>Plată</span><strong>{statusLabel(selectedOrderDetails.paymentStatus)}</strong></div>
+                            <div class="summary-row"><span>Livrare</span><strong>{statusLabel(selectedOrderDetails.fulfillmentStatus)}</strong></div>
+                            <div class="summary-row"><span>Metodă</span><strong>{selectedOrderDetails.deliveryMethod === 'delivery' ? 'Livrare' : 'Ridicare'}</strong></div>
+                            <div class="summary-row"><span>Total</span><strong>{formatMoney(selectedOrderDetails.total, selectedOrderDetails.currency)}</strong></div>
+                          </div>
+
+                          <div class="order-items-panel">
+                            <div class="items-head">
+                              <h3>Produse comandate</h3>
+                              <p>{selectedOrderDetails.items?.length ?? 0} produse</p>
+                            </div>
+
+                            {#if selectedOrderDetails.items?.length}
+                              <div class="order-items-table">
+                                <div class="item-row item-header">
+                                  <span>Produs</span>
+                                  <span>Cantitate</span>
+                                  <span>Preț / buc</span>
+                                  <span>Total</span>
+                                </div>
+                                {#each selectedOrderDetails.items as item (item.productId)}
+                                  <div class="item-row">
+                                    <span>{item.productName}</span>
+                                    <span>{item.quantity}</span>
+                                    <span>{formatMoney(item.unitPrice, item.currency)}</span>
+                                    <span>{formatMoney(item.lineTotal, item.currency)}</span>
+                                  </div>
+                                {/each}
+                              </div>
+                            {:else}
+                              <div class="muted">Detaliile produselor nu sunt disponibile.</div>
+                            {/if}
+                          </div>
                         {/if}
-                        <div class="order-help-note">
-                          <i class="bi bi-chat-dots"></i>
-                          <span>Mesajele pentru comenzi sunt în panoul de conversații de mai jos.</span>
-                        </div>
                       </div>
                     {/if}
                   </article>
@@ -353,6 +477,47 @@
               </label>
               <button class="btn btn-outline-accent w-100" type="submit" disabled={passwordSaving}>
                 {passwordSaving ? 'Se schimbă…' : 'Schimbă parola'}
+              </button>
+            </form>
+          </section>
+
+          <section class="surface panel danger-panel">
+            <div class="panel-head">
+              <div>
+                <h2><i class="bi bi-exclamation-triangle"></i> Ștergere cont</h2>
+                <p>
+                  Îți poți închide contul de client. Profilul și accesul la cont vor fi dezactivate,
+                  iar datele care trebuie păstrate legal, precum comenzile sau documentele contabile,
+                  pot rămâne stocate pe durata prevăzută de lege.
+                </p>
+              </div>
+            </div>
+
+            <form class="stack-form" on:submit={deleteAccount}>
+              <label>
+                <span>Parola curentă</span>
+                <input
+                  class="form-control"
+                  type="password"
+                  autocomplete="current-password"
+                  bind:value={deleteForm.currentPassword}
+                  disabled={deleteSaving}
+                  required
+                />
+              </label>
+              <label>
+                <span>Confirmare</span>
+                <input
+                  class="form-control"
+                  bind:value={deleteForm.confirmation}
+                  disabled={deleteSaving}
+                  placeholder={DELETE_CONFIRMATION}
+                  required
+                />
+                <small>Scrie exact <strong>{DELETE_CONFIRMATION}</strong> pentru a continua.</small>
+              </label>
+              <button class="btn btn-outline-danger w-100" type="submit" disabled={deleteSaving}>
+                {deleteSaving ? 'Se șterge contul…' : 'Șterge contul'}
               </button>
             </form>
           </section>
@@ -475,6 +640,17 @@
     color: var(--desaga-muted);
   }
 
+  .danger-panel {
+    border-color: rgba(220, 53, 69, 0.22);
+    background:
+      linear-gradient(180deg, rgba(255, 245, 245, 0.9), #fff),
+      #fff;
+  }
+
+  .danger-panel .panel-head h2 {
+    color: #842029;
+  }
+
   .orders-list,
   .stack-form {
     display: grid;
@@ -485,14 +661,15 @@
     border: 1px solid var(--desaga-border);
     border-radius: var(--desaga-radius-md);
     background: #fff;
+    overflow: hidden;
+    transition: all 0.3s ease;
   }
 
-  .order-card.selected {
-    border-color: rgba(var(--desaga-accent-rgb), 0.36);
+  .order-card.expanded {
     box-shadow: var(--desaga-shadow-sm);
   }
 
-  .order-main {
+  .order-card-header {
     width: 100%;
     border: 0;
     background: transparent;
@@ -501,49 +678,153 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
   }
 
-  .order-main strong {
+  .order-card-header:hover {
+    background: rgba(var(--desaga-accent-rgb), 0.02);
+  }
+
+  .order-card.expanded .order-card-header {
+    background: rgba(var(--desaga-accent-rgb), 0.05);
+    border-bottom: 1px solid var(--desaga-border);
+  }
+
+  .order-card-header strong {
     display: block;
     color: var(--desaga-heading);
   }
 
-  .order-main span {
+  .order-card-header span {
     color: var(--desaga-muted);
+  }
+
+  .order-card-header i {
+    transition: transform 0.3s ease;
+    color: var(--desaga-muted);
+  }
+
+  .order-card.expanded .order-card-header i {
+    transform: rotate(180deg);
   }
 
   .order-meta {
-    display: grid;
-    gap: 0.4rem;
-    justify-items: end;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
-  .order-detail {
-    padding: 0 0.9rem 0.9rem;
+  .order-card-details {
+    padding: 1rem;
     border-top: 1px solid var(--desaga-border);
+    background: rgba(var(--desaga-accent-rgb), 0.015);
   }
 
-  .detail-row {
+  .items-head {
+    margin-bottom: 0.75rem;
+  }
+
+  .items-head h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 850;
+    color: var(--desaga-heading);
+  }
+
+  .items-head p {
+    margin: 0.25rem 0 0;
+    font-size: 0.9rem;
+    color: var(--desaga-muted);
+  }
+
+  .order-items-panel {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .order-items-table {
+    display: grid;
+    gap: 0.5rem;
+    border: 1px solid var(--desaga-border);
+    border-radius: var(--desaga-radius-md);
+    padding: 0.75rem;
+    background: #fff;
+  }
+
+  .item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) 0.8fr 0.9fr 0.9fr;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--desaga-border);
+  }
+
+  .item-row:last-child {
+    border-bottom: 0;
+  }
+
+  .item-header {
+    font-weight: 850;
+    color: var(--desaga-muted);
+  }
+
+  .item-row span {
+    word-break: break-word;
+  }
+
+  .order-summary-grid {
+    display: grid;
+    gap: 0.75rem;
+    border: 1px solid var(--desaga-border);
+    border-radius: var(--desaga-radius-lg);
+    padding: 1rem;
+    background: #fff;
+  }
+
+  .summary-row {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    padding-top: 0.75rem;
-  }
-
-  .order-help-note {
-    display: flex;
     align-items: center;
-    gap: 0.55rem;
-    margin-top: 0.9rem;
-    padding: 0.75rem;
-    border-radius: var(--desaga-radius-md);
-    background: rgba(var(--desaga-accent-rgb), 0.08);
-    color: var(--desaga-muted);
-    font-weight: 800;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--desaga-border);
   }
 
-  .order-help-note i {
-    color: var(--desaga-blue);
+  .summary-row:last-child {
+    border-bottom: 0;
+  }
+
+  .summary-row span {
+    color: var(--desaga-muted);
+    font-weight: 700;
+  }
+
+  .summary-row strong {
+    color: var(--desaga-heading);
+    text-align: right;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translate(-50%, -40%);
+      opacity: 0;
+    }
+    to {
+      transform: translate(-50%, -50%);
+      opacity: 1;
+    }
   }
 
   .empty-box {
@@ -573,6 +854,13 @@
     color: rgba(20, 33, 43, 0.78);
   }
 
+  label small {
+    display: block;
+    margin-top: 0.35rem;
+    color: var(--desaga-muted);
+    line-height: 1.35;
+  }
+
   @media (max-width: 1199.98px) {
     .account-grid {
       grid-template-columns: 1fr;
@@ -585,20 +873,41 @@
 
   @media (max-width: 991.98px) {
     .page-head,
-    .panel-head,
-    .order-main {
+    .panel-head {
       flex-direction: column;
     }
 
-    .head-actions,
-    .order-meta {
+    .head-actions {
       justify-content: flex-start;
-      justify-items: start;
     }
 
     .side-column,
     .stats-grid {
       grid-template-columns: 1fr;
+    }
+
+    .item-row {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .item-row span::before {
+      content: attr(data-label);
+      display: block;
+      font-weight: 850;
+      font-size: 0.85rem;
+      color: var(--desaga-muted);
+      margin-bottom: 0.25rem;
+    }
+  }
+
+  @media (max-width: 567.98px) {
+    .order-card-details {
+      padding: 0.75rem;
+    }
+
+    .order-items-table {
+      padding: 0.5rem;
     }
   }
 </style>

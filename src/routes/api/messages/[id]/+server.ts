@@ -1,11 +1,21 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import {
+  booleanField,
+  LIMITS,
+  optionalEnumField,
+  readJsonBody,
+  requireNumericId,
+  stringField,
+  validationErrorResponse,
+} from '$lib/server/validation';
 
 async function fetchConversation(admin: ReturnType<typeof createAdminClient>, id: string) {
+  const conversationId = requireNumericId(id, 'ID conversație');
   const conversationResult = await admin
     .from('support_conversations')
     .select('conversation_id, user_id, subject, status, created_at, updated_at')
-    .eq('conversation_id', id)
+    .eq('conversation_id', conversationId)
     .maybeSingle();
 
   if (conversationResult.error) throw conversationResult.error;
@@ -29,7 +39,7 @@ export async function GET({ locals, params }) {
     const messagesResult = await admin
       .from('support_messages')
       .select('message_id, sender_user_id, sender_type, message_body, is_read, created_at')
-      .eq('conversation_id', params.id)
+      .eq('conversation_id', conversation.conversation_id)
       .order('created_at', { ascending: true });
     if (messagesResult.error) throw messagesResult.error;
 
@@ -70,6 +80,9 @@ export async function GET({ locals, params }) {
       { status: 200 }
     );
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Failed to load conversation';
     return json({ error: message }, { status: 400 });
   }
@@ -80,13 +93,14 @@ export async function POST({ locals, params, request }) {
     return json({ error: 'Autentificarea este necesară.' }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const messageBody = String(body.message ?? '').trim();
-  if (!messageBody) {
-    return json({ error: 'Mesajul este obligatoriu.' }, { status: 400 });
-  }
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
+    const messageBody = stringField(body, 'message', {
+      required: true,
+      max: LIMITS.message,
+      fieldLabel: 'Mesajul',
+    });
+
     const admin = createAdminClient();
     const conversation = await fetchConversation(admin, params.id);
     if (!conversation) return json({ error: 'Conversația nu există.' }, { status: 404 });
@@ -129,6 +143,9 @@ export async function POST({ locals, params, request }) {
       { status: 201 }
     );
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Failed to send reply';
     return json({ error: message }, { status: 400 });
   }
@@ -139,9 +156,8 @@ export async function PATCH({ locals, params, request }) {
     return json({ error: 'Autentificarea este necesară.' }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => ({}));
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.tinyJson });
     const admin = createAdminClient();
     const conversation = await fetchConversation(admin, params.id);
     if (!conversation) return json({ error: 'Conversația nu există.' }, { status: 404 });
@@ -150,18 +166,18 @@ export async function PATCH({ locals, params, request }) {
       return json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    if (body.markRead) {
+    if (booleanField(body, 'markRead', false)) {
       const senderType = locals.isAdmin ? 'USER' : 'ADMIN';
       const markReadResult = await admin
         .from('support_messages')
         .update({ is_read: true })
-        .eq('conversation_id', params.id)
+        .eq('conversation_id', conversation.conversation_id)
         .eq('sender_type', senderType);
       if (markReadResult.error) throw markReadResult.error;
     }
 
-    if (body.status) {
-      const nextStatus = String(body.status);
+    const nextStatus = optionalEnumField(body, 'status', ['OPEN', 'CLOSED', 'ARCHIVED']);
+    if (nextStatus) {
       const statusResult = await admin
         .from('support_conversations')
         .update({
@@ -169,13 +185,16 @@ export async function PATCH({ locals, params, request }) {
           closed_at: nextStatus === 'CLOSED' ? new Date().toISOString() : null,
           updated_at: new Date().toISOString(),
         })
-        .eq('conversation_id', params.id);
+        .eq('conversation_id', conversation.conversation_id);
       if (statusResult.error) throw statusResult.error;
     }
 
-    const updated = await fetchConversation(admin, params.id);
+    const updated = await fetchConversation(admin, String(conversation.conversation_id));
     return json({ item: updated }, { status: 200 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Failed to update conversation';
     return json({ error: message }, { status: 400 });
   }
@@ -188,6 +207,7 @@ export async function DELETE({ locals, params }) {
 
   try {
     const admin = createAdminClient();
+    const conversationId = requireNumericId(params.id, 'ID conversație');
     const { error } = await admin
       .from('support_conversations')
       .update({
@@ -195,11 +215,14 @@ export async function DELETE({ locals, params }) {
         closed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq('conversation_id', params.id);
+      .eq('conversation_id', conversationId);
     if (error) throw error;
 
     return json({ success: true }, { status: 200 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Failed to close conversation';
     return json({ error: message }, { status: 400 });
   }

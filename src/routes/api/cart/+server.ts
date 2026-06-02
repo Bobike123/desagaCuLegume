@@ -1,5 +1,19 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import {
+  arrayField,
+  isPlainObject,
+  LIMITS,
+  numberField,
+  readJsonBody,
+  requireNumericId,
+  validationErrorResponse,
+} from '$lib/server/validation';
+
+type CartInputItem = {
+  productId: string;
+  quantity: number;
+};
 
 async function getOrCreateActiveCart(userId: number) {
   const admin = createAdminClient();
@@ -65,24 +79,55 @@ async function buildCartResponse(userId: number) {
   return { cartId: cartRow.data.cart_id, items };
 }
 
-async function replaceCartItems(userId: number, items: Array<{ productId: string; quantity: number }>) {
+function normalizeCartItems(rawItems: unknown[]): CartInputItem[] {
+  const normalized = rawItems.map((raw, index) => {
+    if (!isPlainObject(raw)) {
+      throw new Error(`Produs invalid în coș la poziția ${index + 1}.`);
+    }
+
+    return {
+      productId: requireNumericId(raw.productId, 'ID produs'),
+      quantity: numberField(raw, 'quantity', {
+        required: true,
+        integer: true,
+        min: 1,
+        max: 99,
+        fieldLabel: 'Cantitatea',
+      }),
+    };
+  });
+
+  const quantities = new Map<string, number>();
+  for (const item of normalized) {
+    quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
+  }
+
+  return [...quantities.entries()].map(([productId, quantity]) => ({
+    productId,
+    quantity: Math.min(quantity, 99),
+  }));
+}
+
+async function replaceCartItems(userId: number, items: CartInputItem[]) {
   const admin = createAdminClient();
   const cartId = await getOrCreateActiveCart(userId);
 
   const productIds = items.map((item) => Number(item.productId)).filter((value) => Number.isFinite(value));
-  const { data: products, error: productsError } = await admin
-    .from('products')
-    .select('product_id, name, price, stock_quantity, status')
-    .in('product_id', productIds);
+  const productRows = productIds.length
+    ? await admin
+        .from('products')
+        .select('product_id, name, price, stock_quantity, status')
+        .in('product_id', productIds)
+    : { data: [], error: null };
 
-  if (productsError) throw productsError;
+  if (productRows.error) throw productRows.error;
 
-  const productMap = new Map((products ?? []).map((row: any) => [String(row.product_id), row]));
+  const productMap = new Map((productRows.data ?? []).map((row: any) => [String(row.product_id), row]));
 
   const prepared = items
     .map((item) => {
       const product = productMap.get(String(item.productId));
-      const quantity = Math.max(0, Math.floor(item.quantity));
+      const quantity = item.quantity;
       if (!product || quantity <= 0) return null;
       if (product.status !== 'ACTIVE') throw new Error(`Produsul ${product.name} nu este activ.`);
       if (quantity > Number(product.stock_quantity ?? 0)) {
@@ -135,11 +180,17 @@ export async function POST({ locals, request }) {
     return json({ error: 'Adminii nu pot avea coș.' }, { status: 403 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const productId = String(body.productId ?? '').trim();
-  const quantity = Math.max(1, Math.floor(Number(body.quantity ?? 1)));
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.tinyJson });
+    const productId = requireNumericId(body.productId, 'ID produs');
+    const quantity = numberField(body, 'quantity', {
+      defaultValue: 1,
+      integer: true,
+      min: 1,
+      max: 99,
+      fieldLabel: 'Cantitatea',
+    });
+
     const current = await buildCartResponse(locals.user.id);
     const items = current.items.map((item) => ({ productId: item.productId, quantity: item.quantity }));
     const index = items.findIndex((item) => item.productId === productId);
@@ -154,6 +205,8 @@ export async function POST({ locals, request }) {
     return json(payload, { status: 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update cart';
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
     return json({ error: message }, { status: 400 });
   }
 }
@@ -166,13 +219,15 @@ export async function PUT({ locals, request }) {
     return json({ error: 'Adminii nu pot avea coș.' }, { status: 403 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const items = Array.isArray(body.items) ? body.items : [];
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
+    const items = normalizeCartItems(arrayField(body, 'items', 100));
     const payload = await replaceCartItems(locals.user.id, items);
     return json(payload, { status: 200 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Failed to sync cart';
     return json({ error: message }, { status: 400 });
   }
@@ -207,4 +262,3 @@ export async function DELETE({ locals }) {
     return json({ error: message }, { status: 400 });
   }
 }
-

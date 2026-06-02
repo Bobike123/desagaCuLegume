@@ -3,6 +3,7 @@
   import Navigation from '$lib/components/Navigation.svelte';
   import Footer from '$lib/components/Footer.svelte';
   import ScrollToTop from '$lib/components/ScrollToTop.svelte';
+  import CookieConsentBanner from '$lib/components/CookieConsentBanner.svelte';
   import { auth } from '$lib/stores/auth';
   import { cart } from '$lib/stores/cart';
   import '$lib/styles/global.css';
@@ -43,6 +44,7 @@
 <main class="min-vh-100 bg-white">
   <slot />
   <ScrollToTop />
+  <CookieConsentBanner />
 </main>
 
 <Footer />

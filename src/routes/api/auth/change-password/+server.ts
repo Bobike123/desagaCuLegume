@@ -1,25 +1,32 @@
 import { json } from '@sveltejs/kit';
 import { assertStrongPassword, hashPassword, verifyPassword } from '$lib/server/auth';
 import { createAdminClient } from '$lib/server/supabase';
+import { LIMITS, readJsonBody, stringField, validationErrorResponse } from '$lib/server/validation';
 
 export async function POST({ locals, request }) {
   if (!locals.isAuthenticated || !locals.user) {
     return json({ error: 'Autentificarea este necesară.' }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const currentPassword = String(body.currentPassword ?? '');
-  const newPassword = String(body.newPassword ?? '');
-
-  if (!currentPassword || !newPassword) {
-    return json({ error: 'Parola curentă și parola nouă sunt obligatorii.' }, { status: 400 });
-  }
-
-  if (!assertStrongPassword(newPassword)) {
-    return json({ error: 'Parola nouă trebuie să aibă minim 8 caractere, o literă mare și o cifră.' }, { status: 400 });
-  }
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.tinyJson });
+    const currentPassword = stringField(body, 'currentPassword', {
+      required: true,
+      min: 1,
+      max: 200,
+      fieldLabel: 'Parola curentă',
+    });
+    const newPassword = stringField(body, 'newPassword', {
+      required: true,
+      min: 8,
+      max: 200,
+      fieldLabel: 'Parola nouă',
+    });
+
+    if (!assertStrongPassword(newPassword)) {
+      return json({ error: 'Parola nouă trebuie să aibă minim 8 caractere, o literă mare și o cifră.' }, { status: 400 });
+    }
+
     const admin = createAdminClient();
     const { data: userRow, error: userError } = await admin
       .from('users')
@@ -48,6 +55,9 @@ export async function POST({ locals, request }) {
 
     return json({ success: true }, { status: 200 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Nu am putut schimba parola.';
     return json({ error: message }, { status: 400 });
   }

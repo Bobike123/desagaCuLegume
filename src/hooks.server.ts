@@ -1,10 +1,70 @@
 import { createServerClient } from '@supabase/ssr';
-import { redirect, type Handle } from '@sveltejs/kit';
+import { json, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { clearSessionCookie, resolveSessionFromToken, touchSession } from '$lib/server/auth';
+import { rateLimit } from '$lib/server/rate-limit';
 import { SESSION_COOKIE_NAME } from '$lib/server/supabase';
+import { LIMITS } from '$lib/server/validation';
+
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH']);
+const AUTH_ATTEMPT_PATHS = new Set([
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/change-password',
+]);
+
+function enforceRequestEnvelope(event: RequestEvent) {
+  const { pathname } = event.url;
+  if (!pathname.startsWith('/api')) return null;
+
+  const isAuthAttempt = AUTH_ATTEMPT_PATHS.has(pathname) && event.request.method === 'POST';
+  const authLimit = isAuthAttempt
+    ? rateLimit(event, { scope: 'api-auth-attempt', limit: 5, windowMs: FIFTEEN_MINUTES })
+    : null;
+
+  if (authLimit) return authLimit;
+
+  const generalLimit = rateLimit(event, {
+    scope: event.request.method === 'GET' ? 'api-read' : 'api-write',
+    limit: event.request.method === 'GET' ? 300 : 120,
+    windowMs: FIFTEEN_MINUTES,
+  });
+
+  if (generalLimit) return generalLimit;
+
+  if (!METHODS_WITH_BODY.has(event.request.method)) return null;
+
+  const contentType = event.request.headers.get('content-type')?.toLowerCase() ?? '';
+  const contentLength = Number(event.request.headers.get('content-length') ?? 0);
+  const hasBody = contentLength > 0 || Boolean(contentType);
+  const isUpload = pathname === '/api/products/upload';
+  const maxBytes = isUpload ? LIMITS.upload : LIMITS.largeJson;
+
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    return json({ error: 'Payload prea mare.' }, { status: 413 });
+  }
+
+  if (!hasBody) return null;
+
+  if (isUpload) {
+    if (!contentType.includes('multipart/form-data')) {
+      return json({ error: 'Content-Type trebuie să fie multipart/form-data.' }, { status: 415 });
+    }
+    return null;
+  }
+
+  if (!contentType.includes('application/json')) {
+    return json({ error: 'Content-Type trebuie să fie application/json.' }, { status: 415 });
+  }
+
+  return null;
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
+  const blockedResponse = enforceRequestEnvelope(event);
+  if (blockedResponse) return blockedResponse;
+
   event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       get: (name: string) => event.cookies.get(name),

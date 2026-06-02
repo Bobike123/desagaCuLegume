@@ -7,27 +7,24 @@ import {
   formatProductRow,
   uniqueProductSlug,
 } from '$lib/server/catalog';
+import {
+  cleanString,
+  enumField,
+  LIMITS,
+  nullableStringField,
+  numberField,
+  readJsonBody,
+  safeUrl,
+  stringField,
+  validationErrorResponse,
+} from '$lib/server/validation';
 
-function cleanString(value: unknown) {
-  return String(value ?? '').trim();
-}
-
-function cleanNumber(value: unknown, fallback = 0) {
-  const n = Number(value ?? fallback);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function cleanStatus(value: unknown) {
-  const status = cleanString(value || 'ACTIVE').toUpperCase();
-  return ['ACTIVE', 'OUT_OF_STOCK', 'DISCONTINUED', 'DRAFT'].includes(status)
-    ? status
-    : 'ACTIVE';
-}
+const PRODUCT_STATUSES = ['ACTIVE', 'OUT_OF_STOCK', 'DISCONTINUED', 'DRAFT'] as const;
 
 export async function GET({ locals, url }) {
   try {
     const admin = createAdminClient();
-    const categorySlug = cleanString(url.searchParams.get('category'));
+    const categorySlug = cleanString(url.searchParams.get('category')).slice(0, 80);
 
     if (categorySlug === 'horeca') {
       return json({ items: [] }, { status: 200 });
@@ -69,28 +66,39 @@ export async function POST({ locals, request }) {
   }
 
   try {
-    const body = await request.json().catch(() => ({}));
+    const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
 
-    const name = cleanString(body.name);
+    const name = stringField(body, 'name', { required: true, max: 160, fieldLabel: 'Numele produsului' });
     if (!name) return json({ error: 'Numele produsului este obligatoriu.' }, { status: 400 });
 
-    const requestedCategory = cleanString(body.category || 'de-sezon');
+    const requestedCategory = stringField(body, 'category', { max: 80, defaultValue: 'de-sezon', fieldLabel: 'Categoria' });
     const categorySlug = requestedCategory === 'horeca' ? 'de-sezon' : requestedCategory;
     const category = await ensureCategory(categorySlug);
-    const slug = body.slug ? cleanString(body.slug) : await uniqueProductSlug(name);
-    const sku = cleanString(body.sku) || `PROD-${Date.now()}`;
+    const slug = body.slug ? stringField(body, 'slug', { max: 120, fieldLabel: 'Slug' }) : await uniqueProductSlug(name);
+    const sku = stringField(body, 'sku', { max: 80, fieldLabel: 'SKU' }) || `PROD-${Date.now()}`;
 
     const payload = {
       category_id: category.category_id,
       sku,
       slug,
       name,
-      description: cleanString(body.description) || null,
-      price: cleanNumber(body.price),
-      currency_code: cleanString(body.currency_code) || 'RON',
-      stock_quantity: Math.max(0, cleanNumber(body.stock_quantity)),
-      status: cleanStatus(body.status),
-      image_url: cleanString(body.image_url) || null,
+      description: nullableStringField(body, 'description', { max: LIMITS.longText, fieldLabel: 'Descrierea' }),
+      price: numberField(body, 'price', { defaultValue: 0, min: 0, max: 100_000, fieldLabel: 'Prețul' }),
+      currency_code: stringField(body, 'currency_code', {
+        defaultValue: 'RON',
+        max: 3,
+        pattern: /^[A-Z]{3}$/i,
+        fieldLabel: 'Moneda',
+      }).toUpperCase(),
+      stock_quantity: numberField(body, 'stock_quantity', {
+        defaultValue: 0,
+        integer: true,
+        min: 0,
+        max: 100_000,
+        fieldLabel: 'Stocul',
+      }),
+      status: enumField(body, 'status', PRODUCT_STATUSES, 'ACTIVE'),
+      image_url: safeUrl(body.image_url),
       created_by_admin_id: locals.user.id,
       updated_by_admin_id: locals.user.id,
     };
@@ -105,6 +113,9 @@ export async function POST({ locals, request }) {
 
     return json({ item: formatProductRow(data, category.slug) }, { status: 201 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Failed to create product';
     return json({ error: message }, { status: 400 });
   }

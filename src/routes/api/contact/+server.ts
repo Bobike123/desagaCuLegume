@@ -1,9 +1,12 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
-
-function cleanString(value: unknown) {
-  return String(value ?? '').trim();
-}
+import {
+  LIMITS,
+  readJsonBody,
+  requireNumericId,
+  stringField,
+  validationErrorResponse,
+} from '$lib/server/validation';
 
 function mapOrder(row: any) {
   return {
@@ -190,19 +193,15 @@ export async function POST({ request, locals }) {
     return json({ error: 'Administratorii răspund din panoul de mesaje.' }, { status: 403 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const orderId = cleanString(body.orderId);
-  const messageBody = cleanString(body.message);
-
-  if (!orderId) {
-    return json({ error: 'Selectează comanda pentru care trimiți mesajul.' }, { status: 400 });
-  }
-
-  if (!messageBody) {
-    return json({ error: 'Mesajul este obligatoriu.' }, { status: 400 });
-  }
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
+    const orderId = requireNumericId(body.orderId, 'ID comandă');
+    const messageBody = stringField(body, 'message', {
+      required: true,
+      max: LIMITS.message,
+      fieldLabel: 'Mesajul',
+    });
+
     const admin = createAdminClient();
     const order = await getUserOrder(admin, orderId, locals.user.id);
 
@@ -272,6 +271,9 @@ export async function POST({ request, locals }) {
       { status: 201 }
     );
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Failed to send contact message';
     return json({ error: message }, { status: 400 });
   }

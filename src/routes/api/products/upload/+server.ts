@@ -3,11 +3,13 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_NAME_LENGTH = 180;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 function safeFileName(name: string) {
   const clean = name
     .trim()
+    .slice(0, MAX_FILE_NAME_LENGTH)
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '');
@@ -53,6 +55,10 @@ export async function POST(event: RequestEvent) {
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       return json({ error: 'Invalid file type. Only JPEG, PNG, WebP allowed' }, { status: 400 });
+    }
+
+    if (file.name.length > MAX_FILE_NAME_LENGTH) {
+      return json({ error: 'File name is too long' }, { status: 400 });
     }
 
     const supabase = createAdminClient();

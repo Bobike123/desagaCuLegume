@@ -10,26 +10,46 @@ import {
   safeUsernameFromEmail,
   setSessionCookie,
 } from '$lib/server/auth';
+import {
+  LIMITS,
+  nullableStringField,
+  readJsonBody,
+  stringField,
+  validationErrorResponse,
+} from '$lib/server/validation';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,80}$/;
 
 export async function POST({ request, cookies }) {
-  const body = await request.json().catch(() => ({}));
-  const email = normalizeEmail(String(body.email ?? ''));
-  const password = String(body.password ?? '');
-  const fullName = String(body.fullName ?? '').trim() || null;
-  const phone = String(body.phone ?? '').trim() || null;
-  const username = normalizeUsername(String(body.username ?? '') || safeUsernameFromEmail(email));
-
-  if (!email || !password) {
-    return json({ error: 'Email și parola sunt obligatorii.' }, { status: 400 });
-  }
-
-  if (!assertStrongPassword(password)) {
-    return json({ error: 'Parola trebuie să aibă minim 8 caractere, o literă mare și o cifră.' }, { status: 400 });
-  }
-
-  const admin = createAdminClient();
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
+    const email = normalizeEmail(
+      stringField(body, 'email', {
+        required: true,
+        max: 120,
+        pattern: EMAIL_PATTERN,
+        fieldLabel: 'Emailul',
+      })
+    );
+    const password = stringField(body, 'password', { required: true, min: 8, max: 200, fieldLabel: 'Parola' });
+    const fullName = nullableStringField(body, 'fullName', { max: 120, fieldLabel: 'Numele complet' });
+    const phone = nullableStringField(body, 'phone', { max: 30, fieldLabel: 'Telefonul' });
+    const username = normalizeUsername(
+      stringField(body, 'username', { max: 80, pattern: USERNAME_PATTERN, fieldLabel: 'Username-ul' }) ||
+        safeUsernameFromEmail(email)
+    );
+
+    if (!email || !password) {
+      return json({ error: 'Email și parola sunt obligatorii.' }, { status: 400 });
+    }
+
+    if (!assertStrongPassword(password)) {
+      return json({ error: 'Parola trebuie să aibă minim 8 caractere, o literă mare și o cifră.' }, { status: 400 });
+    }
+
+    const admin = createAdminClient();
+
     const existingByEmail = await admin.from('users').select('user_id').eq('email', email).maybeSingle();
     if (existingByEmail.error) throw existingByEmail.error;
     if (existingByEmail.data) {
@@ -78,8 +98,10 @@ export async function POST({ request, cookies }) {
 
     return json({ success: true }, { status: 201 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     console.error('Register failed', error);
     return json({ error: 'Înregistrarea a eșuat.' }, { status: 500 });
   }
 }
-

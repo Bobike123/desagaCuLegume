@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import { LIMITS, readJsonBody, stringField, validationErrorResponse } from '$lib/server/validation';
 
 function mapConversation(row: any, userMap: Map<number, any>, messagesByConversation: Map<number, any[]>) {
   const messages = messagesByConversation.get(row.conversation_id) ?? [];
@@ -102,15 +103,15 @@ export async function POST({ locals, request }) {
     return json({ error: 'Administratorii răspund din conversații existente.' }, { status: 403 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const subject = String(body.subject ?? '').trim() || 'Mesaj nou';
-  const messageBody = String(body.message ?? '').trim();
-
-  if (!messageBody) {
-    return json({ error: 'Mesajul este obligatoriu.' }, { status: 400 });
-  }
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
+    const subject = stringField(body, 'subject', { max: 140, fieldLabel: 'Subiectul' }) || 'Mesaj nou';
+    const messageBody = stringField(body, 'message', {
+      required: true,
+      max: LIMITS.message,
+      fieldLabel: 'Mesajul',
+    });
+
     const admin = createAdminClient();
     const { data: conversation, error: conversationError } = await admin
       .from('support_conversations')
@@ -157,6 +158,9 @@ export async function POST({ locals, request }) {
       { status: 201 }
     );
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Failed to create conversation';
     return json({ error: message }, { status: 400 });
   }

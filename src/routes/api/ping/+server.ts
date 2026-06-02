@@ -3,23 +3,21 @@ import {
     PUBLIC_SUPABASE_URL,
     PUBLIC_SUPABASE_ANON_KEY
 } from '$env/static/public';
-import {
-    VITE_ADMIN_EMAIL,
-    VITE_ADMIN_PASSWORD
-} from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
-export function GET() {
+export function GET({ locals }) {
+    if (!locals.isAdmin) {
+        return json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     return json({
         supabase: {
             hasUrl: Boolean(PUBLIC_SUPABASE_URL),
-            hasAnonKey: Boolean(PUBLIC_SUPABASE_ANON_KEY),
-            urlPrefix: PUBLIC_SUPABASE_URL
-                ? PUBLIC_SUPABASE_URL.slice(0, 25)
-                : null
+            hasAnonKey: Boolean(PUBLIC_SUPABASE_ANON_KEY)
         },
         admin: {
-            hasEmail: Boolean(VITE_ADMIN_EMAIL),
-            hasPassword: Boolean(VITE_ADMIN_PASSWORD)
+            hasEmail: Boolean(env.ADMIN_EMAIL),
+            hasPassword: Boolean(env.ADMIN_PASSWORD)
         }
     });
 }

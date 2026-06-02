@@ -1,19 +1,50 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import {
+  arrayField,
+  enumField,
+  isPlainObject,
+  LIMITS,
+  nullableStringField,
+  numberField,
+  readJsonBody,
+  requireNumericId,
+  stringField,
+  validationErrorResponse,
+} from '$lib/server/validation';
 
 type CheckoutItem = {
   productId: string;
   quantity: number;
 };
 
-function normalizeItems(raw: unknown): CheckoutItem[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((item) => ({
-      productId: String((item as any)?.productId ?? '').trim(),
-      quantity: Math.max(0, Math.floor(Number((item as any)?.quantity ?? 0))),
-    }))
-    .filter((item) => item.productId && item.quantity > 0);
+function normalizeItems(raw: unknown[]): CheckoutItem[] {
+  const normalized = raw.map((item, index) => {
+    if (!isPlainObject(item)) {
+      throw new Error(`Produs invalid în coș la poziția ${index + 1}.`);
+    }
+
+    return {
+      productId: requireNumericId(item.productId, 'ID produs'),
+      quantity: numberField(item, 'quantity', {
+        required: true,
+        integer: true,
+        min: 1,
+        max: 99,
+        fieldLabel: 'Cantitatea',
+      }),
+    };
+  });
+
+  const quantities = new Map<string, number>();
+  for (const item of normalized) {
+    quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
+  }
+
+  return [...quantities.entries()].map(([productId, quantity]) => ({
+    productId,
+    quantity: Math.min(quantity, 99),
+  }));
 }
 
 function buildOrderNumber() {
@@ -43,28 +74,37 @@ export async function POST({ locals, request }) {
     return json({ error: 'Adminii nu pot face comenzi.' }, { status: 403 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const items = normalizeItems(body.items);
-
-  if (items.length === 0) {
-    return json({ error: 'Coșul este gol.' }, { status: 400 });
-  }
-
-  const fullName = String(body.fullName ?? locals.user.fullName ?? '').trim();
-  const phone = String(body.phone ?? locals.user.phone ?? '').trim();
-  const deliveryMethod = String(body.deliveryMethod ?? 'pickup') === 'delivery' ? 'delivery' : 'pickup';
-  const customerMessage = String(body.customerMessage ?? '').trim();
-  const paymentMethod = String(body.paymentMethod ?? 'CASH_ON_DELIVERY');
-
-  if (!fullName) {
-    return json({ error: 'Numele complet este obligatoriu.' }, { status: 400 });
-  }
-
-  if (!phone) {
-    return json({ error: 'Telefonul este obligatoriu.' }, { status: 400 });
-  }
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.largeJson });
+    const items = normalizeItems(arrayField(body, 'items', 100));
+
+    if (items.length === 0) {
+      return json({ error: 'Coșul este gol.' }, { status: 400 });
+    }
+
+    const fullName =
+      stringField(body, 'fullName', { max: 120, fieldLabel: 'Numele complet' }) ||
+      (locals.user.fullName ?? '');
+    const phone =
+      stringField(body, 'phone', { max: 30, fieldLabel: 'Telefonul' }) ||
+      (locals.user.phone ?? '');
+    const deliveryMethod = enumField(body, 'deliveryMethod', ['PICKUP', 'DELIVERY'], 'PICKUP').toLowerCase() as
+      | 'pickup'
+      | 'delivery';
+    const customerMessage = stringField(body, 'customerMessage', {
+      max: LIMITS.message,
+      fieldLabel: 'Mesajul',
+    });
+    const paymentMethod = enumField(body, 'paymentMethod', ['CASH_ON_DELIVERY'], 'CASH_ON_DELIVERY');
+
+    if (!fullName) {
+      return json({ error: 'Numele complet este obligatoriu.' }, { status: 400 });
+    }
+
+    if (!phone) {
+      return json({ error: 'Telefonul este obligatoriu.' }, { status: 400 });
+    }
+
     const admin = createAdminClient();
     const productIds = items.map((item) => Number(item.productId)).filter((value) => Number.isFinite(value));
     const { data: productRows, error: productError } = await admin
@@ -145,12 +185,17 @@ export async function POST({ locals, request }) {
       label: 'Billing',
       full_name: fullName,
       phone,
-      line1: String(body.addressLine1 ?? '').trim() || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).line1 : ''),
-      line2: String(body.addressLine2 ?? '').trim() || null,
-      city: String(body.city ?? '').trim() || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).city : ''),
-      state_region: String(body.stateRegion ?? '').trim() || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).state_region : null),
-      postal_code: String(body.postalCode ?? '').trim() || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).postal_code : ''),
-      country_code: String(body.countryCode ?? 'RO').trim() || 'RO',
+      line1: stringField(body, 'addressLine1', { max: 180, fieldLabel: 'Adresa' }) || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).line1 : ''),
+      line2: nullableStringField(body, 'addressLine2', { max: 180, fieldLabel: 'Detalii adresă' }),
+      city: stringField(body, 'city', { max: 90, fieldLabel: 'Orașul' }) || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).city : ''),
+      state_region: stringField(body, 'stateRegion', { max: 90, fieldLabel: 'Județul' }) || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).state_region : null),
+      postal_code: stringField(body, 'postalCode', { max: 20, fieldLabel: 'Codul poștal' }) || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).postal_code : ''),
+      country_code: stringField(body, 'countryCode', {
+        max: 2,
+        defaultValue: 'RO',
+        fieldLabel: 'Țara',
+        pattern: /^[A-Z]{2}$/i,
+      }).toUpperCase(),
       is_default: true,
     };
 
@@ -315,8 +360,10 @@ export async function POST({ locals, request }) {
       { status: 201 }
     );
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     const message = error instanceof Error ? error.message : 'Checkout failed';
     return json({ error: message }, { status: 400 });
   }
 }
-

@@ -7,18 +7,22 @@ import {
   setSessionCookie,
   verifyPassword,
 } from '$lib/server/auth';
+import { booleanField, LIMITS, readJsonBody, stringField, validationErrorResponse } from '$lib/server/validation';
 
 export async function POST({ request, cookies }) {
-  const body = await request.json().catch(() => ({}));
-  const identity = String(body.identity ?? body.email ?? body.username ?? '').trim();
-  const password = String(body.password ?? '');
-  const requireAdmin = Boolean(body.requireAdmin);
-
-  if (!identity || !password) {
-    return json({ error: 'Email sau username și parola sunt obligatorii.' }, { status: 400 });
-  }
-
   try {
+    const body = await readJsonBody(request, { maxBytes: LIMITS.tinyJson });
+    const identity =
+      stringField(body, 'identity', { max: 120 }) ||
+      stringField(body, 'email', { max: 120 }) ||
+      stringField(body, 'username', { max: 80 });
+    const password = stringField(body, 'password', { required: true, min: 1, max: 200, fieldLabel: 'Parola' });
+    const requireAdmin = booleanField(body, 'requireAdmin', false);
+
+    if (!identity) {
+      return json({ error: 'Email sau username și parola sunt obligatorii.' }, { status: 400 });
+    }
+
     const user = await findUserByIdentity(identity);
 
     if (!user || user.status !== 'ACTIVE') {
@@ -41,6 +45,9 @@ export async function POST({ request, cookies }) {
 
     return json({ success: true }, { status: 200 });
   } catch (error) {
+    const validation = validationErrorResponse(error);
+    if (validation) return validation;
+
     console.error('Login failed', error);
     return json({ error: 'Autentificarea a eșuat.' }, { status: 500 });
   }

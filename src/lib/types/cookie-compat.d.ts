@@ -1,5 +1,6 @@
 import 'cookie';
 
 declare module 'cookie' {
-  export type SerializeOptions = CookieSerializeOptions;
+  export type CookieParseOptions = ParseOptions;
+  export type CookieSerializeOptions = SerializeOptions;
 }
