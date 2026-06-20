@@ -1,6 +1,17 @@
 import type { LegalDocumentData } from '$lib/components/LegalDocument.svelte';
 
-const updated = 'Ultima actualizare: 2 iunie 2026';
+const updated = 'Ultima actualizare: 3 iunie 2026';
+const companyName = 'DESAGA CU LEGUME S.R.L.';
+const brandName = 'DeSaga cu Legume';
+const registeredOffice = 'Sat Jucu de Mijloc, Comuna Jucu, nr. 217B, județ Cluj, România';
+const operatingLocation = 'Cluj-Napoca, Str. Constantin Brâncuși nr. 153';
+const tradeRegisterNumber = 'J12/3492/04.09.2019';
+const euid = 'ROONRC.J12/3492/2019';
+const taxId = '41600010';
+const phone = '+40 729 969 822';
+const contactChannels = `pagina Contact din website sau telefonic la ${phone}`;
+const mainActivity = '4631 - Comerț cu ridicata al fructelor și legumelor';
+const registrationCertificate = 'Seria B nr. 3947243, eliberat la 05.09.2019';
 
 export const privacyPolicy: LegalDocumentData = {
   title: 'Politica de confidențialitate',
@@ -14,8 +25,8 @@ export const privacyPolicy: LegalDocumentData = {
     {
       title: 'Operatorul de date',
       paragraphs: [
-        '[DENUMIRE_COMPANIE], cu sediul social în [ADRESA], înregistrată la Registrul Comerțului sub nr. [NUMAR_REGISTRUL_COMERTULUI], având CUI/TVA [CUI], este operatorul datelor cu caracter personal prelucrate prin intermediul acestui website.',
-        'Pentru întrebări privind această politică sau pentru exercitarea drepturilor privind datele personale, ne puteți contacta la [EMAIL] sau la [TELEFON].',
+        `${companyName}, cu sediul social în ${registeredOffice}, înregistrată la Registrul Comerțului sub nr. ${tradeRegisterNumber}, EUID ${euid}, având CUI ${taxId}, este operatorul datelor cu caracter personal prelucrate prin intermediul acestui website.`,
+        `Pentru întrebări privind această politică sau pentru exercitarea drepturilor privind datele personale, ne puteți contacta prin ${contactChannels}.`,
       ],
     },
     {
@@ -117,7 +128,7 @@ export const privacyPolicy: LegalDocumentData = {
     {
       title: 'Exercitarea drepturilor',
       paragraphs: [
-        'Pentru exercitarea drepturilor, ne puteți transmite o cerere la [EMAIL], indicând dreptul exercitat, datele de identificare necesare și informațiile care ne ajută să identificăm contul sau comanda vizată.',
+        `Pentru exercitarea drepturilor, ne puteți transmite o cerere prin ${contactChannels}, indicând dreptul exercitat, datele de identificare necesare și informațiile care ne ajută să identificăm contul sau comanda vizată.`,
         'Putem solicita informații suplimentare rezonabile pentru confirmarea identității, în special atunci când cererea privește accesul, ștergerea sau transmiterea datelor. Răspundem fără întârzieri nejustificate și, în orice caz, în termenul prevăzut de GDPR.',
         'Dacă o cerere este complexă sau există un număr mare de cereri, termenul de răspuns poate fi prelungit conform legii, cu informarea persoanei vizate.',
       ],
@@ -127,7 +138,7 @@ export const privacyPolicy: LegalDocumentData = {
       paragraphs: [
         'Utilizatorul autentificat poate solicita închiderea contului direct din pagina „Contul meu”, secțiunea „Ștergere cont”, prin introducerea parolei curente și a textului de confirmare afișat în interfață.',
         'După confirmare, contul este dezactivat, sesiunile active sunt închise, iar datele de profil care nu mai sunt necesare sunt șterse sau anonimizate. Datele care trebuie păstrate pentru executarea comenzilor, obligații fiscale, contabile, comerciale, protecția consumatorilor, siguranța alimentară sau apărarea drepturilor pot fi păstrate pe durata permisă ori impusă de lege.',
-        'Ștergerea contului nu anulează automat comenzile deja plasate. Pentru anularea unei comenzi în curs, utilizatorul trebuie să contacteze [DENUMIRE_COMPANIE] la [EMAIL] sau [TELEFON], înainte de pregătirea ori livrarea produselor.',
+        `Ștergerea contului nu anulează automat comenzile deja plasate. Pentru anularea unei comenzi în curs, utilizatorul trebuie să contacteze ${companyName} prin ${contactChannels}, înainte de pregătirea ori livrarea produselor.`,
       ],
     },
     {
@@ -140,7 +151,7 @@ export const privacyPolicy: LegalDocumentData = {
     {
       title: 'Contact pentru confidențialitate',
       paragraphs: [
-        'Pentru orice solicitare privind protecția datelor, vă rugăm să utilizați următoarele date de contact: [DENUMIRE_COMPANIE], [ADRESA], e-mail: [EMAIL], telefon: [TELEFON].',
+        `Pentru orice solicitare privind protecția datelor, vă rugăm să utilizați următoarele date de contact: ${companyName}, ${registeredOffice}, ${contactChannels}.`,
       ],
     },
   ],
@@ -226,7 +237,7 @@ export const cookiePolicy: LegalDocumentData = {
     {
       title: 'Contact',
       paragraphs: [
-        'Pentru întrebări privind această Politică de cookie-uri, ne puteți contacta la [EMAIL] sau la [TELEFON].',
+        `Pentru întrebări privind această Politică de cookie-uri, ne puteți contacta prin ${contactChannels}.`,
       ],
     },
   ],
@@ -244,8 +255,8 @@ export const termsAndConditions: LegalDocumentData = {
     {
       title: 'Identitatea comerciantului',
       paragraphs: [
-        'Website-ul este operat de [DENUMIRE_COMPANIE], societate înregistrată la Registrul Comerțului sub nr. [NUMAR_REGISTRUL_COMERTULUI], CUI/TVA [CUI], cu sediul social în [ADRESA].',
-        'Pentru comunicări privind comenzile, conturile sau acești termeni, ne puteți contacta la [EMAIL] sau [TELEFON].',
+        `Website-ul este operat de ${companyName}, societate înregistrată la Registrul Comerțului sub nr. ${tradeRegisterNumber}, EUID ${euid}, CUI ${taxId}, cu sediul social în ${registeredOffice}.`,
+        `Pentru comunicări privind comenzile, conturile sau acești termeni, ne puteți contacta prin ${contactChannels}.`,
       ],
     },
     {
@@ -259,7 +270,7 @@ export const termsAndConditions: LegalDocumentData = {
       title: 'Crearea contului și responsabilitățile utilizatorului',
       paragraphs: [
         'Pentru plasarea unei comenzi poate fi necesară crearea unui cont de client. Utilizatorul declară că informațiile furnizate sunt reale, complete și actuale.',
-        'Utilizatorul este responsabil pentru confidențialitatea datelor de autentificare și pentru toate activitățile efectuate prin contul său. Orice acces neautorizat sau suspiciune de compromitere trebuie comunicată imediat la [EMAIL].',
+        `Utilizatorul este responsabil pentru confidențialitatea datelor de autentificare și pentru toate activitățile efectuate prin contul său. Orice acces neautorizat sau suspiciune de compromitere trebuie comunicată imediat prin ${contactChannels}.`,
         'Utilizatorul poate solicita ștergerea contului din pagina „Contul meu”, folosind secțiunea „Ștergere cont”. Pentru protecția contului, solicitarea necesită parola curentă și confirmarea explicită afișată în interfață.',
       ],
       bullets: [
@@ -272,7 +283,7 @@ export const termsAndConditions: LegalDocumentData = {
       title: 'Efectele ștergerii contului',
       paragraphs: [
         'După ștergerea contului, utilizatorul nu va mai putea accesa profilul, istoricul comenzilor din cont sau conversațiile asociate contului prin interfața de client.',
-        'Ștergerea contului nu afectează dreptul [DENUMIRE_COMPANIE] de a păstra informațiile necesare pentru comenzile plasate anterior, documente fiscale sau contabile, reclamații, obligații legale ori apărarea drepturilor, conform Politicii de confidențialitate și legislației aplicabile.',
+        `Ștergerea contului nu afectează dreptul ${companyName} de a păstra informațiile necesare pentru comenzile plasate anterior, documente fiscale sau contabile, reclamații, obligații legale ori apărarea drepturilor, conform Politicii de confidențialitate și legislației aplicabile.`,
       ],
     },
     {
@@ -306,7 +317,7 @@ export const termsAndConditions: LegalDocumentData = {
       ],
       bullets: [
         'Putem respinge sau anula comenzi în caz de lipsă stoc, produse neconforme, eroare de preț, adresă în afara zonei de livrare, comportament abuziv, suspiciune de fraudă sau imposibilitate obiectivă de livrare.',
-        'Clientul poate solicita anularea comenzii înainte de pregătirea acesteia, prin contactarea DeSaga cu Legume la [TELEFON] sau [EMAIL].',
+        `Clientul poate solicita anularea comenzii înainte de pregătirea acesteia, prin contactarea ${brandName} prin ${contactChannels}.`,
         'Pentru produse perisabile deja pregătite, rezervate sau aflate în livrare, anularea poate fi refuzată sau poate genera costuri rezonabile, în limitele legii.',
       ],
     },
@@ -339,7 +350,7 @@ export const termsAndConditions: LegalDocumentData = {
     {
       title: 'Reclamații și protecția consumatorilor',
       paragraphs: [
-        'Pentru orice problemă privind o comandă, clientul trebuie să contacteze mai întâi DeSaga cu Legume la [EMAIL] sau [TELEFON], pentru soluționare amiabilă.',
+        `Pentru orice problemă privind o comandă, clientul trebuie să contacteze mai întâi ${brandName} prin ${contactChannels}, pentru soluționare amiabilă.`,
         'Consumatorii pot utiliza și mecanismele puse la dispoziție de autoritățile competente din România și Uniunea Europeană, inclusiv Autoritatea Națională pentru Protecția Consumatorilor, în condițiile legii.',
       ],
     },
@@ -414,7 +425,7 @@ export const deliveryPickupPolicy: LegalDocumentData = {
     {
       title: 'Contact livrare și ridicare',
       paragraphs: [
-        'Pentru modificarea unei comenzi, clarificarea adresei sau informații despre ridicare, contactați DeSaga cu Legume la [TELEFON] sau [EMAIL].',
+        `Pentru modificarea unei comenzi, clarificarea adresei sau informații despre ridicare, contactați ${brandName} prin ${contactChannels}.`,
       ],
     },
   ],
@@ -473,7 +484,7 @@ export const returnsComplaintsPolicy: LegalDocumentData = {
     {
       title: 'Procedura de soluționare',
       paragraphs: [
-        'Reclamațiile se transmit la [EMAIL] sau [TELEFON]. După primire, DeSaga cu Legume poate solicita detalii suplimentare și va analiza situația ținând cont de natura produsului, timpul scurs, dovezi, condițiile de predare și istoricul comenzii.',
+        `Reclamațiile se transmit prin ${contactChannels}. După primire, ${brandName} poate solicita detalii suplimentare și va analiza situația ținând cont de natura produsului, timpul scurs, dovezi, condițiile de predare și istoricul comenzii.`,
       ],
       bullets: [
         'Dacă reclamația este întemeiată, putem oferi înlocuire, produs echivalent, credit pentru o comandă viitoare, reducere de preț sau rambursare, după caz.',
@@ -515,45 +526,49 @@ export const companyInformation: LegalDocumentData = {
       table: {
         headers: ['Câmp', 'Informație'],
         rows: [
-          ['Denumire societate', '[DENUMIRE_COMPANIE]'],
-          ['Număr Registrul Comerțului', '[NUMAR_REGISTRUL_COMERTULUI]'],
-          ['CUI / TVA', '[CUI]'],
-          ['Sediu social', '[ADRESA]'],
-          ['E-mail contact', '[EMAIL]'],
-          ['Telefon contact', '[TELEFON]'],
+          ['Denumire societate', companyName],
+          ['Denumire comercială', brandName],
+          ['Număr Registrul Comerțului', tradeRegisterNumber],
+          ['EUID', euid],
+          ['CUI', taxId],
+          ['Sediu social', registeredOffice],
+          ['Punct de vânzare / ridicare', operatingLocation],
+          ['Activitate principală', mainActivity],
+          ['Certificat de înregistrare', registrationCertificate],
+          ['Telefon contact', phone],
+          ['Contact online', 'Pagina Contact din website'],
         ],
       },
     },
     {
-      title: 'Notițe pentru completare înainte de publicare',
+      title: 'Date din certificatul de înregistrare',
       paragraphs: [
-        'Înainte de publicarea website-ului, toate câmpurile de mai jos trebuie înlocuite cu datele reale ale comerciantului. Placeholder-ele sunt scrise cu majuscule și în limba română pentru a fi ușor de identificat.',
+        'Datele comerciale de mai jos sunt preluate din certificatul de înregistrare al societății și trebuie păstrate aliniate cu documentele oficiale ale comerciantului.',
       ],
       table: {
-        headers: ['Placeholder', 'Ce trebuie completat'],
+        headers: ['Element', 'Valoare'],
         rows: [
-          ['[DENUMIRE_COMPANIE]', 'Denumirea juridică exactă a societății, conform certificatului de înregistrare.'],
-          ['[NUMAR_REGISTRUL_COMERTULUI]', 'Numărul de ordine în Registrul Comerțului. Exemplu orientativ: J12/1234/2026.'],
-          ['[CUI]', 'Codul unic de identificare fiscală, cu prefix RO numai dacă societatea este plătitoare de TVA.'],
-          ['[ADRESA]', 'Sediul social complet: localitate, stradă, număr, județ/sector și țară.'],
-          ['[EMAIL]', 'Adresa de e-mail oficială pentru clienți, solicitări GDPR, comenzi și reclamații.'],
-          ['[TELEFON]', 'Numărul de telefon oficial pentru suport clienți și comunicări privind comenzile.'],
+          ['Autoritate emitentă', 'Oficiul Registrului Comerțului de pe lângă Tribunalul Cluj'],
+          ['Număr certificat', registrationCertificate],
+          ['Cod unic de înregistrare', `${taxId}, din data de 04.09.2019`],
+          ['EUID', euid],
+          ['Număr de ordine în registrul comerțului', tradeRegisterNumber],
         ],
       },
       callout:
-        'Nu lăsați placeholder-e necompletate în producție. Datele comerciale trebuie să fie identice cu cele din documentele societății și cu informațiile afișate în facturi sau alte comunicări oficiale.',
+        'Dacă societatea își schimbă sediul, datele fiscale, punctul de lucru sau canalele oficiale de contact, aceste informații trebuie actualizate înainte de publicarea website-ului.',
     },
     {
       title: 'Activitate',
       paragraphs: [
-        'DeSaga cu Legume comercializează legume, fructe, produse proaspete și produse locale provenite de la furnizori de piață și colaboratori locali, în funcție de disponibilitate, sezon și stoc.',
+        `${brandName} comercializează legume, fructe, produse proaspete și produse locale provenite de la furnizori de piață și parteneri locali, în funcție de disponibilitate, sezon și stoc. Activitatea principală înregistrată este ${mainActivity}.`,
         'Website-ul permite informarea clienților, crearea de conturi, plasarea comenzilor și alegerea opțiunilor de livrare sau ridicare, fără procesare de plăți online.',
       ],
     },
     {
       title: 'Contact comercial și suport clienți',
       paragraphs: [
-        'Pentru informații despre produse, comenzi, disponibilitate, livrare, ridicare, reclamații sau documente legale, ne puteți contacta la [EMAIL] sau [TELEFON].',
+        `Pentru informații despre produse, comenzi, disponibilitate, livrare, ridicare, reclamații sau documente legale, ne puteți contacta prin ${contactChannels}.`,
       ],
     },
     {
@@ -589,7 +604,7 @@ export const produceQualityPolicy: LegalDocumentData = {
     {
       title: 'Standarde de prospețime',
       paragraphs: [
-        'DeSaga cu Legume urmărește să ofere produse proaspete, potrivite pentru consum, selectate cu grijă de la furnizori locali, colaboratori sau piețe de aprovizionare.',
+        'DeSaga cu Legume urmărește să ofere produse proaspete, potrivite pentru consum, selectate cu grijă de la furnizori locali sau piețe de aprovizionare.',
       ],
       bullets: [
         'Produsele sunt verificate vizual și, după caz, sortate înainte de predare.',

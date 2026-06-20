@@ -1,24 +1,46 @@
-node_modules
+# Dependencies
+node_modules/
 
 # Output
 commandRepo.txt
-.output
-.vercel
-.netlify
-.wrangler
-/.svelte-kit
-/build
+.output/
+.vercel/
+.netlify/
+.wrangler/
+.svelte-kit/
+build/
+dist/
+coverage/
+bundles/
+
+# Supabase: track migrations/config/schema export.
+# Secrets stay ignored via supabase/.gitignore (.env.local, .env.keys, .temp, .branches).
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Env
+# Env — never commit real secrets. .env.example holds placeholders only.
 .env
 .env.*
 !.env.example
-!.env.test
 
-# Vite
+# Local editors / agent state
+.vscode/
+.fallow/
+.claude/
+
+# Caches and temporary files
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+*.log
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Vite/SvelteKit
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*

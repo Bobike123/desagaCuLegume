@@ -1,6 +1,14 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { isIP } from 'node:net';
+import { promisify } from 'node:util';
 import type { Cookies } from '@sveltejs/kit';
-import { SESSION_COOKIE_NAME, SESSION_TIMEOUT_MINUTES, createAdminClient } from '$lib/server/supabase';
+import {
+  ADMIN_SESSION_TIMEOUT_MINUTES,
+  SESSION_COOKIE_NAME,
+  USER_SESSION_TIMEOUT_MINUTES,
+  createAdminClient,
+} from '$lib/server/supabase';
+import type { ResolveSessionArgs } from '$lib/server/rpc-contracts';
 
 export type SessionUser = {
   id: number;
@@ -14,6 +22,7 @@ export type SessionUser = {
 export type ResolvedSession = {
   sessionId: string;
   userId: number;
+  lastActivityAt: string;
   user: SessionUser;
   roles: string[];
   isAdmin: boolean;
@@ -24,6 +33,12 @@ export type RequestMeta = {
   userAgent: string | null;
 };
 
+let warnedAboutSessionRpc = false;
+const PASSWORD_KEY_BYTES = 64;
+const PASSWORD_HASH_VERSION = 'scrypt:v1';
+const SESSION_TOUCH_THROTTLE_MS = 5 * 60 * 1000;
+const scryptAsync = promisify(scrypt);
+
 export function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
@@ -32,20 +47,36 @@ export function normalizeUsername(value: string) {
   return value.trim().toLowerCase();
 }
 
-export function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString('hex');
-  const hash = scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${hash}`;
+  const key = (await scryptAsync(password, salt, PASSWORD_KEY_BYTES)) as Buffer;
+  return `${PASSWORD_HASH_VERSION}:${salt}:${key.toString('hex')}`;
 }
 
-export function verifyPassword(password: string, storedHash: string) {
-  const [salt, hash] = storedHash.split(':');
+export async function verifyPassword(password: string, storedHash: string) {
+  const parts = storedHash.split(':');
+  let salt: string | undefined;
+  let hash: string | undefined;
+
+  if (parts.length === 2) {
+    [salt, hash] = parts;
+  } else if (parts.length === 4) {
+    const [algorithm, version, versionedSalt, versionedHash] = parts;
+    if (`${algorithm}:${version}` !== PASSWORD_HASH_VERSION) return false;
+    salt = versionedSalt;
+    hash = versionedHash;
+  } else {
+    return false;
+  }
+
   if (!salt || !hash) return false;
+  if (!/^[a-f0-9]+$/i.test(hash)) return false;
 
-  const candidate = scryptSync(password, salt, 64);
   const existing = Buffer.from(hash, 'hex');
+  if (existing.length !== PASSWORD_KEY_BYTES) return false;
 
-  if (candidate.length !== existing.length) return false;
+  const candidate = (await scryptAsync(password, salt, PASSWORD_KEY_BYTES)) as Buffer;
+
   return timingSafeEqual(candidate, existing);
 }
 
@@ -53,11 +84,11 @@ export function createSessionToken() {
   return randomBytes(32).toString('base64url');
 }
 
-export function hashSessionToken(token: string) {
+function hashSessionToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export function cookieOptions(maxAgeSeconds: number) {
+function cookieOptions(maxAgeSeconds: number) {
   return {
     path: '/',
     httpOnly: true,
@@ -67,12 +98,49 @@ export function cookieOptions(maxAgeSeconds: number) {
   };
 }
 
-export function setSessionCookie(cookies: Cookies, token: string, timeoutMinutes = SESSION_TIMEOUT_MINUTES) {
+export function getSessionTimeoutMinutes(rolesOrIsAdmin: string[] | boolean = false) {
+  const isAdmin = Array.isArray(rolesOrIsAdmin) ? rolesOrIsAdmin.includes('ADMIN') : rolesOrIsAdmin;
+  return isAdmin ? ADMIN_SESSION_TIMEOUT_MINUTES : USER_SESSION_TIMEOUT_MINUTES;
+}
+
+export function setSessionCookie(cookies: Cookies, token: string, timeoutMinutes = USER_SESSION_TIMEOUT_MINUTES) {
   cookies.set(SESSION_COOKIE_NAME, token, cookieOptions(timeoutMinutes * 60));
 }
 
 export function clearSessionCookie(cookies: Cookies) {
   cookies.delete(SESSION_COOKIE_NAME, { path: '/' });
+}
+
+function rolesFromValue(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((role): role is string => typeof role === 'string' && role.length > 0);
+}
+
+function mapResolvedSessionRow(row: any): ResolvedSession | null {
+  if (!row || row.user_status === 'DELETED') return null;
+
+  const roles = rolesFromValue(row.roles);
+
+  return {
+    sessionId: row.session_id,
+    userId: Number(row.user_id),
+    lastActivityAt: row.last_activity_at,
+    user: {
+      id: Number(row.user_id),
+      email: row.user_email,
+      username: row.username,
+      fullName: row.full_name ?? null,
+      phone: row.phone ?? null,
+      status: row.user_status,
+    },
+    roles,
+    isAdmin: roles.includes('ADMIN'),
+  };
+}
+
+function isExpiredSessionRow(row: { expires_at?: string | null }) {
+  const expiresAt = new Date(row.expires_at ?? '').getTime();
+  return !Number.isFinite(expiresAt) || expiresAt <= Date.now();
 }
 
 export async function getRolesForUser(userId: number) {
@@ -96,7 +164,7 @@ export async function findUserByIdentity(identity: string) {
 
   let result = await admin
     .from('users')
-    .select('*')
+    .select('user_id, email, username, full_name, phone, status, password_hash')
     .eq('email', email)
     .maybeSingle();
 
@@ -105,7 +173,7 @@ export async function findUserByIdentity(identity: string) {
 
   result = await admin
     .from('users')
-    .select('*')
+    .select('user_id, email, username, full_name, phone, status, password_hash')
     .eq('username', username)
     .maybeSingle();
 
@@ -133,11 +201,15 @@ export async function insertAuthLog(payload: {
   if (error) throw error;
 }
 
-export async function createSession(userId: number, meta?: RequestMeta) {
+export async function createSession(
+  userId: number,
+  meta?: RequestMeta,
+  timeoutMinutes = USER_SESSION_TIMEOUT_MINUTES
+) {
   const admin = createAdminClient();
   const token = createSessionToken();
   const sessionTokenHash = hashSessionToken(token);
-  const expiresAt = new Date(Date.now() + SESSION_TIMEOUT_MINUTES * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + timeoutMinutes * 60 * 1000).toISOString();
 
   const { data, error } = await admin
     .from('sessions')
@@ -164,43 +236,25 @@ export async function createSession(userId: number, meta?: RequestMeta) {
   return { token, sessionId: data.session_id };
 }
 
-export async function resolveSessionFromToken(token: string): Promise<ResolvedSession | null> {
-  const admin = createAdminClient();
-  const tokenHash = hashSessionToken(token);
-
+async function resolveSessionFromTokenFallback(
+  admin: ReturnType<typeof createAdminClient>,
+  tokenHash: string
+): Promise<ResolvedSession | null> {
   const { data: sessionRow, error } = await admin
     .from('sessions')
-    .select('session_id, user_id, status, expires_at')
+    .select('session_id, user_id, status, expires_at, last_activity_at')
     .eq('session_token_hash', tokenHash)
     .eq('status', 'ACTIVE')
+    .gt('expires_at', new Date().toISOString())
     .maybeSingle();
 
   if (error) throw error;
   if (!sessionRow) return null;
-
-  const isExpired = new Date(sessionRow.expires_at).getTime() <= Date.now();
-  if (isExpired) {
-    await admin
-      .from('sessions')
-      .update({
-        status: 'TIMED_OUT',
-        ended_at: new Date().toISOString(),
-      })
-      .eq('session_id', sessionRow.session_id);
-
-    await insertAuthLog({
-      userId: sessionRow.user_id,
-      sessionId: sessionRow.session_id,
-      eventType: 'SESSION_TIMEOUT',
-      details: { reason: 'idle timeout' },
-    });
-
-    return null;
-  }
+  if (isExpiredSessionRow(sessionRow)) return null;
 
   const { data: userRow, error: userError } = await admin
     .from('users')
-    .select('*')
+    .select('user_id, email, username, full_name, phone, status')
     .eq('user_id', sessionRow.user_id)
     .maybeSingle();
 
@@ -212,6 +266,7 @@ export async function resolveSessionFromToken(token: string): Promise<ResolvedSe
   return {
     sessionId: sessionRow.session_id,
     userId: sessionRow.user_id,
+    lastActivityAt: sessionRow.last_activity_at,
     user: {
       id: userRow.user_id,
       email: userRow.email,
@@ -225,18 +280,50 @@ export async function resolveSessionFromToken(token: string): Promise<ResolvedSe
   };
 }
 
-export async function touchSession(sessionId: string) {
+export async function resolveSessionFromToken(token: string): Promise<ResolvedSession | null> {
   const admin = createAdminClient();
-  const expiresAt = new Date(Date.now() + SESSION_TIMEOUT_MINUTES * 60 * 1000).toISOString();
+  const tokenHash = hashSessionToken(token);
+
+  const { data: sessionRow, error } = await admin
+    .rpc('resolve_session', { p_token_hash: tokenHash } satisfies ResolveSessionArgs)
+    .maybeSingle();
+
+  if (error) {
+    if (!warnedAboutSessionRpc) {
+      warnedAboutSessionRpc = true;
+      console.warn('Session RPC unavailable; falling back to multi-query session lookup.', error);
+    }
+    return resolveSessionFromTokenFallback(admin, tokenHash);
+  }
+
+  if (!sessionRow) return null;
+  if (isExpiredSessionRow(sessionRow as any)) return null;
+
+  return mapResolvedSessionRow(sessionRow);
+}
+
+export function shouldTouchSession(lastActivityAt: string | null | undefined, now = Date.now()) {
+  if (!lastActivityAt) return true;
+  const lastActivityTime = new Date(lastActivityAt).getTime();
+  return !Number.isFinite(lastActivityTime) || now - lastActivityTime > SESSION_TOUCH_THROTTLE_MS;
+}
+
+export async function touchSession(sessionId: string, timeoutMinutes = USER_SESSION_TIMEOUT_MINUTES) {
+  const admin = createAdminClient();
+  const now = Date.now();
+  const touchedAt = new Date(now).toISOString();
+  const expiresAt = new Date(now + timeoutMinutes * 60 * 1000).toISOString();
+  const touchThreshold = new Date(now - SESSION_TOUCH_THROTTLE_MS).toISOString();
 
   const { error } = await admin
     .from('sessions')
     .update({
-      last_activity_at: new Date().toISOString(),
+      last_activity_at: touchedAt,
       expires_at: expiresAt,
     })
     .eq('session_id', sessionId)
-    .eq('status', 'ACTIVE');
+    .eq('status', 'ACTIVE')
+    .lt('last_activity_at', touchThreshold);
 
   if (error) throw error;
 }
@@ -273,10 +360,31 @@ export async function logoutSession(token: string, meta?: RequestMeta) {
   });
 }
 
-export function getRequestMeta(request: Request) {
+function safeHeader(value: string | null, maxLength = 240) {
+  return value?.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, maxLength) || null;
+}
+
+function trustedProxyIp(request: Request) {
+  if (process.env.TRUST_PROXY_HEADERS !== 'true') return null;
+
+  const candidates = [
+    request.headers.get('cf-connecting-ip'),
+    request.headers.get('x-real-ip'),
+    request.headers.get('x-forwarded-for')?.split(',')[0],
+  ];
+
+  for (const candidate of candidates) {
+    const value = candidate?.trim().slice(0, 64);
+    if (value && isIP(value)) return value;
+  }
+
+  return null;
+}
+
+export function getRequestMeta(request: Request, clientIp?: string | null) {
   return {
-    ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
-    userAgent: request.headers.get('user-agent'),
+    ipAddress: trustedProxyIp(request) ?? safeHeader(clientIp ?? null, 64),
+    userAgent: safeHeader(request.headers.get('user-agent'), 240),
   } satisfies RequestMeta;
 }
 
@@ -287,4 +395,3 @@ export function assertStrongPassword(password: string) {
 export function safeUsernameFromEmail(email: string) {
   return normalizeEmail(email).split('@')[0].replace(/[^a-z0-9_-]/g, '-').slice(0, 40) || 'user';
 }
-

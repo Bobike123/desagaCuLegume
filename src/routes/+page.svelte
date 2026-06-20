@@ -123,7 +123,7 @@
   eyebrow="DeSaga cu Legume"
   title={heroTitle}
   subtitle="Vezi stocul de azi, adaugă produsele în coș și ridică de la rulota DeSaga. Pentru confirmare rapidă, sună direct."
-  backgroundImage="https://www.pngall.com/wp-content/uploads/2016/03/Vegetable-Free-Download-PNG.png"
+  backgroundImage="/images/home/hero-produse-locale.jpg"
   height="430px"
   primaryHref="/produse"
   primaryLabel="Vezi produsele disponibile"
@@ -346,8 +346,6 @@
       <div class="category-pills">
         <a href="/produse/de-sezon" class="category-pill"><i class="bi bi-flower1"></i> De sezon</a>
         <a href="/produse/la-borcan" class="category-pill"><i class="bi bi-jar"></i> La borcan</a>
-        <a href="/produse/colaboratori" class="category-pill"><i class="bi bi-people"></i> Colaboratori</a>
-        <a href="/produse/horeca" class="category-pill"><i class="bi bi-shop"></i> HORECA</a>
       </div>
     </div>
   </div>

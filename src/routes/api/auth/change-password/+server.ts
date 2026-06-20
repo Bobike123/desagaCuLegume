@@ -39,26 +39,45 @@ export async function POST({ locals, request }) {
       return json({ error: 'Utilizatorul nu există.' }, { status: 404 });
     }
 
-    if (!verifyPassword(currentPassword, userRow.password_hash)) {
+    if (!(await verifyPassword(currentPassword, userRow.password_hash))) {
       return json({ error: 'Parola curentă este greșită.' }, { status: 401 });
     }
+
+    const updatedAt = new Date().toISOString();
 
     const { error: updateError } = await admin
       .from('users')
       .update({
-        password_hash: hashPassword(newPassword),
-        updated_at: new Date().toISOString(),
+        password_hash: await hashPassword(newPassword),
+        updated_at: updatedAt,
       })
       .eq('user_id', locals.user.id);
 
     if (updateError) throw updateError;
+
+    let revokeSessions = admin
+      .from('sessions')
+      .update({
+        status: 'REVOKED',
+        ended_at: updatedAt,
+        last_activity_at: updatedAt,
+      })
+      .eq('user_id', locals.user.id)
+      .eq('status', 'ACTIVE');
+
+    if (locals.session?.sessionId) {
+      revokeSessions = revokeSessions.neq('session_id', locals.session.sessionId);
+    }
+
+    const { error: revokeError } = await revokeSessions;
+    if (revokeError) throw revokeError;
 
     return json({ success: true }, { status: 200 });
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Nu am putut schimba parola.';
-    return json({ error: message }, { status: 400 });
+    console.error('Password change failed', error);
+    return json({ error: 'Nu am putut schimba parola.' }, { status: 400 });
   }
 }

@@ -1,5 +1,7 @@
 import { json } from "@sveltejs/kit";
 import { createAdminClient } from "$lib/server/supabase";
+import { getPagination, getPaginationMeta, noStoreHeaders, publicCacheHeaders } from "$lib/server/pagination";
+import { EVENT_TYPES } from "$lib/server/events";
 import {
   booleanField,
   enumField,
@@ -11,28 +13,34 @@ import {
   validationErrorResponse,
 } from "$lib/server/validation";
 
-const EVENT_TYPES = ["FESTIVAL", "PIATA", "ATELIER"] as const;
-
-export async function GET({ locals, url }) {
+export async function GET({ locals, url, setHeaders }) {
   const admin = createAdminClient();
   const isAdminRequest =
     url.searchParams.get("admin") === "true" && locals.isAdmin;
+  const pagination = getPagination(url, { defaultLimit: 50, maxLimit: 100 });
 
   let q = admin
     .from("events")
-    .select("*")
-    .order("date", { ascending: true });
+    .select("*", { count: "exact" });
 
   if (!isAdminRequest) q = q.eq("published", true);
 
-  const { data, error } = await q;
-  if (error) return json({ error: error.message }, { status: 400 });
+  const { data, error, count } = await q
+    .order("date", { ascending: true })
+    .range(pagination.offset, pagination.to);
+  if (error) {
+    console.error("Events load failed", error);
+    return json({ error: "Nu am putut încărca evenimentele." }, { status: 400 });
+  }
 
-  return json(data ?? []);
+  if (isAdminRequest) setHeaders(noStoreHeaders);
+  else setHeaders(publicCacheHeaders());
+
+  return json({ items: data ?? [], page: getPaginationMeta(pagination, count ?? 0) });
 }
 
 export async function POST({ locals, request }) {
-  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!locals.isAdmin) return json({ error: "Acces neautorizat." }, { status: 401 });
 
   try {
     const payload = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
@@ -61,13 +69,16 @@ export async function POST({ locals, request }) {
       .select("*")
       .single();
 
-    if (error) return json({ error: error.message }, { status: 400 });
+    if (error) {
+      console.error("Event create failed", error);
+      return json({ error: "Nu am putut crea evenimentul." }, { status: 400 });
+    }
     return json({ item: data }, { status: 201 });
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : "Eroare la crearea evenimentului.";
-    return json({ error: message }, { status: 400 });
+    console.error("Event create failed", error);
+    return json({ error: "Eroare la crearea evenimentului." }, { status: 400 });
   }
 }

@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Hero from '$lib/components/Hero.svelte';
+  import LocationMapPreview from '$lib/components/LocationMapPreview.svelte';
   import MessageThread from '$lib/components/MessageThread.svelte';
+  import { DESAGA_ADDRESS } from '$lib/location';
   import { auth } from '$lib/stores/auth';
 
   const phoneHref = 'tel:+40729969822';
   const facebookHref = 'https://www.facebook.com/desagaculegume/';
   const instagramHref = 'https://www.instagram.com/desaga_cu_legume/';
-  const mapSrc =
-    'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2733.2627958985477!2d23.613140411901085!3d46.759716245953896!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47490c49b6ff9853%3A0x2cdb1ae569801b0b!2sStrada%20Constantin%20Br%C3%A2ncu%C8%99i%20153%2C%20Cluj-Napoca%20400645%2C%20Rom%C3%A2nia!5e0!3m2!1sro!2sdk!4v1765492717214!5m2!1sro!2sdk';
 
   let authChecked = false;
 
@@ -29,7 +29,7 @@
 <Hero
   title="Contact DeSaga"
   subtitle="Sună pentru stocul de azi sau trimite un mesaj despre comandă"
-  backgroundImage=""
+  backgroundImage="/images/contact/hero-contact.jpg"
   height="300px"
 />
 
@@ -56,7 +56,7 @@
         <div class="card-icon"><i class="bi bi-geo-alt-fill"></i></div>
         <div>
           <h2 id="location-title">Rulota DeSaga</h2>
-          <p>Cluj-Napoca, Str. Constantin Brâncuși nr. 153</p>
+          <p>{DESAGA_ADDRESS}</p>
           <p class="muted mb-0">Program: L–V, 9:00–18:00</p>
         </div>
       </section>
@@ -75,12 +75,7 @@
     </div>
 
     <div class="map-panel">
-      <iframe
-        src={mapSrc}
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade"
-        title="Harta DeSaga cu Legume"
-      ></iframe>
+      <LocationMapPreview />
     </div>
 
     <section class="messages-shell" aria-labelledby="messages-title">
@@ -152,8 +147,7 @@
   }
 
   .contact-card,
-  .panel,
-  .map-panel {
+  .panel {
     background: #fff;
     border: 1px solid rgba(15, 23, 42, 0.08);
     border-radius: 20px;
@@ -219,15 +213,7 @@
   }
 
   .map-panel {
-    overflow: hidden;
     margin-bottom: 1.4rem;
-  }
-
-  .map-panel iframe {
-    width: 100%;
-    height: 280px;
-    border: 0;
-    display: block;
   }
 
   .messages-shell {
@@ -309,8 +295,5 @@
       flex-direction: column;
     }
 
-    .map-panel iframe {
-      height: 230px;
-    }
   }
 </style>

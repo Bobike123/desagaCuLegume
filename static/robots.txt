@@ -1,3 +1,14 @@
-# allow crawling everything by default
 User-agent: *
-Disallow:
+Disallow: /admin/
+Disallow: /api/
+Disallow: /security-decoy
+Disallow: /admin-backup
+Disallow: /old-admin
+Disallow: /phpmyadmin
+Disallow: /wp-admin
+Disallow: /.env
+Disallow: /backup.zip
+Disallow: /database-dump
+Disallow: /internal-panel
+
+Sitemap: https://desagaculegume.ro/sitemap.xml

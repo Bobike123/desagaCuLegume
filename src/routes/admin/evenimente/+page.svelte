@@ -1,7 +1,6 @@
 <!-- src/routes/admin/evenimente/+page.svelte -->
 <script lang="ts">
   import { onMount } from "svelte";
-  import AdminNav from "$lib/components/AdminNav.svelte";
 
   type EventItem = {
     id: string;
@@ -17,6 +16,8 @@
   let loading = true;
   let errorMsg = "";
   let searchQuery = "";
+  let statusFilter = "";
+  let sortMode = "date-asc";
   let toast = "";
   let toastType: "success" | "danger" | "info" = "info";
 
@@ -45,7 +46,7 @@
     loading = true;
     errorMsg = "";
     try {
-      const res = await fetch("/api/evenimente?admin=true");
+      const res = await fetch("/api/evenimente?admin=true&limit=100");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         errorMsg = data?.error ?? "Eroare la încărcarea evenimentelor";
@@ -62,9 +63,24 @@
 
   onMount(loadEvents);
 
-  $: filteredEvents = (events ?? []).filter((e) =>
-    (e.title ?? "").toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  $: filteredEvents = (events ?? [])
+    .filter((event) => {
+      const q = searchQuery.trim().toLowerCase();
+      const matchesStatus =
+        !statusFilter ||
+        (statusFilter === "published" ? Boolean(event.published) : !Boolean(event.published));
+      if (!q) return matchesStatus;
+      const haystack = `${event.title ?? ""} ${event.location ?? ""} ${event.event_type ?? ""} ${event.date ?? ""}`.toLowerCase();
+      return matchesStatus && haystack.includes(q);
+    })
+    .slice()
+    .sort((a, b) => {
+      const left = new Date(a.date ?? a.created_at ?? 0).getTime();
+      const right = new Date(b.date ?? b.created_at ?? 0).getTime();
+      if (sortMode === "date-desc") return right - left;
+      if (sortMode === "title") return String(a.title ?? "").localeCompare(String(b.title ?? ""), "ro");
+      return left - right;
+    });
 
   async function deleteEvent(id: string) {
     if (!confirm("Ești sigur că vrei să ștergi evenimentul?")) return;
@@ -110,9 +126,7 @@
   <title>Gestionare Evenimente - Admin DeSaga</title>
 </svelte:head>
 
-<AdminNav />
-
-<div class="page">
+<div class="admin-page">
   <header class="topbar">
     <div>
       <p class="eyebrow">Calendar public</p>
@@ -134,15 +148,25 @@
   {/if}
 
   <section class="toolbar">
-    <label class="search">
-      <i class="bi bi-search"></i>
-      <input type="search" placeholder="Caută după titlu..." bind:value={searchQuery} />
+    <label class="searchBox" aria-label="Caută evenimente">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input type="search" placeholder="Caută după titlu, locație, tip sau dată..." bind:value={searchQuery} />
     </label>
+    <select bind:value={statusFilter} aria-label="Filtrează evenimente">
+      <option value="">Toate</option>
+      <option value="published">Publice</option>
+      <option value="draft">Draft</option>
+    </select>
+    <select bind:value={sortMode} aria-label="Sortează evenimente">
+      <option value="date-asc">Dată crescător</option>
+      <option value="date-desc">Dată descrescător</option>
+      <option value="title">Titlu A-Z</option>
+    </select>
     <span class="count">{loading ? '…' : filteredEvents.length} rezultate</span>
   </section>
 
   {#if loading}
-    <section class="stateCard"><span class="spinner"></span><strong>Se încarcă evenimentele…</strong></section>
+    <section class="stateCard"><span class="spinner" aria-hidden="true"></span><strong>Se încarcă evenimentele…</strong></section>
   {:else if filteredEvents.length > 0}
     <section class="eventGrid">
       {#each filteredEvents as event (event.id)}
@@ -174,58 +198,12 @@
     <section class="emptyCard">
       <i class="bi bi-calendar-event"></i>
       <h2>Nu sunt evenimente disponibile</h2>
-      <p>Creează primul eveniment din butonul „Eveniment nou”.</p>
+      <p>Creează primul eveniment din butonul „Eveniment nou".</p>
     </section>
   {/if}
 </div>
 
 <style>
-  .page {
-    --bg: #f6f1e7;
-    --surface: #fffdf7;
-    --ink: #1d241b;
-    --muted: #6b7165;
-    --line: rgba(31, 42, 28, 0.12);
-    --accent: #274f2a;
-    --green: #8bd450;
-    margin-left: 240px;
-    min-height: 100vh;
-    padding: clamp(18px, 3vw, 34px);
-    background: radial-gradient(900px 420px at 8% -5%, rgba(139, 212, 80, 0.2), transparent 60%), var(--bg);
-    color: var(--ink);
-  }
-
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: end;
-    gap: 18px;
-    margin-bottom: 16px;
-  }
-
-  .eyebrow {
-    margin: 0 0 6px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.13em;
-    font-size: 0.75rem;
-    font-weight: 950;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(2.2rem, 7vw, 4.6rem);
-    line-height: 0.94;
-    letter-spacing: -0.07em;
-    font-weight: 950;
-  }
-
-  .topbar p:not(.eyebrow) {
-    margin: 12px 0 0;
-    max-width: 720px;
-    color: var(--muted);
-  }
-
   .actions {
     display: flex;
     gap: 10px;
@@ -254,6 +232,7 @@
   .cardBtn.primary {
     background: var(--accent);
     color: #fffdf7;
+    border-color: transparent;
   }
 
   .pill:disabled {
@@ -263,34 +242,19 @@
   .toolbar {
     margin-bottom: 16px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(240px, 1fr) minmax(140px, 180px) minmax(150px, 200px) auto;
     gap: 12px;
     align-items: center;
   }
 
-  .search {
-    position: relative;
-    display: block;
-  }
-
-  .search i {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-  }
-
-  .search input {
-    width: 100%;
-    min-height: 54px;
+  .toolbar select {
+    min-height: 44px;
     border: 1px solid var(--line);
-    border-radius: 22px;
-    padding: 0 18px 0 46px;
+    border-radius: 999px;
+    padding: 0 14px;
     background: rgba(255, 253, 247, 0.9);
     color: var(--ink);
-    font-weight: 800;
-    box-shadow: 0 12px 30px rgba(35, 51, 30, 0.07);
+    font-weight: 850;
   }
 
   .count {
@@ -303,25 +267,34 @@
     white-space: nowrap;
   }
 
+  .searchBox input {
+    width: 100%;
+  }
+
   .eventGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
     gap: 14px;
   }
 
-  .eventCard,
-  .stateCard,
-  .emptyCard {
+  .eventCard {
     border: 1px solid var(--line);
     border-radius: 28px;
     background: rgba(255, 253, 247, 0.92);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
-  }
-
-  .eventCard {
     padding: 18px;
     display: grid;
     gap: 18px;
+  }
+
+  @media (max-width: 820px) {
+    .toolbar {
+      grid-template-columns: 1fr;
+    }
+
+    .count {
+      justify-content: center;
+    }
   }
 
   .eventCard.unpublished {
@@ -401,62 +374,11 @@
     border-color: #facaca;
   }
 
-  .notice {
-    margin-bottom: 14px;
-    border-radius: 18px;
-    padding: 14px 16px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    font-weight: 850;
-  }
-
-  .notice.success { background: #ecf8df; border: 1px solid #b9e58d; color: #285b20; }
-  .notice.info { background: #f4f1e8; border: 1px solid var(--line); color: var(--accent); }
-  .notice.danger { background: #fff1f1; border: 1px solid #facaca; color: #842029; }
-
-  .stateCard,
-  .emptyCard {
-    padding: 36px 20px;
-    display: grid;
-    place-items: center;
-    text-align: center;
-    gap: 12px;
-    color: var(--muted);
-  }
-
-  .emptyCard i {
-    font-size: 2rem;
-    color: var(--accent);
-  }
-
-  .emptyCard h2 {
-    margin: 0;
-    color: var(--ink);
-    font-weight: 950;
-  }
-
-  .spinner {
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    border: 3px solid rgba(39, 79, 42, 0.18);
-    border-top-color: var(--accent);
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  @media (max-width: 991.98px) {
-    .page {
-      margin-left: 0;
-      padding: 88px 16px 24px;
-    }
-  }
-
   @media (max-width: 680px) {
-    .topbar,
-    .toolbar,
+    .toolbar {
+      grid-template-columns: 1fr;
+    }
+
     .eventCard header {
       display: grid;
       grid-template-columns: 1fr;

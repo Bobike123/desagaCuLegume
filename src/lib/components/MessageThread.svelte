@@ -1,74 +1,30 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { formatMoney, statusLabel } from '$lib/format';
+  import {
+    normalizeSupportTopic,
+    SUPPORT_TOPIC_META,
+    SUPPORT_TOPICS,
+    type SupportTopic,
+  } from '$lib/support-messages';
+  import {
+    buildConversationItems,
+    customerName,
+    mapConversationDetail,
+    normalizeStatus,
+    normalizeText,
+    topicMeta,
+    type ConversationDetail,
+    type ConversationListItem,
+    type Mode,
+    type OrderItem,
+    type RawConversation,
+  } from '$lib/message-thread';
 
-  type Mode = 'user' | 'admin';
   type ConversationStatus = 'ALL' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
+  type ConversationView = 'main' | 'archive';
+  type TopicFilter = 'ALL' | SupportTopic;
 
-  type OrderItem = {
-    id: string;
-    orderNumber: string;
-    total: number;
-    currency: string;
-    status: string;
-    paymentStatus: string;
-    fulfillmentStatus: string;
-    createdAt: string;
-  };
-
-  type RawConversation = {
-    id?: unknown;
-    subject?: unknown;
-    status?: unknown;
-    unreadCount?: unknown;
-    createdAt?: unknown;
-    updatedAt?: unknown;
-    user?: {
-      fullName?: unknown;
-      email?: unknown;
-      phone?: unknown;
-    } | null;
-    lastMessage?: {
-      body?: unknown;
-      senderType?: unknown;
-      createdAt?: unknown;
-    } | null;
-  };
-
-  type ConversationUser = {
-    fullName: string | null;
-    email: string;
-    phone: string | null;
-  } | null;
-
-  type ConversationListItem = {
-    id: string;
-    subject: string;
-    status: string;
-    unreadCount: number;
-    updatedAt: string;
-    order: OrderItem | null;
-    kind: 'order' | 'general';
-    user: ConversationUser;
-    lastMessage: {
-      body: string;
-      senderType: string;
-      createdAt: string;
-    } | null;
-  };
-
-  type ConversationDetail = {
-    id: string;
-    subject: string;
-    status: string;
-    user: ConversationUser;
-    messages: Array<{
-      id: string;
-      senderType: string;
-      body: string;
-      createdAt: string;
-      isRead: boolean;
-    }>;
-  };
 
   export let mode: Mode = 'user';
   export let orders: OrderItem[] = [];
@@ -76,13 +32,16 @@
   export let collapsible = false;
   export let title = '';
   export let subtitle = '';
+  export let ready = true;
+  export let ordersReady = false;
 
   let items: ConversationListItem[] = [];
   let current: ConversationDetail | null = null;
   let selectedId = '';
   let selectedOrderId = '';
   let reply = '';
-  let generalSubject = 'Întrebare generală';
+  let generalSubject = '';
+  let newTopic: SupportTopic = 'GENERAL';
   let loading = false;
   let loadingCurrent = false;
   let reloading = false;
@@ -91,18 +50,31 @@
   let error = '';
   let q = '';
   let statusFilter: ConversationStatus = 'ALL';
+  let topicFilter: TopicFilter = 'ALL';
+  let conversationView: ConversationView = 'main';
+  let clientFilter = '';
   let hasLoaded = false;
+
+  const FETCH_TIMEOUT_MS = 15_000;
 
   const statusFilters: Array<{ value: ConversationStatus; label: string }> = [
     { value: 'ALL', label: 'Toate' },
     { value: 'OPEN', label: 'Deschise' },
     { value: 'CLOSED', label: 'Închise' },
-    { value: 'ARCHIVED', label: 'Arhivate' },
   ];
 
-  function formatMoney(value: number, currency = 'RON') {
-    return `${Number(value ?? 0).toFixed(2)} ${currency || 'RON'}`;
-  }
+  const topicFilters: Array<{ value: TopicFilter; label: string }> = [
+    { value: 'ALL', label: 'Toate' },
+    ...SUPPORT_TOPICS.map((topic) => ({
+      value: topic,
+      label: SUPPORT_TOPIC_META[topic].shortLabel,
+    })),
+  ];
+
+  const userTopicOptions = SUPPORT_TOPICS.map((topic) => ({
+    value: topic,
+    label: SUPPORT_TOPIC_META[topic].label,
+  }));
 
   function formatDate(value: string | null | undefined) {
     if (!value) return '—';
@@ -118,143 +90,45 @@
     });
   }
 
-  function normalizeStatus(value: string | null | undefined) {
-    return String(value ?? 'OPEN').trim().toUpperCase();
-  }
 
-  function statusLabel(value: string | null | undefined) {
-    const status = normalizeStatus(value);
-    const labels: Record<string, string> = {
-      OPEN: 'Deschisă',
-      CLOSED: 'Închisă',
-      ARCHIVED: 'Arhivată',
-      PLACED: 'Plasată',
-      PENDING: 'În așteptare',
-      PAID: 'Plătită',
-      CANCELLED: 'Anulată',
-      COMPLETED: 'Finalizată',
-      UNFULFILLED: 'Nepregătită',
-      FULFILLED: 'Livrată',
-    };
+  async function fetchJson(path: string, options: RequestInit = {}) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    return labels[status] ?? status.replaceAll('_', ' ').toLowerCase();
-  }
-
-  function readString(value: unknown, fallback = '') {
-    return typeof value === 'string' ? value : value == null ? fallback : String(value);
-  }
-
-  function readNullableString(value: unknown) {
-    const normalized = readString(value).trim();
-    return normalized || null;
-  }
-
-  function readUser(value: RawConversation['user']): ConversationUser {
-    if (!value) return null;
-    return {
-      fullName: readNullableString(value.fullName),
-      email: readString(value.email),
-      phone: readNullableString(value.phone),
-    };
-  }
-
-  function normalizeText(value: string) {
-    return value
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/ă|â/g, 'a')
-      .replace(/î/g, 'i')
-      .replace(/ș|ş/g, 's')
-      .replace(/ț|ţ/g, 't');
-  }
-
-  function customerName(item: ConversationListItem | ConversationDetail | null) {
-    return item?.user?.fullName || item?.user?.email || 'Utilizator';
-  }
-
-  function conversationMatchesOrder(conversation: RawConversation, order: OrderItem) {
-    const subject = readString(conversation.subject).toLowerCase();
-    const orderNumber = String(order.orderNumber ?? '').toLowerCase();
-    const orderId = String(order.id ?? '').toLowerCase();
-    return Boolean(orderNumber && subject.includes(orderNumber)) || Boolean(orderId && subject.includes(orderId));
-  }
-
-  function mapConversation(conversation: RawConversation, order: OrderItem | null): ConversationListItem {
-    const updatedAt = readString(conversation.updatedAt || conversation.createdAt || order?.createdAt || new Date().toISOString());
-    const subjectFallback = order ? `Comandă ${order.orderNumber}` : 'Mesaj către DeSaga';
-
-    return {
-      id: readString(conversation.id),
-      subject: readString(conversation.subject, subjectFallback),
-      status: readString(conversation.status, 'OPEN'),
-      unreadCount: Number(conversation.unreadCount ?? 0),
-      updatedAt,
-      order,
-      kind: order ? 'order' : 'general',
-      user: readUser(conversation.user),
-      lastMessage: conversation.lastMessage
-        ? {
-            body: readString(conversation.lastMessage.body),
-            senderType: readString(conversation.lastMessage.senderType),
-            createdAt: readString(conversation.lastMessage.createdAt),
-          }
-        : null,
-    };
-  }
-
-  function buildConversationItems(rawConversations: RawConversation[]) {
-    if (mode === 'admin') {
-      return rawConversations
-        .map((conversation: RawConversation) => mapConversation(conversation, null))
-        .filter((item: ConversationListItem) => item.id)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    try {
+      const res = await fetch(path, {
+        ...options,
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      return { res, data };
+    } finally {
+      window.clearTimeout(timeout);
     }
-
-    const mapped: ConversationListItem[] = [];
-    const matchedConversationIds = new Set<string>();
-
-    for (const order of orders) {
-      const matching = rawConversations.filter((conversation: RawConversation) => conversationMatchesOrder(conversation, order));
-      for (const conversation of matching) {
-        const item = mapConversation(conversation, order);
-        if (!item.id) continue;
-        matchedConversationIds.add(item.id);
-        mapped.push(item);
-      }
-    }
-
-    for (const conversation of rawConversations) {
-      const id = readString(conversation.id);
-      if (!id || matchedConversationIds.has(id)) continue;
-      mapped.push(mapConversation(conversation, null));
-    }
-
-    mapped.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    return mapped;
   }
+
 
   async function loadOrders() {
     if (mode === 'admin') return;
+    if (ordersReady) return;
 
-    const res = await fetch('/api/orders');
-    const data = await res.json().catch(() => ({}));
+    const { res, data } = await fetchJson('/api/orders?limit=100');
     if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca comenzile.');
     orders = Array.isArray(data?.items) ? data.items : [];
   }
 
   async function loadMessages() {
-    const res = await fetch('/api/messages');
-    const data = await res.json().catch(() => ({}));
+    const { res, data } = await fetchJson('/api/messages?limit=50');
     if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca mesajele.');
     const rawConversations: RawConversation[] = Array.isArray(data?.items) ? data.items : [];
-    items = buildConversationItems(rawConversations);
+    items = buildConversationItems(rawConversations, mode, orders);
   }
 
   async function loadList() {
-    if (loading) return;
+    if (loading || !ready) return;
 
     loading = true;
+    hasLoaded = true;
     error = '';
 
     try {
@@ -265,15 +139,19 @@
         await loadMessages();
       }
 
-      if (selectedId && !items.some((item: ConversationListItem) => item.id === selectedId)) {
+      const selectableItems = items.filter((item: ConversationListItem) =>
+        conversationView === 'archive' ? isConversationArchived(item) : !isConversationArchived(item)
+      );
+
+      if (selectedId && !selectableItems.some((item: ConversationListItem) => item.id === selectedId)) {
         selectedId = '';
         selectedOrderId = '';
         current = null;
       }
 
-      if (!selectedId && !selectedOrderId && items.length > 0) {
-        selectedId = items[0].id;
-        selectedOrderId = items[0].order?.id ?? '';
+      if (!selectedId && !selectedOrderId && selectableItems.length > 0) {
+        selectedId = selectableItems[0].id;
+        selectedOrderId = selectableItems[0].order?.id ?? '';
       }
 
       if (selectedId) {
@@ -281,14 +159,19 @@
       } else if (mode === 'user' && selectedOrderId) {
         const selectedOrder = orders.find((order: OrderItem) => order.id === selectedOrderId);
         if (selectedOrder) selectOrderWithoutConversation(selectedOrder);
-      } else if (mode === 'user') {
+      } else if (mode === 'user' && conversationView === 'main') {
         selectGeneralNew();
       }
-
-      hasLoaded = true;
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Nu am putut încărca mesajele.';
-      current = null;
+      const aborted = err instanceof DOMException && err.name === 'AbortError';
+      const loadError = aborted ? 'Încărcarea mesajelor a durat prea mult. Reîncearcă.' : err instanceof Error ? err.message : 'Nu am putut încărca mesajele.';
+      if (mode === 'user') {
+        selectGeneralNew();
+        error = loadError;
+      } else {
+        error = loadError;
+        current = null;
+      }
     } finally {
       loading = false;
     }
@@ -310,16 +193,15 @@
     error = '';
 
     const selected = items.find((item: ConversationListItem) => item.id === id);
-    selectedOrderId = selected?.order?.id ?? '';
+    selectedOrderId = selected?.order?.id ?? selected?.orderId ?? '';
 
     try {
-      const res = await fetch(`/api/messages/${id}`);
-      const data = await res.json().catch(() => ({}));
+      const { res, data } = await fetchJson(`/api/messages/${id}`);
       if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca conversația.');
 
-      current = data.item;
+      current = mapConversationDetail(data.item);
 
-      await fetch(`/api/messages/${id}`, {
+      await fetchJson(`/api/messages/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ markRead: true }),
@@ -343,42 +225,42 @@
 
   async function refreshListSilent() {
     if (mode === 'admin') {
-      const res = await fetch('/api/messages');
-      const data = await res.json().catch(() => ({}));
+      const { res, data } = await fetchJson('/api/messages?limit=50');
       if (res.ok) {
         const rawConversations: RawConversation[] = Array.isArray(data?.items) ? data.items : [];
-        items = buildConversationItems(rawConversations);
+        items = buildConversationItems(rawConversations, mode, orders);
       }
       return;
     }
 
-    const [ordersRes, messagesRes] = await Promise.all([fetch('/api/orders'), fetch('/api/messages')]);
-    const ordersData = await ordersRes.json().catch(() => ({}));
-    const messagesData = await messagesRes.json().catch(() => ({}));
+    const [ordersResult, messagesResult] = await Promise.all([
+      ordersReady ? Promise.resolve(null) : fetchJson('/api/orders?limit=100'),
+      fetchJson('/api/messages?limit=50'),
+    ]);
 
-    if (ordersRes.ok) {
-      orders = Array.isArray(ordersData?.items) ? ordersData.items : [];
+    if (ordersResult?.res.ok) {
+      orders = Array.isArray(ordersResult.data?.items) ? ordersResult.data.items : [];
     }
 
-    if (messagesRes.ok) {
-      const rawConversations: RawConversation[] = Array.isArray(messagesData?.items) ? messagesData.items : [];
-      items = buildConversationItems(rawConversations);
+    if (messagesResult.res.ok) {
+      const rawConversations: RawConversation[] = Array.isArray(messagesResult.data?.items) ? messagesResult.data.items : [];
+      items = buildConversationItems(rawConversations, mode, orders);
     }
   }
 
   async function sendReply() {
     if (!selectedId || !reply.trim() || sending) return;
+    if (isConversationReadOnly(current)) return;
 
     sending = true;
     error = '';
 
     try {
-      const res = await fetch(`/api/messages/${selectedId}`, {
+      const { res, data } = await fetchJson(`/api/messages/${selectedId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: reply }),
       });
-      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Nu am putut trimite răspunsul.');
 
       reply = '';
@@ -397,12 +279,11 @@
     error = '';
 
     try {
-      const res = await fetch(`/api/messages/${selectedId}`, {
+      const { res, data } = await fetchJson(`/api/messages/${selectedId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
-      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Nu am putut actualiza statusul.');
 
       await loadConversation(selectedId);
@@ -416,11 +297,16 @@
   function selectOrderWithoutConversation(order: OrderItem) {
     selectedOrderId = order.id;
     selectedId = '';
+    newTopic = 'ORDER';
     current = {
       id: '',
-      subject: `Comandă ${order.orderNumber}`,
+      subject: `Comandă #${order.orderNumber}`,
       status: 'OPEN',
+      topic: 'ORDER',
+      orderId: order.id,
+      order,
       user: null,
+      closedAt: null,
       messages: [],
     };
     reply = '';
@@ -440,11 +326,16 @@
   function selectGeneralNew() {
     selectedOrderId = '';
     selectedId = '';
+    newTopic = 'GENERAL';
     current = {
       id: '',
-      subject: generalSubject,
+      subject: generalSubject.trim() || topicMeta(newTopic).label,
       status: 'OPEN',
+      topic: newTopic,
+      orderId: null,
+      order: null,
       user: null,
+      closedAt: null,
       messages: [],
     };
     reply = '';
@@ -459,13 +350,18 @@
 
     try {
       const selectedOrder = orders.find((order: OrderItem) => order.id === selectedOrderId);
-      const subject = selectedOrder ? `Comandă ${selectedOrder.orderNumber}` : generalSubject.trim() || 'Întrebare generală';
-      const res = await fetch('/api/messages', {
+      const topic = selectedOrder ? newTopic : normalizeSupportTopic(newTopic);
+      const subject = selectedOrder ? `Comandă #${selectedOrder.orderNumber}` : generalSubject.trim();
+      const { res, data } = await fetchJson('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, message: reply }),
+        body: JSON.stringify({
+          subject,
+          message: reply,
+          topic,
+          orderId: selectedOrder?.id ?? null,
+        }),
       });
-      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Nu am putut crea conversația.');
 
       reply = '';
@@ -489,8 +385,40 @@
 
   function senderLabel(senderType: string) {
     const normalized = normalizeStatus(senderType);
+    if (normalized === 'SYSTEM') return 'Sistem';
     if (mode === 'admin') return normalized === 'ADMIN' ? 'Admin' : 'Client';
     return normalized === 'ADMIN' ? 'Admin' : 'Tu';
+  }
+
+  function messageClass(senderType: string) {
+    const normalized = normalizeStatus(senderType);
+    if (normalized === 'SYSTEM') return 'msg-system';
+    const isOwnMessage = mode === 'admin' ? normalized === 'ADMIN' : normalized === 'USER';
+    return isOwnMessage ? 'msg-own' : 'msg-other';
+  }
+
+  function isConversationArchived(item: ConversationListItem | ConversationDetail | null) {
+    return normalizeStatus(item?.status) === 'ARCHIVED';
+  }
+
+  function isConversationReadOnly(item: ConversationDetail | null) {
+    const status = normalizeStatus(item?.status);
+    return Boolean(item?.id) && (status === 'CLOSED' || status === 'ARCHIVED');
+  }
+
+  function readOnlyMessage(item: ConversationDetail | null) {
+    if (normalizeStatus(item?.status) === 'ARCHIVED') {
+      return 'Această conversație este arhivată și poate fi doar citită.';
+    }
+    return 'Această conversație este închisă. Nu mai poți trimite mesaje.';
+  }
+
+  function switchConversationView(view: ConversationView) {
+    conversationView = view;
+    selectedId = '';
+    selectedOrderId = '';
+    current = null;
+    reply = '';
   }
 
   function orderConversation(orderId: string) {
@@ -498,26 +426,63 @@
   }
 
   $: selectedOrder = orders.find((order: OrderItem) => order.id === selectedOrderId) ?? null;
-  $: generalConversations = items.filter((item: ConversationListItem) => item.kind === 'general');
-  $: openCount = items.filter((item: ConversationListItem) => normalizeStatus(item.status) === 'OPEN').length;
+  $: currentOrder = selectedOrder ?? current?.order ?? null;
+  $: searchNeedle = normalizeText(q.trim());
+  $: mainItems = items.filter((item: ConversationListItem) => !isConversationArchived(item));
+  $: archivedItems = items.filter((item: ConversationListItem) => isConversationArchived(item));
+  $: sourceItems = conversationView === 'archive' ? archivedItems : mainItems;
+  $: generalConversations = sourceItems.filter((item: ConversationListItem) => item.kind === 'general');
+  $: openCount = mainItems.filter((item: ConversationListItem) => normalizeStatus(item.status) === 'OPEN').length;
+  $: archiveCount = archivedItems.length;
   $: unreadCount = items.reduce((sum: number, item: ConversationListItem) => sum + Number(item.unreadCount ?? 0), 0);
-  $: filteredItems = items.filter((item: ConversationListItem) => {
-    if (mode !== 'admin') return true;
 
-    const matchesStatus = statusFilter === 'ALL' || normalizeStatus(item.status) === statusFilter;
-    const needle = normalizeText(q.trim());
-    if (!needle) return matchesStatus;
+  $: clientList = (() => {
+    const map = new Map<string, { email: string; fullName: string | null; count: number; unread: number }>();
+    for (const item of sourceItems) {
+      const email = item.user?.email;
+      if (!email) continue;
+      const existing = map.get(email);
+      if (existing) {
+        existing.count++;
+        existing.unread += item.unreadCount;
+      } else {
+        map.set(email, { email, fullName: item.user?.fullName ?? null, count: 1, unread: item.unreadCount });
+      }
+    }
+    return [...map.values()].sort((a, b) => b.unread - a.unread || a.email.localeCompare(b.email));
+  })();
+
+  $: filteredItems = sourceItems.filter((item: ConversationListItem) => {
+    if (mode === 'admin' && clientFilter && item.user?.email !== clientFilter) return false;
+
+    const matchesStatus =
+      conversationView === 'archive' ||
+      statusFilter === 'ALL' ||
+      normalizeStatus(item.status) === statusFilter;
+    const matchesTopic = topicFilter === 'ALL' || item.topic === topicFilter;
+    if (!searchNeedle) return matchesStatus && matchesTopic;
 
     const haystack = normalizeText(
-      `${item.subject} ${item.user?.fullName ?? ''} ${item.user?.email ?? ''} ${item.user?.phone ?? ''} ${item.lastMessage?.body ?? ''}`
+      `${item.subject} ${item.order?.orderNumber ?? ''} ${item.user?.fullName ?? ''} ${item.user?.email ?? ''} ${item.user?.phone ?? ''} ${statusLabel(item.status)} ${item.lastMessage?.body ?? ''}`
     );
 
-    return matchesStatus && haystack.includes(needle);
+    return matchesStatus && matchesTopic && haystack.includes(searchNeedle);
   });
+
+  $: filteredOrders = orders.filter((order: OrderItem) => {
+    if (conversationView === 'archive') return false;
+    if (!searchNeedle) return true;
+    return normalizeText(
+      `${order.orderNumber} ${statusLabel(order.status)} ${statusLabel(order.paymentStatus)} ${statusLabel(order.fulfillmentStatus)} ${formatMoney(order.total, order.currency)}`
+    ).includes(searchNeedle);
+  });
+
+  $: readOnlyCurrent = isConversationReadOnly(current);
+
   $: resolvedTitle = title || (mode === 'admin' ? 'Mesaje clienți' : 'Mesaje și suport');
   $: resolvedSubtitle = subtitle || (mode === 'admin' ? 'Conversații dintre utilizatori și administratori.' : 'Scrie adminului despre comenzi, stoc sau livrare.');
 
-  $: if (browser && expanded && !hasLoaded && !loading) {
+  $: if (browser && expanded && ready && !hasLoaded && !loading) {
     void loadList();
   }
 </script>
@@ -559,9 +524,33 @@
 
     {#if mode === 'admin'}
       <div class="admin-tools">
+        <div class="view-tabs" aria-label="Tip conversații">
+          <button
+            type="button"
+            class:active={conversationView === 'main'}
+            aria-pressed={conversationView === 'main'}
+            on:click={() => switchConversationView('main')}
+          >
+            Conversații <span>{mainItems.length}</span>
+          </button>
+          <button
+            type="button"
+            class:active={conversationView === 'archive'}
+            aria-pressed={conversationView === 'archive'}
+            on:click={() => switchConversationView('archive')}
+          >
+            Arhivă <span>{archiveCount}</span>
+          </button>
+        </div>
+
         <div class="search-box">
           <i class="bi bi-search" aria-hidden="true"></i>
-          <input class="form-control" type="search" placeholder="Caută client, email, subiect…" bind:value={q} />
+          <input
+            class="form-control"
+            type="search"
+            placeholder={conversationView === 'archive' ? 'Caută în arhivă…' : 'Caută client, email, subiect…'}
+            bind:value={q}
+          />
           {#if q.trim()}
             <button type="button" aria-label="Șterge căutarea" on:click={() => (q = '')}>
               <i class="bi bi-x-lg"></i>
@@ -569,23 +558,48 @@
           {/if}
         </div>
 
-        <div class="filters" aria-label="Filtre status">
-          {#each statusFilters as filter (filter.value)}
-            <button
-              type="button"
-              class:active={statusFilter === filter.value}
-              aria-pressed={statusFilter === filter.value}
-              on:click={() => (statusFilter = filter.value)}
+        <div class="filters-row">
+          {#if clientList.length > 0}
+            <select
+              class="client-select"
+              class:has-filter={!!clientFilter}
+              bind:value={clientFilter}
+              on:change={() => { selectedId = ''; current = null; }}
+              aria-label="Filtrează după client"
             >
-              {filter.label}
-            </button>
-          {/each}
+              <option value="">Toți clienții ({sourceItems.length})</option>
+              {#each clientList as client (client.email)}
+                <option value={client.email}>{client.fullName ?? client.email} ({client.count})</option>
+              {/each}
+            </select>
+          {/if}
+
+          <select class="client-select" bind:value={topicFilter} aria-label="Filtrează după tip conversație">
+            {#each topicFilters as filter (filter.value)}
+              <option value={filter.value}>{filter.label}</option>
+            {/each}
+          </select>
+
+          {#if conversationView === 'main'}
+            <div class="filters" aria-label="Filtre status">
+              {#each statusFilters as filter (filter.value)}
+                <button
+                  type="button"
+                  class:active={statusFilter === filter.value}
+                  aria-pressed={statusFilter === filter.value}
+                  on:click={() => (statusFilter = filter.value)}
+                >
+                  {filter.label}
+                </button>
+              {/each}
+            </div>
+          {/if}
         </div>
       </div>
 
       <div class="list-summary">
-        <span>{loading ? 'Se încarcă…' : `${filteredItems.length} conversații`}</span>
-        <span>{loading ? '' : `${openCount} deschise`}</span>
+        <span>{loading ? 'Se încarcă…' : clientFilter ? `${filteredItems.length} conversații client` : `${filteredItems.length} conversații`}</span>
+        <span>{loading ? '' : conversationView === 'archive' ? `${archiveCount} arhivate` : `${openCount} deschise`}</span>
       </div>
 
       <div class="message-grid admin-grid">
@@ -615,7 +629,9 @@
                   {/if}
                 </div>
 
-                <div class="conversation-btn__subject">{item.subject}</div>
+                <div class="conversation-btn__subject">
+                  {item.order?.orderNumber ? `Comanda #${item.order.orderNumber}` : item.subject}
+                </div>
 
                 <div class="conversation-btn__meta">
                   <span class={`status-dot status-${normalizeStatus(item.status).toLowerCase()}`}></span>
@@ -643,7 +659,7 @@
           {:else if current}
             <div class="detail-header admin-detail-header">
               <div>
-                <h4>{current.subject}</h4>
+                <h4>{current.order?.orderNumber ? `Comanda #${current.order.orderNumber}` : current.subject}</h4>
                 <div class="customer-line">
                   <span>{customerName(current)}</span>
                   {#if current.user?.email}
@@ -660,9 +676,9 @@
                   {statusLabel(current.status)}
                 </span>
                 <div class="status-actions" aria-label="Schimbă status conversație">
-                  <button class="btn btn-sm btn-outline-accent" type="button" on:click={() => updateStatus('OPEN')} disabled={updatingStatus}>Open</button>
-                  <button class="btn btn-sm btn-outline-accent" type="button" on:click={() => updateStatus('CLOSED')} disabled={updatingStatus}>Closed</button>
-                  <button class="btn btn-sm btn-outline-accent" type="button" on:click={() => updateStatus('ARCHIVED')} disabled={updatingStatus}>Archived</button>
+                  <button class="btn btn-sm btn-outline-accent" type="button" on:click={() => updateStatus('OPEN')} disabled={updatingStatus}>Deschisă</button>
+                  <button class="btn btn-sm btn-outline-accent" type="button" on:click={() => updateStatus('CLOSED')} disabled={updatingStatus}>Închisă</button>
+                  <button class="btn btn-sm btn-outline-accent" type="button" on:click={() => updateStatus('ARCHIVED')} disabled={updatingStatus}>Arhivată</button>
                 </div>
               </div>
             </div>
@@ -676,7 +692,7 @@
                 </div>
               {:else}
                 {#each current.messages as msg (msg.id)}
-                  <div class={`msg ${normalizeStatus(msg.senderType) === 'ADMIN' ? 'msg-admin' : 'msg-user'}`}>
+                  <div class={`msg ${messageClass(msg.senderType)}`}>
                     <div class="msg-meta">
                       <strong>{senderLabel(msg.senderType)}</strong>
                       <span>{formatDate(msg.createdAt)}</span>
@@ -689,17 +705,23 @@
 
             <div class="reply-box">
               <label for="admin-reply">Răspuns administrator</label>
+              {#if readOnlyCurrent}
+                <div class="readonly-note" role="status">
+                  <i class="bi bi-lock"></i>
+                  <span>{readOnlyMessage(current)}</span>
+                </div>
+              {/if}
               <textarea
                 id="admin-reply"
                 class="form-control"
                 rows="4"
                 bind:value={reply}
                 placeholder="Scrie un răspuns clar pentru client…"
-                disabled={sending}
+                disabled={sending || readOnlyCurrent}
               ></textarea>
               <div class="reply-actions">
                 <span class="muted">{reply.trim().length} caractere</span>
-                <button class="btn btn-accent" type="button" on:click={sendReply} disabled={sending || !reply.trim()}>
+                <button class="btn btn-accent" type="button" on:click={sendReply} disabled={sending || readOnlyCurrent || !reply.trim()}>
                   <i class={`bi ${sending ? 'bi-arrow-repeat spin' : 'bi-send'}`}></i>
                   {sending ? 'Se trimite…' : 'Trimite răspuns'}
                 </button>
@@ -721,53 +743,108 @@
           <span>Se încarcă mesajele…</span>
         </div>
       {:else}
+        <div class="user-tools">
+          <div class="view-tabs" aria-label="Tip conversații">
+            <button
+              type="button"
+              class:active={conversationView === 'main'}
+              aria-pressed={conversationView === 'main'}
+              on:click={() => switchConversationView('main')}
+            >
+              Conversații <span>{mainItems.length}</span>
+            </button>
+            <button
+              type="button"
+              class:active={conversationView === 'archive'}
+              aria-pressed={conversationView === 'archive'}
+              on:click={() => switchConversationView('archive')}
+            >
+              Arhivă <span>{archiveCount}</span>
+            </button>
+          </div>
+
+          <div class="search-box">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input
+              class="form-control"
+              type="search"
+              placeholder={conversationView === 'archive' ? 'Caută în arhivă…' : 'Caută conversații sau comenzi…'}
+              bind:value={q}
+            />
+            {#if q.trim()}
+              <button type="button" aria-label="Șterge căutarea" on:click={() => (q = '')}>
+                <i class="bi bi-x-lg"></i>
+              </button>
+            {/if}
+          </div>
+        </div>
+
         <div class="message-grid user-grid">
           <aside class="list-panel" aria-label="Lista conversațiilor">
-            <button
-              class:selected={!selectedOrderId && !selectedId}
-              class="conv-btn new-btn"
-              type="button"
-              on:click={selectGeneralNew}
-            >
-              <span><i class="bi bi-plus-circle"></i> Mesaj nou</span>
-            </button>
-
-            {#if generalConversations.length > 0}
-              <div class="list-title">Conversații generale</div>
-              {#each generalConversations as item (item.id)}
-                <button
-                  class:selected={selectedId === item.id}
-                  class="conv-btn"
-                  type="button"
-                  on:click={() => selectConversation(item.id)}
-                >
-                  <span class="conv-title">{item.subject}</span>
-                  {#if item.unreadCount > 0}
-                    <span class="unread-badge">{item.unreadCount}</span>
-                  {/if}
-                </button>
-              {/each}
-            {/if}
-
-            <div class="list-title">Comenzile mele</div>
-            {#if orders.length === 0}
-              <div class="empty-msg">Nu ai comenzi.</div>
+            {#if conversationView === 'archive'}
+              <div class="list-title">Arhivă</div>
+              {#if filteredItems.length === 0}
+                <div class="empty-msg">Nu există conversații arhivate pentru căutarea curentă.</div>
+              {:else}
+                {#each filteredItems as item (item.id)}
+                  <button
+                    class:selected={selectedId === item.id}
+                    class="conv-btn"
+                    type="button"
+                    on:click={() => selectConversation(item.id)}
+                  >
+                    <span class="conv-title">{item.order?.orderNumber ? `#${item.order.orderNumber}` : item.subject}</span>
+                    <span class="badge-light">Arhivat</span>
+                  </button>
+                {/each}
+              {/if}
             {:else}
-              {#each orders as order (order.id)}
-                <button
-                  class:selected={selectedOrderId === order.id}
-                  class="conv-btn order-btn"
-                  type="button"
-                  on:click={() => selectOrder(order)}
-                >
-                  <span class="conv-title">#{order.orderNumber}</span>
-                  {#if orderConversation(order.id)?.unreadCount}
-                    <span class="unread-badge">{orderConversation(order.id)?.unreadCount}</span>
-                  {:else}
-                    <span class="badge-light">{statusLabel(order.status)}</span>
-                  {/if}
-                </button>
-              {/each}
+              <button
+                class:selected={!selectedOrderId && !selectedId}
+                class="conv-btn new-btn"
+                type="button"
+                on:click={selectGeneralNew}
+              >
+                <span><i class="bi bi-plus-circle"></i> Mesaj nou</span>
+              </button>
+
+              {#if generalConversations.length > 0}
+                <div class="list-title">Conversații generale</div>
+                {#each generalConversations as item (item.id)}
+                  <button
+                    class:selected={selectedId === item.id}
+                    class="conv-btn"
+                    type="button"
+                    on:click={() => selectConversation(item.id)}
+                  >
+                    <span class="conv-title">{item.subject}</span>
+                    {#if item.unreadCount > 0}
+                      <span class="unread-badge">{item.unreadCount}</span>
+                    {/if}
+                  </button>
+                {/each}
+              {/if}
+
+              <div class="list-title">Comenzile mele</div>
+              {#if filteredOrders.length === 0}
+                <div class="empty-msg">{q.trim() ? 'Nu există comenzi pentru căutarea curentă.' : 'Nu ai comenzi.'}</div>
+              {:else}
+                {#each filteredOrders as order (order.id)}
+                  <button
+                    class:selected={selectedOrderId === order.id}
+                    class="conv-btn order-btn"
+                    type="button"
+                    on:click={() => selectOrder(order)}
+                  >
+                    <span class="conv-title">#{order.orderNumber}</span>
+                    {#if orderConversation(order.id)?.unreadCount}
+                      <span class="unread-badge">{orderConversation(order.id)?.unreadCount}</span>
+                    {:else}
+                      <span class="badge-light">{statusLabel(order.status)}</span>
+                    {/if}
+                  </button>
+                {/each}
+              {/if}
             {/if}
           </aside>
 
@@ -776,18 +853,31 @@
               <div class="detail-header">
                 <div>
                   <h4>{current.subject}</h4>
-                  {#if selectedOrder}
-                    <p class="muted">{selectedOrder.orderNumber} · {formatMoney(selectedOrder.total, selectedOrder.currency)}</p>
+                  {#if currentOrder}
+                    <p class="muted">{currentOrder.orderNumber} · {formatMoney(currentOrder.total, currentOrder.currency)}</p>
                   {:else}
                     <p class="muted">Mesaj general</p>
                   {/if}
                 </div>
+                {#if readOnlyCurrent}
+                  <span class={`status-pill status-${normalizeStatus(current.status).toLowerCase()}`}>
+                    {statusLabel(current.status)}
+                  </span>
+                {/if}
               </div>
 
               {#if !selectedId && !selectedOrder}
                 <div class="form-group">
                   <label for="msg-subject">Subiect</label>
                   <input id="msg-subject" class="form-control" bind:value={generalSubject} />
+                </div>
+                <div class="form-group">
+                  <label for="msg-topic">Tip mesaj</label>
+                  <select id="msg-topic" class="form-control" bind:value={newTopic}>
+                    {#each userTopicOptions as option (option.value)}
+                      <option value={option.value}>{option.label}</option>
+                    {/each}
+                  </select>
                 </div>
               {/if}
 
@@ -800,7 +890,7 @@
                   </div>
                 {:else}
                   {#each current.messages as msg (msg.id)}
-                    <div class={`msg ${normalizeStatus(msg.senderType) === 'ADMIN' ? 'msg-admin' : 'msg-user'}`}>
+                    <div class={`msg ${messageClass(msg.senderType)}`}>
                       <div class="msg-meta">
                         <strong>{senderLabel(msg.senderType)}</strong>
                         <span>{formatDate(msg.createdAt)}</span>
@@ -813,17 +903,23 @@
 
               <div class="reply-box user-reply-box">
                 <label for="reply-msg">{selectedId ? 'Răspuns' : 'Mesaj'}</label>
+                {#if readOnlyCurrent}
+                  <div class="readonly-note" role="status">
+                    <i class="bi bi-lock"></i>
+                    <span>{readOnlyMessage(current)}</span>
+                  </div>
+                {/if}
                 <textarea
                   id="reply-msg"
                   class="form-control"
                   rows="3"
                   bind:value={reply}
                   placeholder={selectedId ? 'Scrie răspuns...' : 'Scrie mesaj...'}
-                  disabled={sending}
+                  disabled={sending || readOnlyCurrent}
                 ></textarea>
                 <div class="reply-actions">
                   <span class="muted">{reply.trim().length} caractere</span>
-                  <button class="btn btn-accent" type="button" on:click={submitMessage} disabled={sending || !reply.trim()}>
+                  <button class="btn btn-accent" type="button" on:click={submitMessage} disabled={sending || readOnlyCurrent || !reply.trim()}>
                     <i class={`bi ${sending ? 'bi-arrow-repeat spin' : 'bi-send'}`}></i>
                     {sending ? 'Se trimite...' : 'Trimite'}
                   </button>
@@ -833,7 +929,7 @@
               <div class="empty-thread detail-empty">
                 <i class="bi bi-arrow-left"></i>
                 <strong>Selectează o conversație.</strong>
-                <span>Sau începe un mesaj nou.</span>
+                <span>{conversationView === 'archive' ? 'Arhiva este disponibilă doar pentru citire.' : 'Sau începe un mesaj nou.'}</span>
               </div>
             {/if}
           </section>
@@ -958,11 +1054,80 @@
   }
 
   .admin-tools {
-    display: grid;
-    grid-template-columns: minmax(240px, 1fr) auto;
-    gap: 0.75rem;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
     padding: 1rem 1rem 0;
+  }
+
+  .user-tools {
+    display: grid;
+    gap: 0.65rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.08));
+  }
+
+  .view-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .view-tabs button {
+    min-height: 36px;
+    border: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.1));
+    border-radius: 999px;
+    padding: 0 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: #fff;
+    color: rgba(20, 33, 43, 0.72);
+    font-weight: 900;
+    cursor: pointer;
+  }
+
+  .view-tabs button span {
+    min-width: 22px;
+    min-height: 22px;
+    padding: 0 0.4rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.08);
+    font-size: 0.78rem;
+  }
+
+  .view-tabs button.active {
+    border-color: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.36);
+    background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.1);
+    color: var(--desaga-blue, #2699d6);
+  }
+
+  .filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+  }
+
+  .client-select {
+    height: 36px;
+    border: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.08));
+    border-radius: 999px;
+    padding: 0 0.85rem;
+    font-weight: 850;
+    font-size: 0.9rem;
+    color: rgba(20, 33, 43, 0.72);
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .client-select.has-filter {
+    border-color: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.35);
+    background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.1);
+    color: var(--desaga-blue, #2699d6);
   }
 
   .search-box {
@@ -1278,6 +1443,7 @@
   }
 
   .form-group .form-control,
+  .form-group select,
   .reply-box textarea {
     width: 100%;
     padding: 8px 12px;
@@ -1308,17 +1474,27 @@
     border: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.08));
   }
 
-  .msg-user {
+  .msg-other {
     background: rgba(15, 23, 42, 0.04);
-    justify-self: start;
     align-self: flex-start;
   }
 
-  .msg-admin {
+  .msg-own {
     background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.08);
     border-color: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.16);
-    justify-self: end;
     align-self: flex-end;
+  }
+
+  .msg-system {
+    max-width: min(640px, 94%);
+    align-self: center;
+    text-align: center;
+    background: rgba(100, 116, 139, 0.08);
+    color: rgba(20, 33, 43, 0.72);
+  }
+
+  .msg-system .msg-meta {
+    justify-content: center;
   }
 
   .msg-meta {
@@ -1341,6 +1517,20 @@
     margin-top: auto;
     padding-top: 1rem;
     border-top: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.08));
+  }
+
+  .readonly-note {
+    margin-bottom: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(100, 116, 139, 0.22);
+    border-radius: var(--desaga-radius-md, 12px);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(100, 116, 139, 0.08);
+    color: rgba(20, 33, 43, 0.72);
+    font-size: 0.9rem;
+    font-weight: 850;
   }
 
   .reply-actions {
@@ -1404,10 +1594,6 @@
   }
 
   @media (max-width: 991.98px) {
-    .admin-tools {
-      grid-template-columns: 1fr;
-    }
-
     .filters {
       justify-content: flex-start;
     }

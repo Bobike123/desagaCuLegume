@@ -1,9 +1,11 @@
 import { json } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
 import {
   assertStrongPassword,
   createSession,
   getRequestMeta,
+  getSessionTimeoutMinutes,
   hashPassword,
   normalizeEmail,
   normalizeUsername,
@@ -21,7 +23,9 @@ import {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,80}$/;
 
-export async function POST({ request, cookies }) {
+export async function POST(event: RequestEvent) {
+  const { request, cookies } = event;
+
   try {
     const body = await readJsonBody(request, { maxBytes: LIMITS.smallJson });
     const email = normalizeEmail(
@@ -67,7 +71,7 @@ export async function POST({ request, cookies }) {
       .insert({
         username,
         email,
-        password_hash: hashPassword(password),
+        password_hash: await hashPassword(password),
         full_name: fullName,
         phone,
         status: 'ACTIVE',
@@ -92,9 +96,10 @@ export async function POST({ request, cookies }) {
 
     if (userRoleError) throw userRoleError;
 
-    const meta = getRequestMeta(request);
-    const { token } = await createSession(inserted.user_id, meta);
-    setSessionCookie(cookies, token);
+    const meta = getRequestMeta(request, event.getClientAddress());
+    const timeoutMinutes = getSessionTimeoutMinutes(false);
+    const { token } = await createSession(inserted.user_id, meta, timeoutMinutes);
+    setSessionCookie(cookies, token, timeoutMinutes);
 
     return json({ success: true }, { status: 201 });
   } catch (error) {

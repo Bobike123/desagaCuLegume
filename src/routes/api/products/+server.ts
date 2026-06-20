@@ -1,10 +1,14 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import { getPagination, getPaginationMeta, noStoreHeaders, publicCacheHeaders } from '$lib/server/pagination';
 import {
   ensureCategory,
   fetchCategoryMap,
   findCategoryBySlug,
   formatProductRow,
+  isAllowedProductCategory,
+  normalizeProductCategorySlug,
+  PRODUCT_STATUSES,
   uniqueProductSlug,
 } from '$lib/server/catalog';
 import {
@@ -19,21 +23,25 @@ import {
   validationErrorResponse,
 } from '$lib/server/validation';
 
-const PRODUCT_STATUSES = ['ACTIVE', 'OUT_OF_STOCK', 'DISCONTINUED', 'DRAFT'] as const;
-
-export async function GET({ locals, url }) {
+export async function GET({ locals, url, setHeaders }) {
   try {
     const admin = createAdminClient();
-    const categorySlug = cleanString(url.searchParams.get('category')).slice(0, 80);
+    const requestedCategorySlug = cleanString(url.searchParams.get('category')).slice(0, 80);
+    const categorySlug = requestedCategorySlug ? normalizeProductCategorySlug(requestedCategorySlug) : null;
+    const pagination = getPagination(url, { defaultLimit: 50, maxLimit: 100 });
 
-    if (categorySlug === 'horeca') {
-      return json({ items: [] }, { status: 200 });
+    if (requestedCategorySlug && !categorySlug) {
+      if (locals.isAdmin) setHeaders(noStoreHeaders);
+      else setHeaders(publicCacheHeaders());
+      return json({ items: [], page: getPaginationMeta(pagination, 0) }, { status: 200 });
     }
 
     let query = admin
       .from('products')
-      .select('product_id, category_id, sku, slug, name, description, price, currency_code, image_url, stock_quantity, status, created_at, updated_at')
-      .order('created_at', { ascending: false });
+      .select('product_id, category_id, sku, slug, name, description, price, currency_code, image_url, stock_quantity, status, created_at, updated_at', {
+        count: 'exact',
+      })
+      .is('deleted_at', null);
 
     if (!locals.isAdmin) {
       query = query.in('status', ['ACTIVE', 'OUT_OF_STOCK']);
@@ -41,28 +49,37 @@ export async function GET({ locals, url }) {
 
     if (categorySlug) {
       const category = await findCategoryBySlug(categorySlug);
-      if (!category) return json({ items: [] }, { status: 200 });
+      if (!category) {
+        if (locals.isAdmin) setHeaders(noStoreHeaders);
+        else setHeaders(publicCacheHeaders());
+        return json({ items: [], page: getPaginationMeta(pagination, 0) }, { status: 200 });
+      }
       query = query.eq('category_id', category.category_id);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(pagination.offset, pagination.to);
     if (error) throw error;
 
     const categoryMap = await fetchCategoryMap((data ?? []).map((row) => row.category_id));
     const items = (data ?? [])
       .map((row) => formatProductRow(row, categoryMap.get(Number(row.category_id))?.slug))
-      .filter((item) => locals.isAdmin || item.category !== 'horeca');
+      .filter((item) => isAllowedProductCategory(item.category));
 
-    return json({ items }, { status: 200 });
+    if (locals.isAdmin) setHeaders(noStoreHeaders);
+    else setHeaders(publicCacheHeaders());
+
+    return json({ items, page: getPaginationMeta(pagination, count ?? 0) }, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load products';
-    return json({ error: message }, { status: 400 });
+    console.error('Products load failed', error);
+    return json({ error: 'Nu am putut încărca produsele.' }, { status: 400 });
   }
 }
 
 export async function POST({ locals, request }) {
   if (!locals.isAdmin || !locals.user) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: 'Acces neautorizat.' }, { status: 401 });
   }
 
   try {
@@ -72,7 +89,12 @@ export async function POST({ locals, request }) {
     if (!name) return json({ error: 'Numele produsului este obligatoriu.' }, { status: 400 });
 
     const requestedCategory = stringField(body, 'category', { max: 80, defaultValue: 'de-sezon', fieldLabel: 'Categoria' });
-    const categorySlug = requestedCategory === 'horeca' ? 'de-sezon' : requestedCategory;
+    const categorySlug = normalizeProductCategorySlug(requestedCategory);
+
+    if (!categorySlug) {
+      return json({ error: 'Categoria trebuie să fie De sezon sau La borcan.' }, { status: 400 });
+    }
+
     const category = await ensureCategory(categorySlug);
     const slug = body.slug ? stringField(body, 'slug', { max: 120, fieldLabel: 'Slug' }) : await uniqueProductSlug(name);
     const sku = stringField(body, 'sku', { max: 80, fieldLabel: 'SKU' }) || `PROD-${Date.now()}`;
@@ -116,7 +138,7 @@ export async function POST({ locals, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Failed to create product';
-    return json({ error: message }, { status: 400 });
+    console.error('Product create failed', error);
+    return json({ error: 'Nu am putut crea produsul.' }, { status: 400 });
   }
 }

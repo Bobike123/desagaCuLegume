@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import AdminNav from '$lib/components/AdminNav.svelte';
 
   type ProductItem = {
     id: string;
@@ -23,7 +22,7 @@
     error = '';
 
     try {
-      const res = await fetch('/api/products');
+      const res = await fetch('/api/products?limit=100');
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Eroare la încărcarea produselor');
       items = Array.isArray(data?.items) ? data.items : [];
@@ -60,9 +59,7 @@
   <title>Produse - Admin DeSaga</title>
 </svelte:head>
 
-<AdminNav />
-
-<div class="page">
+<div class="admin-page">
   <header class="topbar">
     <div>
       <p class="eyebrow">Catalog</p>
@@ -76,8 +73,8 @@
   </header>
 
   <section class="toolbar">
-    <label class="search">
-      <i class="bi bi-search"></i>
+    <label class="searchBox" aria-label="Caută produse">
+      <i class="bi bi-search" aria-hidden="true"></i>
       <input type="search" placeholder="Caută după nume, SKU sau categorie..." bind:value={searchQuery} />
     </label>
     <span class="count">{loading ? '…' : filtered.length} produse</span>
@@ -88,7 +85,7 @@
   {/if}
 
   {#if loading}
-    <section class="stateCard"><span class="spinner"></span><strong>Se încarcă produsele…</strong></section>
+    <section class="stateCard"><span class="spinner" aria-hidden="true"></span><strong>Se încarcă produsele…</strong></section>
   {:else if filtered.length === 0}
     <section class="emptyCard">
       <i class="bi bi-box-seam"></i>
@@ -124,52 +121,6 @@
 </div>
 
 <style>
-  .page {
-    --bg: #f6f1e7;
-    --surface: #fffdf7;
-    --ink: #1d241b;
-    --muted: #6b7165;
-    --line: rgba(31, 42, 28, 0.12);
-    --accent: #274f2a;
-    --green: #8bd450;
-    margin-left: 240px;
-    min-height: 100vh;
-    padding: clamp(18px, 3vw, 34px);
-    background: radial-gradient(900px 420px at 8% -5%, rgba(139, 212, 80, 0.2), transparent 60%), var(--bg);
-    color: var(--ink);
-  }
-
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: end;
-    gap: 18px;
-    margin-bottom: 16px;
-  }
-
-  .eyebrow {
-    margin: 0 0 6px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.13em;
-    font-size: 0.75rem;
-    font-weight: 950;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(2.2rem, 7vw, 4.6rem);
-    line-height: 0.94;
-    letter-spacing: -0.07em;
-    font-weight: 950;
-  }
-
-  .topbar p:not(.eyebrow) {
-    margin: 12px 0 0;
-    max-width: 740px;
-    color: var(--muted);
-  }
-
   .actions {
     display: flex;
     gap: 10px;
@@ -197,6 +148,7 @@
   .pill.primary {
     background: var(--accent);
     color: #fffdf7;
+    border-color: transparent;
   }
 
   .pill:disabled {
@@ -209,31 +161,6 @@
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
     align-items: center;
-  }
-
-  .search {
-    position: relative;
-    display: block;
-  }
-
-  .search i {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-  }
-
-  .search input {
-    width: 100%;
-    min-height: 54px;
-    border: 1px solid var(--line);
-    border-radius: 22px;
-    padding: 0 18px 0 46px;
-    background: rgba(255, 253, 247, 0.9);
-    color: var(--ink);
-    font-weight: 800;
-    box-shadow: 0 12px 30px rgba(35, 51, 30, 0.07);
   }
 
   .count {
@@ -252,16 +179,11 @@
     gap: 14px;
   }
 
-  .productCard,
-  .stateCard,
-  .emptyCard {
+  .productCard {
     border: 1px solid var(--line);
     border-radius: 28px;
     background: rgba(255, 253, 247, 0.92);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
-  }
-
-  .productCard {
     padding: 18px;
     display: grid;
     gap: 18px;
@@ -339,65 +261,11 @@
     border-color: #facaca;
   }
 
-  .notice,
-  .stateCard,
-  .emptyCard {
-    padding: 28px 20px;
-  }
-
-  .notice.danger {
-    margin-bottom: 14px;
-    border-radius: 18px;
-    background: #fff1f1;
-    border: 1px solid #facaca;
-    color: #842029;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 850;
-  }
-
-  .stateCard,
-  .emptyCard {
-    display: grid;
-    place-items: center;
-    gap: 12px;
-    text-align: center;
-    color: var(--muted);
-  }
-
-  .emptyCard i {
-    font-size: 2rem;
-    color: var(--accent);
-  }
-
-  .emptyCard h2 {
-    margin: 0;
-    color: var(--ink);
-    font-weight: 950;
-  }
-
-  .spinner {
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    border: 3px solid rgba(39, 79, 42, 0.18);
-    border-top-color: var(--accent);
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  @media (max-width: 991.98px) {
-    .page {
-      margin-left: 0;
-      padding: 88px 16px 24px;
-    }
-  }
-
   @media (max-width: 720px) {
-    .topbar,
-    .toolbar,
+    .toolbar {
+      grid-template-columns: 1fr;
+    }
+
     .productCard header,
     .productCard footer {
       grid-template-columns: 1fr;

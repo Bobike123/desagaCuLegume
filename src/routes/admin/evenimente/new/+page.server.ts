@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import { EVENT_TYPES } from '$lib/server/events';
 import {
   booleanField,
   enumField,
@@ -11,8 +12,6 @@ import {
   validationErrorResponse,
 } from '$lib/server/validation';
 
-const EVENT_TYPES = ['FESTIVAL', 'PIATA', 'ATELIER'] as const;
-
 export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.isAdmin) throw redirect(303, '/admin/login');
   return {};
@@ -21,7 +20,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
   default: async ({ request, locals }) => {
     if (!locals.isAdmin) {
-      return fail(401, { error: 'Unauthorized' });
+      return fail(401, { error: 'Acces neautorizat.' });
     }
 
     const contentLength = Number(request.headers.get('content-length') ?? 0);

@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { slide } from 'svelte/transition';
   import MessageThread from '$lib/components/MessageThread.svelte';
+  import { formatMoney, formatDate, statusLabel } from '$lib/format';
   import { auth } from '$lib/stores/auth';
   import { cart } from '$lib/stores/cart';
 
@@ -67,39 +68,6 @@
     confirmation: '',
   };
 
-  function formatMoney(value: number, currency = 'RON') {
-    return `${Number(value || 0).toFixed(2)} ${currency || 'RON'}`;
-  }
-
-  function formatDate(value: string | null | undefined) {
-    if (!value) return 'Dată indisponibilă';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Dată indisponibilă';
-    return date.toLocaleString('ro-RO', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    });
-  }
-
-  function statusLabel(value: string | null | undefined) {
-    const labels: Record<string, string> = {
-      PLACED: 'Plasată',
-      PENDING: 'În așteptare',
-      PAID: 'Plătită',
-      PROCESSING: 'În pregătire',
-      SHIPPED: 'Expediată',
-      DELIVERED: 'Livrată',
-      COMPLETED: 'Finalizată',
-      CANCELLED: 'Anulată',
-      REFUNDED: 'Rambursată',
-      UNFULFILLED: 'Nepregătită',
-      FULFILLED: 'Livrată',
-    };
-
-    const normalized = String(value ?? '').trim().toUpperCase();
-    return labels[normalized] ?? String(value ?? '—').replaceAll('_', ' ');
-  }
-
   async function loadOrderDetails(orderId: string) {
     if (!orderId) return;
     detailsLoading = true;
@@ -133,7 +101,7 @@
     error = '';
 
     try {
-      const res = await fetch('/api/orders');
+      const res = await fetch('/api/orders?limit=100');
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca comenzile.');
       orders = Array.isArray(data?.items) ? data.items : [];
@@ -242,21 +210,12 @@
 
   onMount(async () => {
     await auth.refresh();
-
-    if (!$auth.isAuthenticated) {
-      await goto('/cont');
-      return;
-    }
-
-    if ($auth.isAdmin) {
-      await goto('/admin/dashboard');
-      return;
-    }
-
     await loadOrders();
     loading = false;
   });
 
+  // Seed form only on first load or when the signed-in account changes.
+  // Checking profileSeedUserId prevents auth-store refreshes (after save/session check) from overwriting in-progress edits.
   $: if ($auth.user && String($auth.user.id) !== profileSeedUserId) {
     profileSeedUserId = String($auth.user.id);
     profileForm = {
@@ -274,14 +233,14 @@
 
 <svelte:head>
   <title>Contul meu - DeSaga cu Legume</title>
-  <meta name="description" content="Dashboard client DeSaga cu Legume: profil, comenzi, mesaje și schimbare parolă." />
+  <meta name="description" content="Panou client DeSaga cu Legume: profil, comenzi, mesaje și schimbare parolă." />
 </svelte:head>
 
 <section class="user-page">
   <div class="container">
     <div class="page-head">
       <div>
-        <p class="eyebrow">Dashboard client</p>
+        <p class="eyebrow">Panou client</p>
         <h1>Contul meu</h1>
         <p class="muted m-0">Profil, comenzi și conversații legate de comenzile tale.</p>
       </div>
@@ -291,7 +250,7 @@
           <i class="bi bi-box"></i> Produse
         </a>
         <button class="btn btn-outline-danger" type="button" on:click={logout}>
-          <i class="bi bi-box-arrow-right"></i> Logout
+          <i class="bi bi-box-arrow-right"></i> Deconectare
         </button>
       </div>
     </div>
@@ -417,6 +376,8 @@
           <MessageThread
             mode="user"
             orders={orders}
+            ready={!loading && !$auth.loading}
+            ordersReady={true}
             title="Conversații"
             subtitle="Mesajele tale către admin și răspunsurile primite."
           />
@@ -433,7 +394,7 @@
 
             <form class="stack-form" on:submit={saveProfile}>
               <label>
-                <span>Nume complet</span>
+                <span>Nume</span>
                 <input class="form-control" bind:value={profileForm.fullName} disabled={profileSaving} />
               </label>
               <label>

@@ -1,5 +1,14 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import { getPagination, getPaginationMeta } from '$lib/server/pagination';
+import {
+  CONVERSATION_SELECT,
+  ORDER_SELECT,
+  getUserOrder,
+  loadConversationSummaries,
+  mapMessage,
+  mapOrder,
+} from '$lib/server/support';
 import {
   LIMITS,
   readJsonBody,
@@ -8,101 +17,16 @@ import {
   validationErrorResponse,
 } from '$lib/server/validation';
 
-function mapOrder(row: any) {
-  return {
-    id: String(row.order_id),
-    orderNumber: row.order_number,
-    userId: row.user_id != null ? String(row.user_id) : null,
-    customerFullName: row.customer_full_name,
-    customerEmail: row.customer_email,
-    total: Number(row.total_amount ?? 0),
-    currency: row.currency_code ?? 'RON',
-    status: row.status,
-    paymentStatus: row.payment_status,
-    fulfillmentStatus: row.fulfillment_status,
-    createdAt: row.created_at,
-    placedAt: row.placed_at,
-  };
-}
-
-function mapMessage(row: any) {
-  return {
-    id: String(row.message_id),
-    senderUserId: row.sender_user_id != null ? String(row.sender_user_id) : null,
-    senderType: row.sender_type,
-    body: row.message_body,
-    isRead: Boolean(row.is_read),
-    createdAt: row.created_at,
-  };
-}
-
-function mapConversation(row: any, messages: any[]) {
-  const orderedMessages = [...messages].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  );
-
-  const lastMessage = orderedMessages[orderedMessages.length - 1] ?? null;
-  const unreadCount = orderedMessages.filter(
-    (message) => message.sender_type === 'ADMIN' && !message.is_read
-  ).length;
-
-  return {
-    id: String(row.conversation_id),
-    subject: row.subject,
-    status: row.status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    unreadCount,
-    lastMessage: lastMessage
-      ? {
-          id: String(lastMessage.message_id),
-          body: lastMessage.message_body,
-          senderType: lastMessage.sender_type,
-          createdAt: lastMessage.created_at,
-        }
-      : null,
-    messages: orderedMessages.map(mapMessage),
-  };
-}
-
-function conversationBelongsToOrder(conversation: any, order: any) {
-  const subject = String(conversation.subject ?? '').toLowerCase();
-  const orderNumber = String(order.order_number ?? '').toLowerCase();
-  const orderId = String(order.order_id ?? '').toLowerCase();
-
-  return Boolean(
-    orderNumber && subject.includes(orderNumber)
-  ) || Boolean(
-    orderId && subject.includes(orderId)
-  );
-}
-
-async function getUserOrder(admin: ReturnType<typeof createAdminClient>, orderId: string, userId: number) {
-  const { data, error } = await admin
-    .from('orders')
-    .select(
-      'order_id, order_number, user_id, customer_full_name, customer_email, total_amount, currency_code, status, payment_status, fulfillment_status, created_at, placed_at'
-    )
-    .eq('order_id', orderId)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data;
-}
-
 async function findOpenConversationForOrder(
   admin: ReturnType<typeof createAdminClient>,
   userId: number,
-  orderNumber: string
+  orderId: string
 ) {
-  const subject = `Comandă ${orderNumber}`;
-
   const { data, error } = await admin
     .from('support_conversations')
-    .select('conversation_id, user_id, subject, status, created_at, updated_at')
+    .select(CONVERSATION_SELECT)
     .eq('user_id', userId)
-    .eq('subject', subject)
+    .eq('order_id', orderId)
     .neq('status', 'CLOSED')
     .order('updated_at', { ascending: false })
     .limit(1);
@@ -111,7 +35,24 @@ async function findOpenConversationForOrder(
   return data?.[0] ?? null;
 }
 
-export async function GET({ locals }) {
+async function createOrderConversation(admin: ReturnType<typeof createAdminClient>, userId: number, order: any) {
+  const { data, error } = await admin
+    .from('support_conversations')
+    .insert({
+      user_id: userId,
+      subject: `Comandă ${order.order_number}`,
+      status: 'OPEN',
+      topic: 'ORDER',
+      order_id: order.order_id,
+    })
+    .select(CONVERSATION_SELECT)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function GET({ locals, url }) {
   if (!locals.isAuthenticated || !locals.user) {
     return json({ error: 'Autentificarea este necesară.' }, { status: 401 });
   }
@@ -122,65 +63,48 @@ export async function GET({ locals }) {
 
   try {
     const admin = createAdminClient();
+    const pagination = getPagination(url, { defaultLimit: 30, maxLimit: 100 });
 
-    const { data: orders, error: ordersError } = await admin
+    const { data: orders, error: ordersError, count } = await admin
       .from('orders')
-      .select(
-        'order_id, order_number, user_id, customer_full_name, customer_email, total_amount, currency_code, status, payment_status, fulfillment_status, created_at, placed_at'
-      )
+      .select(ORDER_SELECT, { count: 'exact' })
       .eq('user_id', locals.user.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(pagination.offset, pagination.to);
 
     if (ordersError) throw ordersError;
 
-    const { data: conversations, error: conversationsError } = await admin
-      .from('support_conversations')
-      .select('conversation_id, user_id, subject, status, created_at, updated_at')
-      .eq('user_id', locals.user.id)
-      .order('updated_at', { ascending: false });
+    const summaryPagination = {
+      page: 1,
+      limit: 100,
+      offset: 0,
+      to: 99,
+    };
+    const summaries = await loadConversationSummaries(admin, locals, summaryPagination, { topic: 'ORDER' });
+    const conversationsByOrder = new Map<string, any[]>();
 
-    if (conversationsError) throw conversationsError;
-
-    const conversationIds = (conversations ?? []).map((conversation: any) => conversation.conversation_id);
-
-    const messageResult = conversationIds.length
-      ? await admin
-          .from('support_messages')
-          .select('message_id, conversation_id, sender_user_id, sender_type, message_body, is_read, created_at')
-          .in('conversation_id', conversationIds)
-          .order('created_at', { ascending: true })
-      : { data: [], error: null };
-
-    if (messageResult.error) throw messageResult.error;
-
-    const messagesByConversation = new Map<number, any[]>();
-
-    for (const message of messageResult.data ?? []) {
-      const list = messagesByConversation.get(message.conversation_id) ?? [];
-      list.push(message);
-      messagesByConversation.set(message.conversation_id, list);
+    for (const conversation of summaries.items) {
+      if (!conversation.orderId) continue;
+      const existing = conversationsByOrder.get(conversation.orderId) ?? [];
+      existing.push(conversation);
+      conversationsByOrder.set(conversation.orderId, existing);
     }
 
-    const mappedOrders = (orders ?? []).map((order: any) => {
-      const orderConversations = (conversations ?? [])
-        .filter((conversation: any) => conversationBelongsToOrder(conversation, order))
-        .map((conversation: any) =>
-          mapConversation(
-            conversation,
-            messagesByConversation.get(conversation.conversation_id) ?? []
-          )
-        );
+    const mappedOrders = (orders ?? []).map((order: any) => ({
+      ...mapOrder(order),
+      conversations: conversationsByOrder.get(String(order.order_id)) ?? [],
+    }));
 
-      return {
-        ...mapOrder(order),
-        conversations: orderConversations,
-      };
-    });
-
-    return json({ orders: mappedOrders }, { status: 200 });
+    return json(
+      {
+        orders: mappedOrders,
+        page: getPaginationMeta(pagination, count ?? 0),
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load contact data';
-    return json({ error: message }, { status: 400 });
+    console.error('Contact data load failed', error);
+    return json({ error: 'Nu am putut încărca datele de contact.' }, { status: 400 });
   }
 }
 
@@ -209,27 +133,15 @@ export async function POST({ request, locals }) {
       return json({ error: 'Comanda nu a fost găsită.' }, { status: 404 });
     }
 
-    const subject = `Comandă ${order.order_number}`;
-    let conversation = await findOpenConversationForOrder(admin, locals.user.id, order.order_number);
+    let conversation = await findOpenConversationForOrder(admin, locals.user.id, orderId);
 
     if (!conversation) {
-      const { data, error } = await admin
-        .from('support_conversations')
-        .insert({
-          user_id: locals.user.id,
-          subject,
-          status: 'OPEN',
-        })
-        .select('conversation_id, user_id, subject, status, created_at, updated_at')
-        .single();
-
-      if (error) throw error;
-      conversation = data;
+      conversation = await createOrderConversation(admin, locals.user.id, order);
     }
 
     const finalMessageBody = [
       `Comandă: ${order.order_number}`,
-      `Status comandă: ${order.status}`,
+      `Stare comandă: ${order.status}`,
       '',
       messageBody,
     ].join('\n');
@@ -265,6 +177,8 @@ export async function POST({ request, locals }) {
           id: String(conversation.conversation_id),
           subject: conversation.subject,
           status: 'OPEN',
+          topic: conversation.topic ?? 'ORDER',
+          orderId: conversation.order_id != null ? String(conversation.order_id) : String(order.order_id),
           message: mapMessage(insertedMessage),
         },
       },
@@ -274,7 +188,7 @@ export async function POST({ request, locals }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Failed to send contact message';
-    return json({ error: message }, { status: 400 });
+    console.error('Contact message send failed', error);
+    return json({ error: 'Nu am putut trimite mesajul.' }, { status: 400 });
   }
 }

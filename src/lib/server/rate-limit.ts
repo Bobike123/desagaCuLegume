@@ -1,4 +1,8 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
+import { createHash } from 'node:crypto';
+import { isIP } from 'node:net';
+import { createAdminClient } from '$lib/server/supabase';
+import type { ConsumeRateLimitArgs, ConsumeRateLimitRow } from '$lib/server/rpc-contracts';
 
 type Bucket = {
   count: number;
@@ -11,15 +15,31 @@ type RateLimitConfig = {
   windowMs: number;
 };
 
+type RateLimitDecision = {
+  allowed: boolean;
+  remaining: number;
+  retryAfterSeconds: number;
+};
+
 const buckets = new Map<string, Bucket>();
+let warnedAboutPersistentRateLimit = false;
+const MAX_IN_MEMORY_BUCKETS = 10_000;
 
 function pruneExpiredBuckets(now = Date.now()) {
   for (const [key, bucket] of buckets) {
     if (bucket.resetAt <= now) buckets.delete(key);
   }
+
+  if (buckets.size <= MAX_IN_MEMORY_BUCKETS) return;
+
+  const entries = [...buckets.entries()].sort((a, b) => a[1].resetAt - b[1].resetAt);
+  const overflow = buckets.size - MAX_IN_MEMORY_BUCKETS;
+  for (let index = 0; index < overflow; index += 1) {
+    buckets.delete(entries[index][0]);
+  }
 }
 
-function consume({ key, limit, windowMs }: RateLimitConfig) {
+function consumeInMemory({ key, limit, windowMs }: RateLimitConfig): RateLimitDecision {
   const now = Date.now();
   pruneExpiredBuckets(now);
 
@@ -46,22 +66,86 @@ function consume({ key, limit, windowMs }: RateLimitConfig) {
   };
 }
 
-export function getClientIp(event: RequestEvent) {
-  const forwarded = event.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const realIp = event.request.headers.get('x-real-ip')?.trim();
-  const cfIp = event.request.headers.get('cf-connecting-ip')?.trim();
+async function consumePersistent({ key, limit, windowMs }: RateLimitConfig): Promise<RateLimitDecision | null> {
+  try {
+    const { data, error } = await createAdminClient().rpc('consume_rate_limit', {
+      p_key: key,
+      p_limit: limit,
+      p_window_seconds: Math.max(1, Math.ceil(windowMs / 1000)),
+    } satisfies ConsumeRateLimitArgs);
 
-  return forwarded || realIp || cfIp || event.getClientAddress();
+    if (error) throw error;
+
+    const row = (Array.isArray(data) ? data[0] : data) as ConsumeRateLimitRow | null;
+    if (!row) return null;
+
+    return {
+      allowed: Boolean(row.allowed),
+      remaining: Number(row.remaining ?? 0),
+      retryAfterSeconds: Number(row.retry_after_seconds ?? 0),
+    };
+  } catch (error) {
+    if (!warnedAboutPersistentRateLimit) {
+      warnedAboutPersistentRateLimit = true;
+      console.warn(
+        'Persistent Supabase rate limiting is unavailable; falling back to process-local limits. Run the provided SQL before production traffic.',
+        error
+      );
+    }
+
+    return null;
+  }
 }
 
-export function rateLimit(event: RequestEvent, config: Omit<RateLimitConfig, 'key'> & { scope: string }) {
+export function getClientIp(event: RequestEvent) {
+  const directIp = event.getClientAddress();
+  if (process.env.TRUST_PROXY_HEADERS !== 'true') return directIp;
+
+  const candidates = [
+    event.request.headers.get('cf-connecting-ip'),
+    event.request.headers.get('x-real-ip'),
+    event.request.headers.get('x-forwarded-for')?.split(',')[0],
+  ];
+
+  for (const candidate of candidates) {
+    const value = candidate?.trim().slice(0, 64);
+    if (value && isIP(value)) return value;
+  }
+
+  return directIp;
+}
+
+export async function checkRateLimit(
+  event: RequestEvent,
+  config: Omit<RateLimitConfig, 'key'> & { scope: string }
+) {
   const ip = getClientIp(event);
-  const result = consume({
-    key: `${config.scope}:${ip}`,
+  const key = `${config.scope}:${ip}`;
+  return checkRateLimitKey({
+    key,
     limit: config.limit,
     windowMs: config.windowMs,
   });
+}
 
+export async function checkRateLimitKey(config: RateLimitConfig) {
+  const persistentResult = await consumePersistent({
+    key: config.key,
+    limit: config.limit,
+    windowMs: config.windowMs,
+  });
+  const result =
+    persistentResult ??
+    consumeInMemory({
+      key: config.key,
+      limit: config.limit,
+      windowMs: config.windowMs,
+    });
+
+  return result;
+}
+
+function rateLimitResponse(result: RateLimitDecision, limit: number) {
   if (result.allowed) return null;
 
   return json(
@@ -70,9 +154,34 @@ export function rateLimit(event: RequestEvent, config: Omit<RateLimitConfig, 'ke
       status: 429,
       headers: {
         'Retry-After': String(result.retryAfterSeconds),
-        'X-RateLimit-Limit': String(config.limit),
+        'X-RateLimit-Limit': String(limit),
         'X-RateLimit-Remaining': '0',
       },
     }
   );
+}
+
+export async function rateLimit(event: RequestEvent, config: Omit<RateLimitConfig, 'key'> & { scope: string }) {
+  const result = await checkRateLimit(event, config);
+  return rateLimitResponse(result, config.limit);
+}
+
+export async function rateLimitKey(config: RateLimitConfig) {
+  const result = await checkRateLimitKey(config);
+  return rateLimitResponse(result, config.limit);
+}
+
+export async function identityRateLimit(
+  identity: string,
+  config: Omit<RateLimitConfig, 'key'> & { scope: string }
+) {
+  const normalizedIdentity = identity.trim().toLowerCase();
+  if (!normalizedIdentity) return null;
+
+  const identityHash = createHash('sha256').update(normalizedIdentity).digest('hex');
+  return rateLimitKey({
+    key: `${config.scope}:${identityHash}`,
+    limit: config.limit,
+    windowMs: config.windowMs,
+  });
 }

@@ -1,82 +1,58 @@
 import { json } from '@sveltejs/kit';
+import { normalizeCartItems } from '$lib/server/cart-validation';
+import { mapRpcError } from '$lib/server/checkout-errors';
 import { createAdminClient } from '$lib/server/supabase';
 import {
   arrayField,
+  cleanString,
   enumField,
-  isPlainObject,
   LIMITS,
   nullableStringField,
-  numberField,
   readJsonBody,
-  requireNumericId,
+  RequestValidationError,
   stringField,
   validationErrorResponse,
 } from '$lib/server/validation';
 
-type CheckoutItem = {
-  productId: string;
-  quantity: number;
+type CheckoutRpcOrder = {
+  order_id: number | string;
+  order_number: string;
+  status: string;
+  payment_status: string;
+  fulfillment_status: string;
+  total_amount: number | string;
+  currency_code: string;
+  created_at: string;
 };
 
-function normalizeItems(raw: unknown[]): CheckoutItem[] {
-  const normalized = raw.map((item, index) => {
-    if (!isPlainObject(item)) {
-      throw new Error(`Produs invalid în coș la poziția ${index + 1}.`);
-    }
+const IDEMPOTENCY_KEY_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-    return {
-      productId: requireNumericId(item.productId, 'ID produs'),
-      quantity: numberField(item, 'quantity', {
-        required: true,
-        integer: true,
-        min: 1,
-        max: 99,
-        fieldLabel: 'Cantitatea',
-      }),
-    };
-  });
-
-  const quantities = new Map<string, number>();
-  for (const item of normalized) {
-    quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
+function optionalIdempotencyKey(value: unknown) {
+  const key = cleanString(value);
+  if (!key) return null;
+  if (!IDEMPOTENCY_KEY_PATTERN.test(key)) {
+    throw new RequestValidationError('Cheia de idempotency este invalidă.');
   }
-
-  return [...quantities.entries()].map(([productId, quantity]) => ({
-    productId,
-    quantity: Math.min(quantity, 99),
-  }));
+  return key.toLowerCase();
 }
 
-function buildOrderNumber() {
-  const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
-  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `ORD-${stamp}-${suffix}`;
-}
+function checkoutErrorResponse(error: unknown) {
+  const match = mapRpcError(error);
+  if (match) return json({ error: match.error }, { status: match.status });
 
-function defaultPickupAddress(fullName: string) {
-  return {
-    full_name: fullName || 'Ridicare din rulota DeSaga',
-    line1: 'Ridicare din rulota DeSaga',
-    line2: null,
-    city: 'Cluj-Napoca',
-    state_region: 'Cluj',
-    postal_code: '400000',
-    country_code: 'RO',
-  };
+  console.error('Checkout RPC failed', error);
+  return json({ error: 'Nu am putut finaliza comanda. Încearcă din nou.' }, { status: 500 });
 }
 
 export async function POST({ locals, request }) {
-  if (!locals.isAuthenticated || !locals.user) {
-    return json({ error: 'Autentificarea este necesară pentru checkout.' }, { status: 401 });
-  }
-
   if (locals.isAdmin) {
     return json({ error: 'Adminii nu pot face comenzi.' }, { status: 403 });
   }
 
   try {
     const body = await readJsonBody(request, { maxBytes: LIMITS.largeJson });
-    const items = normalizeItems(arrayField(body, 'items', 100));
+    const items = normalizeCartItems(arrayField(body, 'items', 100));
 
     if (items.length === 0) {
       return json({ error: 'Coșul este gol.' }, { status: 400 });
@@ -84,10 +60,17 @@ export async function POST({ locals, request }) {
 
     const fullName =
       stringField(body, 'fullName', { max: 120, fieldLabel: 'Numele complet' }) ||
-      (locals.user.fullName ?? '');
+      (locals.user?.fullName ?? '');
     const phone =
       stringField(body, 'phone', { max: 30, fieldLabel: 'Telefonul' }) ||
-      (locals.user.phone ?? '');
+      (locals.user?.phone ?? '');
+    const email =
+      stringField(body, 'email', {
+        max: 255,
+        fieldLabel: 'Emailul',
+        pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      }) ||
+      (locals.user?.email ?? '');
     const deliveryMethod = enumField(body, 'deliveryMethod', ['PICKUP', 'DELIVERY'], 'PICKUP').toLowerCase() as
       | 'pickup'
       | 'delivery';
@@ -105,256 +88,69 @@ export async function POST({ locals, request }) {
       return json({ error: 'Telefonul este obligatoriu.' }, { status: 400 });
     }
 
-    const admin = createAdminClient();
-    const productIds = items.map((item) => Number(item.productId)).filter((value) => Number.isFinite(value));
-    const { data: productRows, error: productError } = await admin
-      .from('products')
-      .select('product_id, sku, name, price, stock_quantity, status')
-      .in('product_id', productIds);
+    const addressLine1 = stringField(body, 'addressLine1', { max: 180, fieldLabel: 'Adresa' });
+    const addressLine2 = nullableStringField(body, 'addressLine2', { max: 180, fieldLabel: 'Detalii adresă' });
+    const city = stringField(body, 'city', { max: 90, fieldLabel: 'Orașul' });
+    const stateRegion = stringField(body, 'stateRegion', { max: 90, fieldLabel: 'Județul' });
+    const postalCode = stringField(body, 'postalCode', { max: 20, fieldLabel: 'Codul poștal' });
+    const countryCode = stringField(body, 'countryCode', {
+      max: 2,
+      defaultValue: 'RO',
+      fieldLabel: 'Țara',
+      pattern: /^[A-Z]{2}$/i,
+    }).toUpperCase();
 
-    if (productError) throw productError;
-
-    const productMap = new Map((productRows ?? []).map((row: any) => [String(row.product_id), row]));
-    const preparedItems = items.map((item) => {
-      const product = productMap.get(item.productId);
-      if (!product) {
-        throw new Error(`Produsul ${item.productId} nu există.`);
-      }
-      if (product.status !== 'ACTIVE') {
-        throw new Error(`Produsul ${product.name} nu este disponibil.`);
-      }
-      if (item.quantity > Number(product.stock_quantity ?? 0)) {
-        throw new Error(`Stoc insuficient pentru ${product.name}.`);
-      }
-      return {
-        product,
-        quantity: item.quantity,
-        unitPrice: Number(product.price ?? 0),
-        lineTotal: Number(product.price ?? 0) * item.quantity,
-      };
-    });
-
-    const subtotal = preparedItems.reduce((sum, item) => sum + item.lineTotal, 0);
-    const shippingAmount = deliveryMethod === 'delivery' ? (subtotal >= 150 ? 0 : 20) : 0;
-    const taxAmount = 0;
-    const discountAmount = 0;
-    const totalAmount = subtotal + shippingAmount + taxAmount - discountAmount;
-
-    const existingCart = await admin
-      .from('carts')
-      .select('cart_id')
-      .eq('user_id', locals.user.id)
-      .eq('status', 'ACTIVE')
-      .maybeSingle();
-
-    if (existingCart.error) throw existingCart.error;
-
-    let cartId = existingCart.data?.cart_id ?? null;
-
-    if (!cartId) {
-      const cartCreate = await admin
-        .from('carts')
-        .insert({ user_id: locals.user.id, status: 'ACTIVE', currency_code: 'RON' })
-        .select('cart_id')
-        .single();
-
-      if (cartCreate.error) throw cartCreate.error;
-      cartId = cartCreate.data.cart_id;
-    }
-
-    if (!cartId) {
-      throw new Error('Nu s-a putut crea coșul de checkout.');
-    }
-
-    const { error: deleteCartItemsError } = await admin.from('cart_items').delete().eq('cart_id', cartId);
-    if (deleteCartItemsError) throw deleteCartItemsError;
-
-    const { error: insertCartItemsError } = await admin.from('cart_items').insert(
-      preparedItems.map((item) => ({
-        cart_id: cartId,
-        product_id: item.product.product_id,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        currency_code: 'RON',
-      }))
-    );
-    if (insertCartItemsError) throw insertCartItemsError;
-
-    const billingAddress = {
-      user_id: locals.user.id,
-      label: 'Billing',
-      full_name: fullName,
-      phone,
-      line1: stringField(body, 'addressLine1', { max: 180, fieldLabel: 'Adresa' }) || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).line1 : ''),
-      line2: nullableStringField(body, 'addressLine2', { max: 180, fieldLabel: 'Detalii adresă' }),
-      city: stringField(body, 'city', { max: 90, fieldLabel: 'Orașul' }) || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).city : ''),
-      state_region: stringField(body, 'stateRegion', { max: 90, fieldLabel: 'Județul' }) || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).state_region : null),
-      postal_code: stringField(body, 'postalCode', { max: 20, fieldLabel: 'Codul poștal' }) || (deliveryMethod === 'pickup' ? defaultPickupAddress(fullName).postal_code : ''),
-      country_code: stringField(body, 'countryCode', {
-        max: 2,
-        defaultValue: 'RO',
-        fieldLabel: 'Țara',
-        pattern: /^[A-Z]{2}$/i,
-      }).toUpperCase(),
-      is_default: true,
-    };
-
-    if (deliveryMethod === 'delivery' && (!billingAddress.line1 || !billingAddress.city || !billingAddress.postal_code)) {
+    if (deliveryMethod === 'delivery' && (!addressLine1 || !city || !postalCode)) {
       return json({ error: 'Adresa de livrare este incompletă.' }, { status: 400 });
     }
 
-    const shippingSeed = deliveryMethod === 'delivery' ? billingAddress : { ...billingAddress, ...defaultPickupAddress(fullName) };
-
-    const billingAddressResult = await admin.from('user_addresses').insert(billingAddress).select('address_id').single();
-    if (billingAddressResult.error) throw billingAddressResult.error;
-
-    const shippingAddressResult = await admin.from('user_addresses').insert({
-      ...shippingSeed,
-      user_id: locals.user.id,
-      label: deliveryMethod === 'delivery' ? 'Shipping' : 'Pickup',
-      is_default: false,
-    }).select('address_id').single();
-    if (shippingAddressResult.error) throw shippingAddressResult.error;
-
-    const checkoutResult = await admin
-      .from('checkouts')
-      .insert({
-        user_id: locals.user.id,
-        cart_id: cartId,
-        status: 'COMPLETED',
-        billing_address_id: billingAddressResult.data.address_id,
-        shipping_address_id: shippingAddressResult.data.address_id,
-        subtotal_amount: subtotal,
-        tax_amount: taxAmount,
-        shipping_amount: shippingAmount,
-        discount_amount: discountAmount,
-        total_amount: totalAmount,
-        currency_code: 'RON',
-        completed_at: new Date().toISOString(),
-      })
-      .select('checkout_id')
-      .single();
-
-    if (checkoutResult.error) throw checkoutResult.error;
-
-    const orderNumber = buildOrderNumber();
-    const shippingAddress = shippingSeed;
-
+    const idempotencyKey = optionalIdempotencyKey(body.idempotencyKey ?? request.headers.get('idempotency-key'));
+    const admin = createAdminClient();
     const orderResult = await admin
-      .from('orders')
-      .insert({
-        order_number: orderNumber,
-        user_id: locals.user.id,
-        checkout_id: checkoutResult.data.checkout_id,
-        status: 'PLACED',
-        payment_status: 'PENDING',
-        fulfillment_status: 'UNFULFILLED',
-        customer_email: locals.user.email,
-        customer_full_name: fullName,
-        customer_phone: phone,
-        billing_full_name: billingAddress.full_name,
-        billing_line1: billingAddress.line1,
-        billing_line2: billingAddress.line2,
-        billing_city: billingAddress.city,
-        billing_state_region: billingAddress.state_region,
-        billing_postal_code: billingAddress.postal_code,
-        billing_country_code: billingAddress.country_code,
-        shipping_full_name: shippingAddress.full_name,
-        shipping_line1: shippingAddress.line1,
-        shipping_line2: shippingAddress.line2,
-        shipping_city: shippingAddress.city,
-        shipping_state_region: shippingAddress.state_region,
-        shipping_postal_code: shippingAddress.postal_code,
-        shipping_country_code: shippingAddress.country_code,
-        subtotal_amount: subtotal,
-        tax_amount: taxAmount,
-        shipping_amount: shippingAmount,
-        discount_amount: discountAmount,
-        total_amount: totalAmount,
-        currency_code: 'RON',
-        notes: customerMessage || null,
-        placed_at: new Date().toISOString(),
+      .rpc('place_order', {
+        p_user_id: locals.user?.id ?? null,
+        p_items: items.map((item) => ({
+          productId: Number(item.productId),
+          quantity: item.quantity,
+        })),
+        p_full_name: fullName,
+        p_phone: phone,
+        p_email: email || null,
+        p_delivery_method: deliveryMethod,
+        p_payment_method: paymentMethod,
+        p_address_line1: addressLine1 || null,
+        p_address_line2: addressLine2,
+        p_city: city || null,
+        p_state_region: stateRegion || null,
+        p_postal_code: postalCode || null,
+        p_country_code: countryCode,
+        p_customer_message: customerMessage || null,
+        p_idempotency_key: idempotencyKey,
       })
-      .select('order_id, order_number, status, payment_status, fulfillment_status, total_amount, currency_code, created_at')
       .single();
 
-    if (orderResult.error) throw orderResult.error;
-
-    const { error: orderItemsError } = await admin.from('order_items').insert(
-      preparedItems.map((item) => ({
-        order_id: orderResult.data.order_id,
-        product_id: item.product.product_id,
-        sku: item.product.sku,
-        product_name: item.product.name,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        line_total: item.lineTotal,
-        currency_code: 'RON',
-      }))
-    );
-    if (orderItemsError) throw orderItemsError;
-
-    const { error: paymentError } = await admin.from('payments').insert({
-      order_id: orderResult.data.order_id,
-      payment_method: paymentMethod,
-      status: 'PENDING',
-      amount: totalAmount,
-      currency_code: 'RON',
-      provider_name: deliveryMethod === 'pickup' ? 'PICKUP' : 'DELIVERY',
-      provider_payload: { deliveryMethod },
-    });
-    if (paymentError) throw paymentError;
-
-    const { error: closeCartError } = await admin
-      .from('carts')
-      .update({ status: 'CHECKED_OUT', updated_at: new Date().toISOString() })
-      .eq('cart_id', cartId);
-    if (closeCartError) throw closeCartError;
-
-    for (const item of preparedItems) {
-      const nextStock = Math.max(0, Number(item.product.stock_quantity ?? 0) - item.quantity);
-      const nextStatus = nextStock > 0 ? item.product.status : 'OUT_OF_STOCK';
-      const stockUpdate = await admin
-        .from('products')
-        .update({ stock_quantity: nextStock, status: nextStatus })
-        .eq('product_id', item.product.product_id);
-      if (stockUpdate.error) throw stockUpdate.error;
+    if (orderResult.error) {
+      return checkoutErrorResponse(orderResult.error);
     }
 
-    if (customerMessage) {
-      const conversationResult = await admin
-        .from('support_conversations')
-        .insert({
-          user_id: locals.user.id,
-          subject: `Comandă ${orderNumber}`,
-          status: 'OPEN',
-        })
-        .select('conversation_id')
-        .single();
-      if (conversationResult.error) throw conversationResult.error;
-
-      const { error: messageError } = await admin.from('support_messages').insert({
-        conversation_id: conversationResult.data.conversation_id,
-        sender_user_id: locals.user.id,
-        sender_type: 'USER',
-        message_body: customerMessage,
-        is_read: false,
-      });
-      if (messageError) throw messageError;
+    if (!orderResult.data) {
+      return checkoutErrorResponse(new Error('Checkout returned no order.'));
     }
+
+    const order = orderResult.data as CheckoutRpcOrder;
 
     return json(
       {
         success: true,
         order: {
-          id: String(orderResult.data.order_id),
-          orderNumber: orderResult.data.order_number,
-          status: orderResult.data.status,
-          paymentStatus: orderResult.data.payment_status,
-          fulfillmentStatus: orderResult.data.fulfillment_status,
-          total: Number(orderResult.data.total_amount),
-          currency: orderResult.data.currency_code,
-          createdAt: orderResult.data.created_at,
+          id: String(order.order_id),
+          orderNumber: order.order_number,
+          status: order.status,
+          paymentStatus: order.payment_status,
+          fulfillmentStatus: order.fulfillment_status,
+          total: Number(order.total_amount),
+          currency: order.currency_code,
+          createdAt: order.created_at,
         },
       },
       { status: 201 }
@@ -363,7 +159,6 @@ export async function POST({ locals, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Checkout failed';
-    return json({ error: message }, { status: 400 });
+    return checkoutErrorResponse(error);
   }
 }

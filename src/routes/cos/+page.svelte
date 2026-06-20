@@ -1,6 +1,9 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { MAX_CART_QUANTITY } from '$lib/cart-limits';
+  import { computeCartSummary, FREE_DELIVERY_THRESHOLD } from '$lib/cart-summary';
+  import { formatMoney, formatDate, statusLabel } from '$lib/format';
   import { auth } from '$lib/stores/auth';
   import { cart } from '$lib/stores/cart';
   import MessageThread from '$lib/components/MessageThread.svelte';
@@ -27,11 +30,7 @@
 
   const SUPPORT_PHONE = '+40 729 969 822';
   const SUPPORT_PHONE_HREF = 'tel:+40729969822';
-  const FREE_DELIVERY_THRESHOLD = 150;
-  const DELIVERY_FEE = 20;
 
-  let authMode: 'login' | 'register' = 'login';
-  let authError = '';
   let checkoutError = '';
   let checkoutSuccess = '';
   let loadingOrders = false;
@@ -39,26 +38,14 @@
   let serverSynced = false;
   let localCartChanged = false;
   let loadedDataForUserId = '';
-  let authSubmitting = false;
   let checkoutSubmitting = false;
   let clearingCart = false;
-
-  let loginForm = {
-    identity: '',
-    password: '',
-  };
-
-  let registerForm = {
-    fullName: '',
-    phone: '',
-    username: '',
-    email: '',
-    password: '',
-  };
+  let checkoutAttemptKey = '';
 
   let checkoutForm = {
     fullName: '',
     phone: '',
+    email: '',
     deliveryMethod: 'pickup',
     paymentMethod: 'CASH_ON_DELIVERY',
     addressLine1: '',
@@ -72,38 +59,15 @@
 
   let orders: OrderItem[] = [];
 
-  function formatMoney(value: number) {
-    return `${Number(value || 0).toFixed(2)} RON`;
-  }
-
-  function formatDate(value: string) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Dată indisponibilă';
-    return date.toLocaleString('ro-RO', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    });
-  }
-
-  function statusLabel(value: string) {
-    const labels: Record<string, string> = {
-      PLACED: 'Plasată',
-      PENDING: 'În așteptare',
-      PAID: 'Plătită',
-      CANCELLED: 'Anulată',
-      COMPLETED: 'Finalizată',
-      UNFULFILLED: 'Nepregătită',
-      FULFILLED: 'Livrată',
-      OPEN: 'Deschisă',
-      CLOSED: 'Închisă',
-    };
-
-    return labels[value] ?? value;
-  }
-
   function markLocalCartChanged() {
     localCartChanged = true;
     serverSynced = false;
+    checkoutAttemptKey = '';
+  }
+
+  function getCheckoutAttemptKey() {
+    checkoutAttemptKey ||= crypto.randomUUID();
+    return checkoutAttemptKey;
   }
 
   function setQty(productId: string, quantity: number) {
@@ -138,43 +102,6 @@
       serverSynced = false;
     } finally {
       clearingCart = false;
-    }
-  }
-
-  async function submitLogin(event: Event) {
-    event.preventDefault();
-    authError = '';
-    authSubmitting = true;
-
-    try {
-      await auth.login({ identity: loginForm.identity, password: loginForm.password });
-      serverSynced = false;
-      await syncServerCart();
-      await loadOrders();
-    } catch (err) {
-      authError = err instanceof Error ? err.message : 'Autentificarea a eșuat.';
-    } finally {
-      authSubmitting = false;
-    }
-  }
-
-  async function submitRegister(event: Event) {
-    event.preventDefault();
-    authError = '';
-    authSubmitting = true;
-
-    try {
-      await auth.register(registerForm);
-      checkoutForm.fullName = registerForm.fullName;
-      checkoutForm.phone = registerForm.phone;
-      serverSynced = false;
-      localCartChanged = true;
-      await syncServerCart();
-      await loadOrders();
-    } catch (err) {
-      authError = err instanceof Error ? err.message : 'Înregistrarea a eșuat.';
-    } finally {
-      authSubmitting = false;
     }
   }
 
@@ -227,7 +154,7 @@
 
     loadingOrders = true;
     try {
-      const res = await fetch('/api/orders');
+      const res = await fetch('/api/orders?limit=100');
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca comenzile.');
       orders = Array.isArray(data?.items) ? data.items : [];
@@ -248,12 +175,6 @@
       return;
     }
 
-    if (!$auth.isAuthenticated) {
-      authMode = 'register';
-      checkoutError = 'Creează un cont sau autentifică-te pentru finalizarea comenzii.';
-      return;
-    }
-
     if ($auth.isAdmin) {
       checkoutError = 'Administratorii nu pot plasa comenzi.';
       return;
@@ -262,11 +183,13 @@
     checkoutSubmitting = true;
 
     try {
+      const idempotencyKey = getCheckoutAttemptKey();
       const res = await fetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify({
           ...checkoutForm,
+          idempotencyKey,
           items: $cart.items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
         }),
       });
@@ -278,6 +201,7 @@
       localCartChanged = false;
       serverSynced = true;
       checkoutForm.customerMessage = '';
+      checkoutAttemptKey = '';
       await loadOrders();
     } catch (err) {
       checkoutError = err instanceof Error ? err.message : 'Checkout-ul a eșuat.';
@@ -286,17 +210,17 @@
     }
   }
 
-  $: itemCount = $cart.items.reduce((sum, item) => sum + item.quantity, 0);
-  $: subtotal = $cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  $: shippingFee = checkoutForm.deliveryMethod === 'delivery' ? (subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : subtotal > 0 ? DELIVERY_FEE : 0) : 0;
-  $: remainingForFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
-  $: total = subtotal + shippingFee;
+  $: ({ itemCount, subtotal, shippingFee, remainingForFreeDelivery, total } = computeCartSummary(
+    $cart.items,
+    checkoutForm.deliveryMethod
+  ));
   $: hasItems = $cart.items.length > 0;
-  $: checkoutDisabled = !hasItems || checkoutSubmitting || syncingCart || !$auth.isAuthenticated || $auth.isAdmin;
+  $: checkoutDisabled = !hasItems || checkoutSubmitting || syncingCart || $auth.loading || $auth.isAdmin;
 
   $: if ($auth.user) {
     checkoutForm.fullName = checkoutForm.fullName || $auth.user.fullName || '';
     checkoutForm.phone = checkoutForm.phone || $auth.user.phone || '';
+    checkoutForm.email = checkoutForm.email || $auth.user.email || '';
   }
 
   $: if ($auth.isAuthenticated && !$auth.isAdmin && $cart.hydrated && !serverSynced) {
@@ -342,7 +266,6 @@
       </div>
     </div>
 
-    {#if authError}<div class="alert alert-danger" role="alert">{authError}</div>{/if}
     {#if checkoutError}<div class="alert alert-danger" role="alert">{checkoutError}</div>{/if}
     {#if checkoutSuccess}<div class="alert alert-success" role="alert">{checkoutSuccess}</div>{/if}
 
@@ -351,7 +274,7 @@
         <span>1</span>
         <strong>Produse</strong>
       </div>
-      <div class:done={$auth.isAuthenticated && !$auth.isAdmin} class="step">
+      <div class:done={Boolean(checkoutForm.fullName.trim() && checkoutForm.phone.trim())} class="step">
         <span>2</span>
         <strong>Date client</strong>
       </div>
@@ -416,7 +339,7 @@
                             class="qty-input"
                             inputmode="numeric"
                             min="0"
-                            max="999"
+                            max={MAX_CART_QUANTITY}
                             aria-label="Cantitate"
                             value={item.quantity}
                             on:input={(e) => setQty(item.productId, Number((e.target as HTMLInputElement).value))}
@@ -441,64 +364,6 @@
           {/if}
         </div>
 
-        {#if hasItems && !$auth.isAuthenticated}
-          <div class="panel panel-soft mt-4" id="auth-panel">
-            <div class="panel-head">
-              <div>
-                <h2 class="h5 fw-bold m-0"><i class="bi bi-person-lock"></i> Date client</h2>
-                <div class="muted small mt-1">Contul păstrează coșul, comenzile și conversația cu adminul.</div>
-              </div>
-            </div>
-
-            <div class="authTabs" role="tablist" aria-label="Autentificare sau înregistrare">
-              <button type="button" class:active={authMode === 'login'} on:click={() => (authMode = 'login')}>Am cont</button>
-              <button type="button" class:active={authMode === 'register'} on:click={() => (authMode = 'register')}>Creez cont</button>
-            </div>
-
-            {#if authMode === 'login'}
-              <form class="authGrid" on:submit={submitLogin}>
-                <label>
-                  <span>Email sau username</span>
-                  <input class="form-control" autocomplete="username" bind:value={loginForm.identity} required />
-                </label>
-                <label>
-                  <span>Parolă</span>
-                  <input class="form-control" type="password" autocomplete="current-password" bind:value={loginForm.password} required />
-                </label>
-                <button class="btn btn-primary" type="submit" disabled={authSubmitting}>
-                  {authSubmitting ? 'Se autentifică…' : 'Autentificare'}
-                </button>
-              </form>
-            {:else}
-              <form class="authGrid" on:submit={submitRegister}>
-                <label>
-                  <span>Nume complet</span>
-                  <input class="form-control" autocomplete="name" bind:value={registerForm.fullName} required />
-                </label>
-                <label>
-                  <span>Telefon</span>
-                  <input class="form-control" autocomplete="tel" bind:value={registerForm.phone} required />
-                </label>
-                <label>
-                  <span>Username</span>
-                  <input class="form-control" autocomplete="username" bind:value={registerForm.username} />
-                </label>
-                <label>
-                  <span>Email</span>
-                  <input class="form-control" type="email" autocomplete="email" bind:value={registerForm.email} required />
-                </label>
-                <label>
-                  <span>Parolă</span>
-                  <input class="form-control" type="password" autocomplete="new-password" bind:value={registerForm.password} required />
-                </label>
-                <button class="btn btn-primary" type="submit" disabled={authSubmitting}>
-                  {authSubmitting ? 'Se creează contul…' : 'Creează cont'}
-                </button>
-              </form>
-            {/if}
-          </div>
-        {/if}
-
         {#if $auth.isAuthenticated && !$auth.isAdmin}
           <div class="panel panel-messages mt-4">
             <MessageThread
@@ -506,6 +371,8 @@
               expanded={true}
               collapsible={false}
               {orders}
+              ready={$auth.isAuthenticated && !$auth.isAdmin && !loadingOrders}
+              ordersReady={true}
               title="Mesaje cu adminul"
               subtitle="Alege o comandă sau începe un mesaj general. Răspunsurile apar în același fir."
             />
@@ -542,12 +409,16 @@
           {:else if hasItems}
             <form class="checkoutForm mt-3" on:submit={submitCheckout}>
               <label>
-                <span>Nume complet</span>
+                <span>Nume</span>
                 <input class="form-control" autocomplete="name" bind:value={checkoutForm.fullName} required />
               </label>
               <label>
                 <span>Telefon</span>
                 <input class="form-control" autocomplete="tel" bind:value={checkoutForm.phone} required />
+              </label>
+              <label>
+                <span>Email <small>(opțional)</small></span>
+                <input class="form-control" type="email" autocomplete="email" bind:value={checkoutForm.email} />
               </label>
               <label>
                 <span>Metodă primire</span>
@@ -592,15 +463,13 @@
 
               {#if !$auth.isAuthenticated}
                 <div class="checkout-note">
-                  Autentificarea este necesară pentru finalizare. Datele comenzii rămân în coș după login sau înregistrare.
+                  Poți finaliza fără cont. Comanda nu va fi legată de un utilizator și va fi prelucrată normal.
                 </div>
               {/if}
 
               <button class="btn btn-accent w-100" type="submit" disabled={checkoutDisabled}>
                 {#if checkoutSubmitting}
                   Se finalizează…
-                {:else if !$auth.isAuthenticated}
-                  Autentifică-te pentru finalizare
                 {:else}
                   Finalizează comanda
                 {/if}
@@ -716,11 +585,6 @@
   .summary-panel {
     position: sticky;
     top: 1rem;
-  }
-
-  .panel-soft {
-    background: rgba(36, 146, 204, 0.06);
-    border-color: rgba(36, 146, 204, 0.18);
   }
 
   .panel-head {
@@ -933,48 +797,16 @@
     border-color: rgba(25, 135, 84, 0.18);
   }
 
-  .checkoutForm,
-  .authGrid {
+  .checkoutForm {
     display: grid;
     gap: 10px;
   }
 
-  .checkoutForm label,
-  .authGrid label {
+  .checkoutForm label {
     display: grid;
     gap: 5px;
     font-size: 0.9rem;
     font-weight: 800;
-  }
-
-  .field-label {
-    display: inline-block;
-    margin-bottom: 5px;
-    font-size: 0.9rem;
-    font-weight: 800;
-  }
-
-  .authTabs {
-    display: inline-flex;
-    gap: 8px;
-    margin-bottom: 12px;
-    padding: 4px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.75);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-  }
-
-  .authTabs button {
-    border: 0;
-    background: transparent;
-    border-radius: 999px;
-    padding: 8px 12px;
-    font-weight: 800;
-  }
-
-  .authTabs button.active {
-    background: rgba(36, 146, 204, 0.14);
-    color: #2492cc;
   }
 
   .orderList {

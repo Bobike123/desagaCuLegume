@@ -123,7 +123,7 @@
         <form class="auth-form" on:submit={submitRegister}>
           <div class="form-grid">
             <label>
-              <span>Nume complet</span>
+              <span>Nume</span>
               <input class="form-control" autocomplete="name" bind:value={registerForm.fullName} required disabled={loading} />
             </label>
             <label>
@@ -275,6 +275,7 @@
     margin-top: 0.35rem;
     color: var(--desaga-muted);
   }
+
 
   @media (max-width: 991.98px) {
     .auth-wrap {

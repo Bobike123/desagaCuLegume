@@ -12,7 +12,8 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
-		"lint": "eslint ."
+		"lint": "eslint .",
+		"zip:clean": "node scripts/create-clean-zip.mjs"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
@@ -27,7 +28,7 @@
 		"@types/node": "^22",
 		"@vitest/browser": "^4.1.8",
 		"@vitest/browser-playwright": "^4.1.8",
-		"bootstrap-icons": "^1.13.1",
+		"@vitest/coverage-v8": "^4.1.8",
 		"eslint": "^9.39.1",
 		"eslint-plugin-svelte": "^3.13.0",
 		"globals": "^16.5.0",
@@ -46,7 +47,8 @@
 		"@supabase/ssr": "^0.10.3",
 		"@supabase/supabase-js": "^2.105.1",
 		"bootstrap": "^5.3.8",
-		"resend": "^6.6.0"
+		"bootstrap-icons": "^1.13.1",
+		"cookie": "1.1.1"
 	},
 	"overrides": {
 		"cookie": "1.1.1"

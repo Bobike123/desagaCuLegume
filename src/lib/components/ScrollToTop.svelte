@@ -79,8 +79,8 @@ function animateScrollToTop(duration = SCROLL_DURATION): void {
     <button
         type="button"
         class="scrolltop-btn"
-        aria-label="Scroll to top"
-        title="Scroll to top"
+        aria-label="Înapoi sus"
+        title="Înapoi sus"
         tabindex={visible ? 0 : -1}
         onclick={() => animateScrollToTop()}
     >

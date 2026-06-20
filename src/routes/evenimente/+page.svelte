@@ -125,7 +125,7 @@
 <Hero
   title="Evenimente"
   subtitle="Târguri, degustări și întâlniri locale"
-  backgroundImage=""
+  backgroundImage="/images/evenimente/hero-degustare.jpg"
   height="320px"
 />
 

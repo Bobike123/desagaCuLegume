@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import type { UpdateOrderAdminArgs } from '$lib/server/rpc-contracts';
 import { createAdminClient } from '$lib/server/supabase';
 import {
   LIMITS,
@@ -93,7 +94,7 @@ export async function GET({ locals, params }) {
     if (!data) return json({ error: 'Comanda nu a fost găsită.' }, { status: 404 });
 
     if (!locals.isAdmin && data.user_id !== locals.user.id) {
-      return json({ error: 'Unauthorized' }, { status: 403 });
+      return json({ error: 'Acces neautorizat.' }, { status: 403 });
     }
 
     let orderItems = Array.isArray(data.order_items) ? data.order_items : [];
@@ -122,53 +123,48 @@ export async function GET({ locals, params }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Failed to load order';
-    return json({ error: message }, { status: 400 });
+    console.error('Order load failed', error);
+    return json({ error: 'Nu am putut încărca comanda.' }, { status: 400 });
   }
 }
 
 export async function PATCH({ locals, params, request }) {
   if (!locals.isAdmin) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: 'Acces neautorizat.' }, { status: 401 });
   }
 
   try {
     const orderId = requireNumericId(params.id, 'ID comandă');
     const body = await readJsonBody(request, { maxBytes: LIMITS.tinyJson });
-    const payload: Record<string, unknown> = {};
-    const now = new Date().toISOString();
     const orderStatus = optionalEnumField(body, 'status', ORDER_STATUSES);
     const paymentStatus = optionalEnumField(body, 'paymentStatus', PAYMENT_STATUSES);
     const fulfillmentStatus = optionalEnumField(body, 'fulfillmentStatus', FULFILLMENT_STATUSES);
 
-    if (orderStatus) {
-      payload.status = orderStatus;
-      if (orderStatus === 'SHIPPED') payload.shipped_at = now;
-      if (orderStatus === 'DELIVERED') payload.delivered_at = now;
-      if (orderStatus === 'CANCELLED') payload.cancelled_at = now;
-      if (orderStatus === 'PAID') payload.paid_at = now;
-    }
-
-    if (paymentStatus) payload.payment_status = paymentStatus;
-    if (fulfillmentStatus) payload.fulfillment_status = fulfillmentStatus;
-
     const admin = createAdminClient();
-    const { error } = await admin.from('orders').update(payload).eq('order_id', orderId);
-    if (error) throw error;
-
-    const { data, error: fetchError } = await admin
-      .from('orders')
-      .select('order_id, order_number, user_id, customer_full_name, customer_email, total_amount, currency_code, status, payment_status, fulfillment_status, created_at, placed_at')
-      .eq('order_id', orderId)
+    const { data, error } = await admin
+      .rpc('update_order_admin', {
+        p_order_id: Number(orderId),
+        p_admin_user_id: locals.user?.id ?? null,
+        p_status: orderStatus ?? null,
+        p_payment_status: paymentStatus ?? null,
+        p_fulfillment_status: fulfillmentStatus ?? null,
+        p_note: 'Actualizare din panoul de comenzi admin',
+      } satisfies UpdateOrderAdminArgs)
       .single();
 
-    if (fetchError) throw fetchError;
+    if (error) {
+      if (error.code === 'P0002') return json({ error: 'Comanda nu a fost găsită.' }, { status: 404 });
+      throw new Error(
+        `Order update transaction failed: ${error.message}. Run the provided update_order_admin SQL function before production use.`
+      );
+    }
+
     return json({ item: mapOrder(data) }, { status: 200 });
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Failed to update order';
-    return json({ error: message }, { status: 400 });
+    console.error('Order update failed', error);
+    return json({ error: 'Nu am putut actualiza comanda.' }, { status: 400 });
   }
 }

@@ -121,12 +121,12 @@ export async function PATCH({ locals, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Nu am putut actualiza profilul.';
-    return json({ error: message }, { status: 400 });
+    console.error('Profile update failed', error);
+    return json({ error: 'Nu am putut actualiza profilul.' }, { status: 400 });
   }
 }
 
-export async function DELETE({ locals, request, cookies }) {
+export async function DELETE({ locals, request, cookies, getClientAddress }) {
   if (!locals.isAuthenticated || !locals.user) {
     return json({ error: 'Autentificarea este necesară.' }, { status: 401 });
   }
@@ -169,7 +169,7 @@ export async function DELETE({ locals, request, cookies }) {
       return json({ success: true }, { status: 200 });
     }
 
-    if (!userRow.password_hash || !verifyPassword(currentPassword, String(userRow.password_hash))) {
+    if (!userRow.password_hash || !(await verifyPassword(currentPassword, String(userRow.password_hash)))) {
       return json({ error: 'Parola curentă este incorectă.' }, { status: 400 });
     }
 
@@ -180,8 +180,9 @@ export async function DELETE({ locals, request, cookies }) {
         username: `cont_sters_${suffix}`,
         full_name: null,
         phone: null,
-        password_hash: hashPassword(createSessionToken()),
+        password_hash: await hashPassword(createSessionToken()),
         status: 'DELETED',
+        deleted_at: deletedAt,
         updated_at: deletedAt,
       })
       .eq('user_id', userId);
@@ -226,8 +227,8 @@ export async function DELETE({ locals, request, cookies }) {
       await insertAuthLog({
         userId,
         sessionId: locals.session?.sessionId ?? null,
-        eventType: 'DELETE_ACCOUNT',
-        meta: getRequestMeta(request),
+        eventType: 'USER_DELETED',
+        meta: getRequestMeta(request, getClientAddress()),
         details: { deletedAt },
       });
     } catch (logError) {
@@ -240,7 +241,7 @@ export async function DELETE({ locals, request, cookies }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Nu am putut șterge contul.';
-    return json({ error: message }, { status: 400 });
+    console.error('Account deletion failed', error);
+    return json({ error: 'Nu am putut șterge contul.' }, { status: 400 });
   }
 }

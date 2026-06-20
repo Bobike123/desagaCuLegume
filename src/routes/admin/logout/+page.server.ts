@@ -3,12 +3,16 @@ import type { Actions, PageServerLoad } from './$types';
 import { clearSessionCookie, getRequestMeta, logoutSession } from '$lib/server/auth';
 import { SESSION_COOKIE_NAME } from '$lib/server/supabase';
 
-async function destroySession(request: Request, cookies: import('@sveltejs/kit').Cookies) {
+async function destroySession(
+  request: Request,
+  cookies: import('@sveltejs/kit').Cookies,
+  clientIp?: string | null
+) {
   const token = cookies.get(SESSION_COOKIE_NAME);
 
   if (token) {
     try {
-      await logoutSession(token, getRequestMeta(request));
+      await logoutSession(token, getRequestMeta(request, clientIp));
     } catch (error) {
       console.error('Admin logout failed', error);
     }
@@ -17,14 +21,14 @@ async function destroySession(request: Request, cookies: import('@sveltejs/kit')
   clearSessionCookie(cookies);
 }
 
-export const load: PageServerLoad = async ({ request, cookies }) => {
-  await destroySession(request, cookies);
+export const load: PageServerLoad = async ({ request, cookies, getClientAddress }) => {
+  await destroySession(request, cookies, getClientAddress());
   throw redirect(302, '/');
 };
 
 export const actions: Actions = {
-  default: async ({ request, cookies }) => {
-    await destroySession(request, cookies);
+  default: async ({ request, cookies, getClientAddress }) => {
+    await destroySession(request, cookies, getClientAddress());
     throw redirect(302, '/');
   },
 };

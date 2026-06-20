@@ -57,16 +57,18 @@ export const productsStore = {
   async loadAll(category?: string | null) {
     store.update((state) => ({ ...state, loading: true, error: null }));
     try {
-      const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+      const params = new URLSearchParams({ limit: '100' });
+      if (category) params.set('category', category);
+      const qs = `?${params.toString()}`;
       const res = await fetch(`/api/products${qs}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? 'Failed to load products');
+      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca produsele.');
 
       const normalized = (Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []).map(normalizeProduct);
       store.set({ items: normalized, loading: false, error: null });
       return normalized;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
+      const msg = err instanceof Error ? err.message : 'Eroare necunoscută.';
       store.set({ items: [], loading: false, error: msg });
       return [];
     }
@@ -75,7 +77,7 @@ export const productsStore = {
   async getById(id: string) {
     const res = await fetch(`/api/products/${id}`);
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.error ?? 'Failed to load product');
+    if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca produsul.');
 
     const raw = data && typeof data === 'object' && 'item' in data ? (data as any).item : data;
     return normalizeProduct(raw) as Product;
@@ -84,8 +86,4 @@ export const productsStore = {
 
 export async function getAllProducts(category?: string | null) {
   return productsStore.loadAll(category);
-}
-
-export async function getProductById(id: string) {
-  return productsStore.getById(id);
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import Fluture from '$lib/IconList.svelte';
-  import logoUrl from '$lib/assets/logo.png';
+  // Served from the editable static images folder — see static/images/README.md.
+  const logoUrl = '/images/shared/logo.png';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onDestroy, onMount } from 'svelte';
@@ -17,64 +18,42 @@
     { href: '/produse', label: 'Toate produsele', icon: '' },
     { href: '/produse/de-sezon', label: 'De sezon', icon: '' },
     { href: '/produse/la-borcan', label: 'La borcan', icon: '' },
-    { href: '/produse/colaboratori', label: 'Colaboratori', icon: '' },
   ];
 
   let offcanvasEl: HTMLElement | null = null;
   let offcanvasInstance: any = null;
   let isOpen = false;
 
-  let productsMenuState: 'closed' | 'opening' | 'open' | 'closing' = 'closed';
+  // Open/close is a single boolean; the enter/exit animation is driven entirely
+  // by CSS (.products-dropdown vs .products-dropdown.open). The only timer is the
+  // hover-out grace delay, so the menu doesn't snap shut when the pointer briefly
+  // leaves the trigger before reaching the panel.
+  let productsMenuOpen = false;
   let productsMenuCloseTimer: ReturnType<typeof setTimeout> | null = null;
-  let productsMenuAnimationTimer: ReturnType<typeof setTimeout> | null = null;
 
-  $: productsMenuVisible = productsMenuState !== 'closed';
-
-  function clearProductsMenuTimers() {
+  function clearProductsMenuCloseTimer() {
     if (productsMenuCloseTimer) {
       clearTimeout(productsMenuCloseTimer);
       productsMenuCloseTimer = null;
     }
-
-    if (productsMenuAnimationTimer) {
-      clearTimeout(productsMenuAnimationTimer);
-      productsMenuAnimationTimer = null;
-    }
   }
 
   function openProductsMenu() {
-    clearProductsMenuTimers();
-
-    if (productsMenuState === 'open') return;
-
-    productsMenuState = 'opening';
-
-    productsMenuAnimationTimer = setTimeout(() => {
-      productsMenuState = 'open';
-      productsMenuAnimationTimer = null;
-    }, 20);
+    clearProductsMenuCloseTimer();
+    productsMenuOpen = true;
   }
 
   function scheduleProductsMenuClose() {
-    if (productsMenuCloseTimer) {
-      clearTimeout(productsMenuCloseTimer);
-    }
-
+    clearProductsMenuCloseTimer();
     productsMenuCloseTimer = setTimeout(() => {
-      productsMenuState = 'closing';
-
-      productsMenuAnimationTimer = setTimeout(() => {
-        productsMenuState = 'closed';
-        productsMenuAnimationTimer = null;
-      }, 240);
-
+      productsMenuOpen = false;
       productsMenuCloseTimer = null;
     }, 200);
   }
 
   function closeProductsMenuNow() {
-    clearProductsMenuTimers();
-    productsMenuState = 'closed';
+    clearProductsMenuCloseTimer();
+    productsMenuOpen = false;
   }
 
   function openMenu() {
@@ -86,7 +65,12 @@
   }
 
   function toggleMenu() {
-    isOpen ? closeMenu() : openMenu();
+    if (isOpen) {
+      closeMenu();
+      return;
+    }
+
+    openMenu();
   }
 
   function handleShown() {
@@ -114,7 +98,7 @@
   });
 
   onDestroy(() => {
-    clearProductsMenuTimers();
+    clearProductsMenuCloseTimer();
 
     if (!offcanvasEl) return;
     offcanvasEl.removeEventListener('shown.bs.offcanvas', handleShown);
@@ -126,18 +110,24 @@
     return path.length > 1 ? path.replace(/\/+$/, '') : path;
   }
 
-  function isActive(path: string) {
-    return normalize($page.url.pathname) === normalize(path);
+  function isActivePath(currentPath: string, path: string) {
+    return currentPath === normalize(path);
   }
 
-  function navActive(path: string) {
-    return isActive(path) ? 'active' : '';
+  function navActive(currentPath: string, path: string) {
+    return isActivePath(currentPath, path) ? 'active' : '';
   }
 
-  function navActiveStarts(prefix: string) {
-    return normalize($page.url.pathname).startsWith(normalize(prefix)) ? 'active' : '';
+  function isActivePrefix(currentPath: string, prefix: string) {
+    const normalizedPrefix = normalize(prefix);
+    return currentPath === normalizedPrefix || currentPath.startsWith(`${normalizedPrefix}/`);
   }
 
+  function navActiveStarts(currentPath: string, prefix: string) {
+    return isActivePrefix(currentPath, prefix) ? 'active' : '';
+  }
+
+  $: currentPath = normalize($page.url.pathname);
   $: isCustomerAuthenticated = $auth.isAuthenticated && !$auth.isAdmin;
   $: accountHref = $auth.isAdmin ? '/admin/dashboard' : isCustomerAuthenticated ? '/utilizator' : '/cont';
   $: accountLabel = $auth.isAdmin
@@ -202,7 +192,7 @@
     <div class="desktop-nav d-none d-lg-flex ms-auto align-items-center">
       <ul class="navbar-nav align-items-lg-center">
         <li class="nav-item">
-          <a class={`nav-link ${navActive('/')}`} href="/" aria-current={isActive('/') ? 'page' : undefined}>Acasă</a>
+          <a class={`nav-link ${navActive(currentPath, '/')}`} href="/" aria-current={isActivePath(currentPath, '/') ? 'page' : undefined}>Acasă</a>
         </li>
 
         <li
@@ -213,27 +203,24 @@
           on:focusout={scheduleProductsMenuClose}
         >
           <a
-            class={`nav-link dropdown-toggle ${navActiveStarts('/produse')}`}
+            class={`nav-link dropdown-toggle ${navActiveStarts(currentPath, '/produse')}`}
             href="/produse"
-            aria-current={navActiveStarts('/produse') ? 'page' : undefined}
-            aria-expanded={productsMenuVisible}
+            aria-current={isActivePrefix(currentPath, '/produse') ? 'page' : undefined}
+            aria-expanded={productsMenuOpen}
           >
             Produse
           </a>
 
           <ul
             class="dropdown-menu products-dropdown"
-            class:visible={productsMenuVisible}
-            class:opening={productsMenuState === 'opening'}
-            class:open={productsMenuState === 'open'}
-            class:closing={productsMenuState === 'closing'}
+            class:open={productsMenuOpen}
             on:mouseenter={openProductsMenu}
             on:mouseleave={scheduleProductsMenuClose}
           >
             {#each productLinks as item}
               <li>
                 <a
-                  class={`dropdown-item ${navActive(item.href)}`}
+                  class={`dropdown-item ${navActive(currentPath, item.href)}`}
                   href={item.href}
                   on:click={closeProductsMenuNow}
                 >
@@ -246,16 +233,16 @@
         </li>
 
         <li class="nav-item">
-          <a class={`nav-link ${navActive('/horeca')}`} href="/horeca" aria-current={isActive('/horeca') ? 'page' : undefined}>HORECA</a>
+          <a class={`nav-link ${navActive(currentPath, '/horeca')}`} href="/horeca" aria-current={isActivePath(currentPath, '/horeca') ? 'page' : undefined}>HORECA</a>
         </li>
         <li class="nav-item">
-          <a class={`nav-link ${navActive('/despre-noi')}`} href="/despre-noi" aria-current={isActive('/despre-noi') ? 'page' : undefined}>Despre noi</a>
+          <a class={`nav-link ${navActive(currentPath, '/despre-noi')}`} href="/despre-noi" aria-current={isActivePath(currentPath, '/despre-noi') ? 'page' : undefined}>Despre noi</a>
         </li>
         <li class="nav-item">
-          <a class={`nav-link ${navActive('/evenimente')}`} href="/evenimente" aria-current={isActive('/evenimente') ? 'page' : undefined}>Evenimente</a>
+          <a class={`nav-link ${navActive(currentPath, '/evenimente')}`} href="/evenimente" aria-current={isActivePath(currentPath, '/evenimente') ? 'page' : undefined}>Evenimente</a>
         </li>
         <li class="nav-item">
-          <a class={`nav-link ${navActive('/contact')}`} href="/contact" aria-current={isActive('/contact') ? 'page' : undefined}>Contact</a>
+          <a class={`nav-link ${navActive(currentPath, '/contact')}`} href="/contact" aria-current={isActivePath(currentPath, '/contact') ? 'page' : undefined}>Contact</a>
         </li>
       </ul>
 
@@ -265,7 +252,7 @@
           <span>Sună</span>
         </a>
 
-        <a class={`cart-action ${navActive('/cos')}`} href="/cos" aria-label={$cartCount > 0 ? `Coș, ${$cartCount} produse` : 'Coș'}>
+        <a class={`cart-action ${navActive(currentPath, '/cos')}`} href="/cos" aria-label={$cartCount > 0 ? `Coș, ${$cartCount} produse` : 'Coș'}>
           <i class="bi bi-basket"></i>
           <span>Coș</span>
           {#if $cartCount > 0}
@@ -273,13 +260,13 @@
           {/if}
         </a>
 
-        <a class={`account-action ${navActive(accountHref)}`} href={accountHref} aria-label={$auth.isAuthenticated ? 'Contul meu' : 'Intră în cont'}>
+        <a class={`account-action ${navActive(currentPath, accountHref)}`} href={accountHref} aria-label={$auth.isAuthenticated ? 'Contul meu' : 'Intră în cont'}>
           <i class={'bi ' + accountIcon}></i>
           <span>{accountLabel}</span>
         </a>
 
         {#if $auth.isAuthenticated && !$auth.isAdmin}
-          <button class="admin-link" type="button" on:click={handleLogout} aria-label="Logout">
+          <button class="admin-link" type="button" on:click={handleLogout} aria-label="Deconectare">
             <i class="bi bi-box-arrow-right"></i>
           </button>
         {/if}
@@ -290,13 +277,13 @@
       <a class="mobile-call" href={phoneHref} aria-label="Sună DeSaga">
         <i class="bi bi-telephone-fill"></i>
       </a>
-      <a class={`mobile-cart ${navActive('/cos')}`} href="/cos" aria-label={$cartCount > 0 ? `Coș, ${$cartCount} produse` : 'Coș'}>
+      <a class={`mobile-cart ${navActive(currentPath, '/cos')}`} href="/cos" aria-label={$cartCount > 0 ? `Coș, ${$cartCount} produse` : 'Coș'}>
         <i class="bi bi-basket"></i>
         {#if $cartCount > 0}
           <span class="cart-badge">{$cartCount}</span>
         {/if}
       </a>
-      <a class={`mobile-account ${navActive(accountHref)}`} href={accountHref} aria-label={$auth.isAuthenticated ? 'Contul meu' : 'Intră în cont'}>
+      <a class={`mobile-account ${navActive(currentPath, accountHref)}`} href={accountHref} aria-label={$auth.isAuthenticated ? 'Contul meu' : 'Intră în cont'}>
         <i class={'bi ' + accountIcon}></i>
       </a>
       <button
@@ -348,54 +335,54 @@
     </div>
 
     <nav class="mobile-nav" aria-label="Navigare mobilă">
-      <a class={`mobile-link ${navActive('/')}`} href="/" on:click={closeMenu}>
+      <a class={`mobile-link ${navActive(currentPath, '/')}`} href="/" on:click={closeMenu}>
         <span><i class="bi bi-house"></i> Acasă</span>
         <i class="bi bi-chevron-right"></i>
       </a>
 
-      <a class={`mobile-link mobile-link-primary ${navActive('/produse')}`} href="/produse" on:click={closeMenu}>
+      <a class={`mobile-link mobile-link-primary ${navActive(currentPath, '/produse')}`} href="/produse" on:click={closeMenu}>
         <span><i class="bi "></i> Toate produsele</span>
         <i class="bi bi-chevron-right"></i>
       </a>
 
       <div class="mobile-section">
-        <div class={`mobile-section__title ${navActiveStarts('/produse')}`}>
+        <div class={`mobile-section__title ${navActiveStarts(currentPath, '/produse')}`}>
           Categorii produse
         </div>
         {#each productLinks.slice(1) as item}
-          <a class={`mobile-sublink ${navActive(item.href)}`} href={item.href} on:click={closeMenu}>
+          <a class={`mobile-sublink ${navActive(currentPath, item.href)}`} href={item.href} on:click={closeMenu}>
             <span><i class={'bi ' + item.icon}></i> {item.label}</span>
             <i class="bi bi-chevron-right"></i>
           </a>
         {/each}
       </div>
 
-      <a class={`mobile-link ${navActive('/horeca')}`} href="/horeca" on:click={closeMenu}>
+      <a class={`mobile-link ${navActive(currentPath, '/horeca')}`} href="/horeca" on:click={closeMenu}>
         <span><i class="bi "></i> HORECA</span>
         <i class="bi bi-chevron-right"></i>
       </a>
 
-      <a class={`mobile-link ${navActive('/despre-noi')}`} href="/despre-noi" on:click={closeMenu}>
+      <a class={`mobile-link ${navActive(currentPath, '/despre-noi')}`} href="/despre-noi" on:click={closeMenu}>
         <span><i class="bi bi-info-circle"></i> Despre noi</span>
         <i class="bi bi-chevron-right"></i>
       </a>
 
-      <a class={`mobile-link ${navActive('/evenimente')}`} href="/evenimente" on:click={closeMenu}>
+      <a class={`mobile-link ${navActive(currentPath, '/evenimente')}`} href="/evenimente" on:click={closeMenu}>
         <span><i class="bi bi-calendar-event"></i> Evenimente</span>
         <i class="bi bi-chevron-right"></i>
       </a>
 
-      <a class={`mobile-link ${navActive('/contact')}`} href="/contact" on:click={closeMenu}>
+      <a class={`mobile-link ${navActive(currentPath, '/contact')}`} href="/contact" on:click={closeMenu}>
         <span><i class="bi bi-chat-dots"></i> Contact</span>
         <i class="bi bi-chevron-right"></i>
       </a>
 
-      <a class={`mobile-link ${navActive(accountHref)}`} href={accountHref} on:click={closeMenu}>
+      <a class={`mobile-link ${navActive(currentPath, accountHref)}`} href={accountHref} on:click={closeMenu}>
         <span><i class={'bi ' + accountIcon}></i> {accountLabel}</span>
         <i class="bi bi-chevron-right"></i>
       </a>
 
-      <a class={`mobile-link ${navActive('/cos')}`} href="/cos" on:click={closeMenu}>
+      <a class={`mobile-link ${navActive(currentPath, '/cos')}`} href="/cos" on:click={closeMenu}>
         <span><i class="bi bi-basket"></i> Coș</span>
         {#if $cartCount > 0}
           <span class="cart-badge">{$cartCount}</span>
@@ -407,11 +394,11 @@
       <div class="mobile-admin">
         {#if $auth.isAdmin}
           <a class="admin-mobile-link" href="/admin/dashboard" on:click={closeMenu}>
-            <i class="bi bi-speedometer2"></i> Dashboard admin
+            <i class="bi bi-speedometer2"></i> Panou admin
           </a>
         {:else if $auth.isAuthenticated}
           <button class="admin-mobile-link" type="button" on:click={handleLogout}>
-            <i class="bi bi-box-arrow-right"></i> Logout
+            <i class="bi bi-box-arrow-right"></i> Deconectare
           </button>
         {:else}
           <a class="admin-mobile-link" href="/admin/login" on:click={closeMenu}>
@@ -581,39 +568,11 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transform: translateY(14px) scale(0.96);
+    transform: translateY(10px) scale(0.98);
     transform-origin: top center;
     clip-path: inset(0 0 100% 0 round 18px);
 
-    transition:
-      opacity 180ms ease,
-      transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
-      clip-path 240ms cubic-bezier(0.16, 1, 0.3, 1),
-      visibility 0s linear 240ms;
-  }
-
-  .products-dropdown.visible {
-    visibility: visible;
-  }
-
-  .products-dropdown.opening,
-  .products-dropdown.open {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0) scale(1);
-    clip-path: inset(0 0 0 0 round 18px);
-    transition:
-      opacity 180ms ease,
-      transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
-      clip-path 260ms cubic-bezier(0.16, 1, 0.3, 1),
-      visibility 0s linear 0s;
-  }
-
-  .products-dropdown.closing {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(10px) scale(0.98);
-    clip-path: inset(0 0 100% 0 round 18px);
+    /* Exit animation — applied when the .open class is removed. */
     transition:
       opacity 160ms ease,
       transform 220ms cubic-bezier(0.7, 0, 0.84, 0),
@@ -621,12 +580,26 @@
       visibility 0s linear 220ms;
   }
 
-  .products-dropdown.visible .dropdown-item {
+  .products-dropdown.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+    clip-path: inset(0 0 0 0 round 18px);
+
+    /* Enter animation — applied when the .open class is added. */
+    transition:
+      opacity 180ms ease,
+      transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      clip-path 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0s linear 0s;
+  }
+
+  .products-dropdown .dropdown-item {
     opacity: 0;
     transform: translateY(-4px);
   }
 
-  .products-dropdown.opening .dropdown-item,
   .products-dropdown.open .dropdown-item {
     opacity: 1;
     transform: translateY(0);
@@ -635,32 +608,16 @@
       transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .products-dropdown.opening li:nth-child(1) .dropdown-item,
   .products-dropdown.open li:nth-child(1) .dropdown-item {
     transition-delay: 40ms;
   }
 
-  .products-dropdown.opening li:nth-child(2) .dropdown-item,
   .products-dropdown.open li:nth-child(2) .dropdown-item {
     transition-delay: 75ms;
   }
 
-  .products-dropdown.opening li:nth-child(3) .dropdown-item,
   .products-dropdown.open li:nth-child(3) .dropdown-item {
     transition-delay: 110ms;
-  }
-
-  .products-dropdown.opening li:nth-child(4) .dropdown-item,
-  .products-dropdown.open li:nth-child(4) .dropdown-item {
-    transition-delay: 145ms;
-  }
-
-  .products-dropdown.closing .dropdown-item {
-    opacity: 0;
-    transform: translateY(-4px);
-    transition:
-      opacity 110ms ease,
-      transform 160ms ease;
   }
 
   .dropdown-item {

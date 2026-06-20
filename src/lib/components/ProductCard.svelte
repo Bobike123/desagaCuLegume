@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
   import { cart } from '$lib/stores/cart';
+  import { fallbackImage, optimizedImageUrl, PLACEHOLDER_IMAGE } from '$lib/images';
   import type { Product } from '$lib/stores/products';
 
   const EMPTY_PRODUCT: Product = {
@@ -25,31 +26,23 @@
     return Number.isFinite(n) ? n : 0;
   }
 
-  function fallbackImage(event: Event) {
-    const img = event.currentTarget as HTMLImageElement;
-    if (!img.src.endsWith('/placeholder.png')) img.src = '/placeholder.png';
-  }
-
   $: id = product?.id != null ? String(product.id) : '';
   $: name = safeText(product?.name).trim();
   $: description = safeText(product?.description).trim();
   $: imageUrl =
     typeof product?.image_url === 'string' && product.image_url.trim().length > 0
       ? product.image_url.trim()
-      : '/placeholder.png';
+      : PLACEHOLDER_IMAGE;
+  $: cardImageUrl = imageUrl === PLACEHOLDER_IMAGE ? imageUrl : optimizedImageUrl(imageUrl, { width: 720, height: 540 });
   $: price = toNumber(product?.price);
   $: isAvailable = Boolean(product?.in_stock);
   $: currentQty = $cart.items.find((item) => item.productId === id)?.quantity ?? 0;
   $: category = safeText(product?.category);
   $: stockQuantity = toNumber(product?.stock_quantity);
   $: categoryMeta =
-    category === 'de-sezon'
-      ? { label: 'De sezon', icon: '', tone: 'tone-green' }
-      : category === 'la-borcan'
-        ? { label: 'La borcan', icon: '', tone: 'tone-amber' }
-        : category === 'colaboratori'
-          ? { label: 'Colaboratori', icon: '', tone: 'tone-blue' }
-          : { label: 'HORECA', icon: '', tone: 'tone-purple' };
+    category === 'la-borcan'
+      ? { label: 'La borcan', tone: 'tone-amber' }
+      : { label: 'De sezon', tone: 'tone-green' };
   $: href = id ? `/produse/${id}` : undefined;
   $: stockLabel = isAvailable
     ? stockQuantity > 0
@@ -68,10 +61,7 @@
   }
 
   function inc() {
-    if (!isAvailable || !id) return;
-    lastDelta = 1;
-    cart.addProduct(product, 1);
-    bumpTick += 1;
+    addToBasket();
   }
 
   function dec() {
@@ -86,10 +76,9 @@
 
 <article class="card" data-available={isAvailable}>
   <a class="media-link" href={href} aria-label={name || 'Produs'}>
-    <img class="img" src={imageUrl} alt={name || 'Produs'} loading="lazy" on:error={fallbackImage} />
+    <img class="img" src={cardImageUrl} alt={name || 'Produs'} loading="lazy" decoding="async" on:error={fallbackImage} />
     <div class="badges">
       <span class={'pill ' + categoryMeta.tone}>
-        <i class={'bi ' + categoryMeta.icon}></i>
         {categoryMeta.label}
       </span>
 

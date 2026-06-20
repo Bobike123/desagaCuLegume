@@ -1,9 +1,9 @@
-<!-- FILE: src/routes/produse/[id]/+page.svelte -->
 <script lang="ts">
   import { page } from "$app/stores";
   import ProductCard from "$lib/components/ProductCard.svelte";
   import { cart } from "$lib/stores/cart";
   import { productsStore, type Product } from "$lib/stores/products";
+  import { fallbackImage, PLACEHOLDER_IMAGE } from "$lib/images";
   import { onDestroy } from "svelte";
 
   let product: Product | null = null;
@@ -25,9 +25,10 @@
     void loadProduct(productId);
   }
 
-  $: imageUrl = product?.image_url?.trim() ? product.image_url.trim() : "/placeholder.png";
+  $: imageUrl = product?.image_url?.trim() ? product.image_url.trim() : PLACEHOLDER_IMAGE;
   $: currentQty = product ? ($cart.items.find((item) => item.productId === String(product?.id))?.quantity ?? 0) : 0;
   $: categoryMeta = getCategoryMeta(product?.category ?? "de-sezon");
+  $: categoryHref = product?.category === "la-borcan" ? "/produse/la-borcan" : "/produse/de-sezon";
   $: stockLabel = product?.in_stock
     ? product.stock_quantity && product.stock_quantity > 0
       ? `${product.stock_quantity} disponibile`
@@ -64,8 +65,6 @@
 
   function getCategoryMeta(category: string) {
     if (category === "la-borcan") return { label: "La borcan", icon: "" };
-    if (category === "colaboratori") return { label: "Colaboratori", icon: "" };
-    if (category === "horeca") return { label: "HORECA", icon: "" };
     return { label: "De sezon", icon: "" };
   }
 
@@ -82,11 +81,6 @@
   function dec() {
     if (!product) return;
     cart.setQuantity(String(product.id), Math.max(0, currentQty - 1));
-  }
-
-  function fallbackImage(event: Event) {
-    const img = event.currentTarget as HTMLImageElement;
-    if (!img.src.endsWith("/placeholder.png")) img.src = "/placeholder.png";
   }
 </script>
 
@@ -183,7 +177,7 @@
         <section class="related-section">
           <div class="section-head">
             <h2>Produse similare disponibile</h2>
-            <a href={`/produse/${product.category}`} class="btn btn-outline-primary btn-sm">Vezi categoria</a>
+            <a href={categoryHref} class="btn btn-outline-primary btn-sm">Vezi categoria</a>
           </div>
 
           <div class="related-grid">

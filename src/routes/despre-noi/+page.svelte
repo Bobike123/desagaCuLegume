@@ -10,14 +10,14 @@
   const stats = [
     { value: '2.500 m²', label: 'solarii lucrate', icon: 'bi-house-heart' },
     { value: '2016', label: 'primul sezon', icon: 'bi-calendar-heart' },
-    { value: '20+', label: 'colaboratori locali', icon: 'bi-people' },
+    { value: '20+', label: 'parteneri locali', icon: 'bi-people' },
     { value: 'zilnic', label: 'stoc după recoltă', icon: 'bi-arrow-repeat' },
   ] as const;
 
   const principles = [
     {
       title: 'Lanț scurt',
-      text: 'Produsele ajung rapid din fermă și de la colaboratori locali la rulota DeSaga.',
+      text: 'Produsele ajung rapid din fermă și de la parteneri locali la rulota DeSaga.',
       icon: 'bi-signpost-split',
     },
     {
@@ -42,21 +42,29 @@
       year: '2016',
       title: 'Primul contact cu ferma',
       text: 'În weekenduri și în timpul liber am început să ajutăm la o fermă de legume din Jucu. După un sezon agricol, direcția era clară.',
+      image: '/images/despre-noi/2016.jpeg',
+      imageAlt: 'Rânduri cultivate în solar la începutul poveștii DeSaga',
     },
     {
       year: '2017–2018',
       title: 'Ritm mai simplu',
       text: 'Munca în aer liber, liniștea din natură și satisfacția de a pune pe masă ceva crescut de la sămânță au schimbat felul în care vedeam munca.',
+      image: '/images/despre-noi/2017-2018.jpeg',
+      imageAlt: 'Legume proaspăt recoltate așezate pe iarbă',
     },
     {
       year: '2019',
       title: 'DeSaga cu Legume',
       text: 'Am preluat oficial ferma de la Jucu, am numit-o DeSaga cu Legume și am investit timpul, banii și energia în proiect.',
+      image: '/images/despre-noi/2019.jpeg',
+      imageAlt: 'Solar DeSaga cu plante crescute pe rânduri',
     },
     {
       year: 'Astăzi',
       title: 'Rulota și comunitatea',
       text: 'Aducem produse locale la rulota din Cluj-Napoca și construim o mică rețea de clienți și producători care apreciază gustul simplu și corect.',
+      image: '/images/despre-noi/zacusca-cu-fasole.jpg',
+      imageAlt: 'Borcan DeSaga cu zacuscă de fasole și ingrediente locale',
     },
   ] as const;
 
@@ -73,16 +81,43 @@
   const productGroups: ProductGroup[] = [
     { title: 'Legume și fructe de sezon', icon: '', href: '/produse/de-sezon' },
     { title: 'Produse la borcan', icon: '', href: '/produse/la-borcan' },
-    { title: 'Produse de la colaboratori', icon: '', href: '/produse/colaboratori' },
-    { title: 'Oferte HORECA', icon: '', href: '/horeca' },
   ];
+
+  const storyPhotos = [
+    {
+      src: '/images/despre-noi/zacusca-cu-fasole.jpg',
+      alt: 'Zacuscă DeSaga cu fasole, ardei și usturoi',
+      caption: 'Loturi mici, făcute pentru mese simple și bune.',
+    },
+    {
+      src: '/images/despre-noi/dulceata-rosii-cherry.jpg',
+      alt: 'Dulceață de roșii cherry DeSaga pe ștergar tradițional',
+      caption: 'Produse păstrate cu grijă pentru gustul de peste sezon.',
+    },
+    {
+      src: '/images/despre-noi/muraturi-asortate.jpg',
+      alt: 'Murături asortate DeSaga în borcan',
+      caption: 'Cămara completează ce se întâmplă în fermă.',
+    },
+  ] as const;
+
+  const pantryPhotos = [
+    {
+      src: '/images/despre-noi/zacusca-ardei-iute.jpg',
+      alt: 'Zacuscă DeSaga cu ardei iute',
+    },
+    {
+      src: '/images/despre-noi/ceapa-rosie-la-borcan.jpg',
+      alt: 'Ceapă roșie DeSaga la borcan',
+    },
+  ] as const;
 </script>
 
 <svelte:head>
   <title>Despre noi - DeSaga cu Legume</title>
   <meta
     name="description"
-    content="Povestea DeSaga cu Legume: fermă locală, produse de sezon, colaboratori locali și rulota DeSaga din Cluj-Napoca."
+    content="Povestea DeSaga cu Legume: fermă locală, produse de sezon, parteneri locali și rulota DeSaga din Cluj-Napoca."
   />
 </svelte:head>
 
@@ -95,7 +130,7 @@
   secondaryHref={phoneHref}
   secondaryLabel="Sună pentru stoc"
   facts={quickInfo}
-  backgroundImage=""
+  backgroundImage="/images/despre-noi/hero-produse-la-borcan.jpg"
   height="360px"
 />
 
@@ -116,11 +151,20 @@
         </p>
 
         <p>
-          Ferma, rulota și colaboratorii locali formează același traseu simplu:
+          Ferma, rulota și partenerii locali formează același traseu simplu:
           produse crescute sau alese cu grijă, aduse aproape de oamenii din
           Cluj-Napoca. Stocul se schimbă des, iar asta este normal pentru un loc
           care lucrează cu sezonul, nu împotriva lui.
         </p>
+
+        <div class="story-photo-grid" aria-label="Produse DeSaga fotografiate">
+          {#each storyPhotos as photo (photo.src)}
+            <figure class="story-photo">
+              <img src={photo.src} alt={photo.alt} loading="lazy" decoding="async" />
+              <figcaption>{photo.caption}</figcaption>
+            </figure>
+          {/each}
+        </div>
 
         <div class="story-actions">
           <a class="btn btn-accent" href="/produse">
@@ -135,19 +179,18 @@
       </article>
 
       <aside class="panel panel-soft trust-panel" aria-label="Informații rapide">
-        <div class="farm-visual" aria-hidden="true">
-          <div class="farm-visual__sun"></div>
-          <div class="farm-visual__rows">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <div class="farm-visual__label">
+        <figure class="farm-photo-card">
+          <img
+            src="/images/despre-noi/muraturi-asortate.jpg"
+            alt="Borcan cu murături asortate DeSaga"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>
             <i class="bi bi-shop-window"></i>
             Rulota DeSaga
-          </div>
-        </div>
+          </figcaption>
+        </figure>
 
         <div class="quick-list">
           {#each quickInfo as item (item.label)}
@@ -213,6 +256,7 @@
             <div class="timeline-item">
               <div class="timeline-dot" aria-hidden="true"></div>
               <div class="timeline-card">
+                <img class="timeline-image" src={step.image} alt={step.imageAlt} loading="lazy" decoding="async" />
                 <div class="timeline-top">
                   <span class="timeline-year">{step.year}</span>
                   <h3>{step.title}</h3>
@@ -246,6 +290,12 @@
           <div class="section-kicker">
             <i class="bi bi-basket"></i>
             Ce găsești la noi
+          </div>
+
+          <div class="pantry-photos" aria-label="Produse la borcan DeSaga">
+            {#each pantryPhotos as photo (photo.src)}
+              <img src={photo.src} alt={photo.alt} loading="lazy" decoding="async" />
+            {/each}
           </div>
 
           <div class="product-links">
@@ -380,46 +430,66 @@
     margin-top: 1.25rem;
   }
 
-  .farm-visual {
-    position: relative;
-    min-height: 240px;
+  .story-photo-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.15rem;
+  }
+
+  @media (min-width: 768px) {
+    .story-photo-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .story-photo {
+    min-width: 0;
+    margin: 0;
     overflow: hidden;
     border-radius: 18px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.08)),
-      linear-gradient(135deg, rgba(38, 153, 214, 0.28), rgba(93, 132, 71, 0.22));
-    border: 1px solid rgba(var(--accent-rgb), 0.16);
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
   }
 
-  .farm-visual__sun {
-    position: absolute;
-    top: 28px;
-    right: 34px;
-    width: 68px;
-    height: 68px;
-    border-radius: 999px;
-    background: rgba(255, 211, 100, 0.88);
-    box-shadow: 0 0 0 18px rgba(255, 211, 100, 0.14);
+  .story-photo img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
   }
 
-  .farm-visual__rows {
-    position: absolute;
-    inset: auto 0 0;
-    height: 58%;
+  .story-photo figcaption {
+    padding: 0.7rem;
+    color: rgba(20, 33, 43, 0.74);
+    font-size: 0.86rem;
+    font-weight: 850;
+    line-height: 1.35;
+  }
+
+  .trust-panel {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    padding: 0 22px 22px;
-    transform: perspective(280px) rotateX(48deg);
-    transform-origin: bottom;
+    gap: 1rem;
   }
 
-  .farm-visual__rows span {
-    border-radius: 999px 999px 10px 10px;
-    background: linear-gradient(180deg, rgba(47, 128, 73, 0.94), rgba(82, 55, 34, 0.78));
+  .farm-photo-card {
+    position: relative;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid rgba(var(--accent-rgb), 0.16);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
   }
 
-  .farm-visual__label {
+  .farm-photo-card img {
+    display: block;
+    width: 100%;
+    min-height: 260px;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .farm-photo-card figcaption {
     position: absolute;
     left: 16px;
     bottom: 16px;
@@ -577,10 +647,21 @@
   }
 
   .timeline-card {
+    overflow: hidden;
     padding: 1rem;
     border-radius: 18px;
     background: rgba(15, 23, 42, 0.025);
     border: 1px solid rgba(15, 23, 42, 0.07);
+  }
+
+  .timeline-image {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.85rem;
+    border-radius: 14px;
+    aspect-ratio: 16 / 8;
+    object-fit: cover;
+    background: rgba(15, 23, 42, 0.05);
   }
 
   .timeline-top {
@@ -640,6 +721,22 @@
     line-height: 1.2;
   }
 
+  .pantry-photos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .pantry-photos img {
+    display: block;
+    width: 100%;
+    border-radius: 16px;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
   .product-links {
     display: grid;
     gap: 0.65rem;
@@ -678,8 +775,8 @@
     border-radius: 24px;
     color: #fff;
     background:
-      radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 22rem),
-      var(--desaga-blue);
+      linear-gradient(90deg, rgba(18, 91, 130, 0.94), rgba(18, 91, 130, 0.78)),
+      url('/images/despre-noi/ceapa-rosie-la-borcan.jpg') center/cover;
     box-shadow: 0 18px 42px rgba(38, 153, 214, 0.24);
   }
 

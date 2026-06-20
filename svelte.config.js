@@ -4,16 +4,9 @@ import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	preprocess: vitePreprocess(),
-	onwarn: (warning, handler) => {
-		const ignore = new Set([
-			"a11y_label_has_associated_control",
-			"element_invalid_self_closing_tag",
-			"css_unused_selector",
-		]);
-
-		if (ignore.has(warning.code)) return;
-		handler(warning);
-	},
+	// No warning suppression: a11y/validity/unused-CSS warnings are surfaced so
+	// real issues are fixed rather than hidden. Re-add a narrow onwarn filter
+	// only for confirmed third-party noise, never for a11y codes.
 	kit: {
 		adapter: adapter(),
 		alias: {

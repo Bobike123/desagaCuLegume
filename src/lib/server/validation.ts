@@ -41,7 +41,7 @@ export const LIMITS = {
   smallJson: 32 * 1024,
   json: DEFAULT_JSON_MAX_BYTES,
   largeJson: 128 * 1024,
-  upload: 6 * 1024 * 1024,
+  upload: 12 * 1024 * 1024,
   message: 2_000,
   longText: 5_000,
 } as const;

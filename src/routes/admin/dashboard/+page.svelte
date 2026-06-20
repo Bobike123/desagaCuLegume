@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import AdminNav from '$lib/components/AdminNav.svelte';
 
   type DashboardState = {
     products: number;
@@ -9,6 +8,10 @@
     unreadMessages: number;
     horecaRequests: number;
     newHorecaRequests: number;
+    securityUnread: number;
+    securityDecoyHits24h: number;
+    securityRateLimits24h: number;
+    failedLogins24h: number;
   };
 
   let stats: DashboardState = {
@@ -18,6 +21,10 @@
     unreadMessages: 0,
     horecaRequests: 0,
     newHorecaRequests: 0,
+    securityUnread: 0,
+    securityDecoyHits24h: 0,
+    securityRateLimits24h: 0,
+    failedLogins24h: 0,
   };
 
   let loading = true;
@@ -28,37 +35,22 @@
     error = '';
 
     try {
-      const [productsRes, ordersRes, messagesRes, horecaRes] = await Promise.all([
-        fetch('/api/products'),
-        fetch('/api/orders'),
-        fetch('/api/messages'),
-        fetch('/api/horeca'),
-      ]);
+      const res = await fetch('/api/admin/stats');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca dashboard-ul.');
 
-      const productsData = await productsRes.json().catch(() => ({}));
-      const ordersData = await ordersRes.json().catch(() => ({}));
-      const messagesData = await messagesRes.json().catch(() => ({}));
-      const horecaData = await horecaRes.json().catch(() => ({}));
-
-      if (!productsRes.ok || !ordersRes.ok || !messagesRes.ok || !horecaRes.ok) {
-        throw new Error(
-          productsData?.error ??
-            ordersData?.error ??
-            messagesData?.error ??
-            horecaData?.error ??
-            'Nu am putut încărca dashboard-ul.'
-        );
-      }
-
-      const messages = Array.isArray(messagesData?.items) ? messagesData.items : [];
-      const horecaItems = Array.isArray(horecaData?.items) ? horecaData.items : [];
-
-      stats.products = Array.isArray(productsData?.items) ? productsData.items.length : 0;
-      stats.orders = Array.isArray(ordersData?.items) ? ordersData.items.length : 0;
-      stats.messages = messages.length;
-      stats.unreadMessages = messages.reduce((sum: number, item: any) => sum + Number(item.unreadCount ?? 0), 0);
-      stats.horecaRequests = horecaItems.length;
-      stats.newHorecaRequests = horecaItems.filter((item: any) => item.status === 'NEW').length;
+      stats = {
+        products: Number(data?.products ?? 0),
+        orders: Number(data?.orders ?? 0),
+        messages: Number(data?.messages ?? 0),
+        unreadMessages: Number(data?.unreadMessages ?? 0),
+        horecaRequests: Number(data?.horecaRequests ?? 0),
+        newHorecaRequests: Number(data?.newHorecaRequests ?? 0),
+        securityUnread: Number(data?.securityUnread ?? 0),
+        securityDecoyHits24h: Number(data?.securityDecoyHits24h ?? 0),
+        securityRateLimits24h: Number(data?.securityRateLimits24h ?? 0),
+        failedLogins24h: Number(data?.failedLogins24h ?? 0),
+      };
     } catch (err) {
       error = err instanceof Error ? err.message : 'Nu am putut încărca dashboard-ul.';
     } finally {
@@ -66,20 +58,28 @@
     }
   }
 
+  async function markSecurityRead() {
+    try {
+      const res = await fetch('/api/admin/security-events', { method: 'PATCH' });
+      if (!res.ok) throw new Error('Nu am putut marca notificările ca citite.');
+      await loadDashboard();
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Nu am putut marca notificările ca citite.';
+    }
+  }
+
   onMount(loadDashboard);
 </script>
 
 <svelte:head>
-  <title>Dashboard - Admin DeSaga</title>
+  <title>Panou - Admin DeSaga</title>
 </svelte:head>
 
-<AdminNav />
-
-<div class="page">
+<div class="admin-page">
   <header class="topbar">
     <div>
       <p class="eyebrow">Overview</p>
-      <h1>Dashboard</h1>
+      <h1>Panou administrare</h1>
       <p>Produse, comenzi, conversații și cereri HORECA într-o singură privire.</p>
     </div>
     <button class="action" on:click={loadDashboard} disabled={loading}>
@@ -95,6 +95,27 @@
     </div>
   {/if}
 
+  <section class:active={stats.securityUnread > 0} class="securityNotice" aria-label="Activitate suspectă">
+    <div class="securityNotice__icon">
+      <i class="bi bi-shield-exclamation"></i>
+    </div>
+    <div>
+      <p class="eyebrow">Activitate suspectă</p>
+      <h2>{loading ? 'Se verifică activitatea' : stats.securityUnread > 0 ? 'Activitate nouă detectată' : 'Nicio notificare nouă'}</h2>
+      <p>
+        {loading
+          ? 'Se încarcă sumarul de securitate.'
+          : `${stats.securityDecoyHits24h} accesări decoy, ${stats.securityRateLimits24h} limitări și ${stats.failedLogins24h} autentificări eșuate în ultimele 24h.`}
+      </p>
+    </div>
+    <div class="securityNotice__actions">
+      <a class="quick primary" href="/admin/security"><i class="bi bi-list-check"></i> Vezi evenimente</a>
+      <button class="quick" type="button" on:click={markSecurityRead} disabled={loading || stats.securityUnread === 0}>
+        <i class="bi bi-check2-circle"></i> Marchează citit
+      </button>
+    </div>
+  </section>
+
   <section class="metricGrid" aria-label="Statistici dashboard">
     <a class="metric featured" href="/admin/produse">
       <span class="metric__icon"><i class="bi bi-box-seam"></i></span>
@@ -107,7 +128,7 @@
       <span class="metric__icon"><i class="bi bi-receipt"></i></span>
       <span class="metric__label">Comenzi</span>
       <strong>{loading ? '…' : stats.orders}</strong>
-      <small>Statusuri și livrare</small>
+      <small>Stări și livrare</small>
     </a>
 
     <a class="metric" href="/admin/horeca">
@@ -140,59 +161,24 @@
 </div>
 
 <style>
-  .page {
-    --bg: #f6f1e7;
-    --surface: #fffdf7;
-    --ink: #1d241b;
-    --muted: #6b7165;
-    --line: rgba(31, 42, 28, 0.12);
-    --accent: #274f2a;
+  .admin-page {
     --accent-soft: rgba(139, 212, 80, 0.2);
-    margin-left: 240px;
-    min-height: 100vh;
-    padding: clamp(18px, 3vw, 34px);
     background:
       radial-gradient(850px 360px at 12% -8%, rgba(139, 212, 80, 0.24), transparent 60%),
       var(--bg);
-    color: var(--ink);
   }
 
-  .topbar {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 20px;
-    margin-bottom: 18px;
-  }
-
-  .eyebrow {
-    margin: 0 0 6px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-size: 0.75rem;
-    font-weight: 950;
-  }
-
-  h1,
   h2 {
     margin: 0;
     font-weight: 950;
     letter-spacing: -0.055em;
     color: var(--ink);
-  }
-
-  h1 {
-    font-size: clamp(2.25rem, 7vw, 4.8rem);
-    line-height: 0.94;
-  }
-
-  h2 {
     font-size: clamp(1.5rem, 3vw, 2.35rem);
   }
 
   .topbar p:not(.eyebrow),
-  .commandPanel p:not(.eyebrow) {
+  .commandPanel p:not(.eyebrow),
+  .securityNotice p:not(.eyebrow) {
     max-width: 680px;
     margin: 10px 0 0;
     color: var(--muted);
@@ -213,32 +199,61 @@
     text-decoration: none;
     font-weight: 900;
     box-shadow: 0 12px 30px rgba(35, 51, 30, 0.08);
+    cursor: pointer;
+    border: 1px solid var(--line);
   }
 
   .action:disabled {
     opacity: 0.58;
   }
 
-  .notice {
-    margin: 0 0 16px;
-    border-radius: 18px;
-    padding: 14px 16px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    font-weight: 800;
+  button.quick:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
   }
 
-  .notice.danger {
-    background: #fff1f1;
-    border: 1px solid #facaca;
+  .securityNotice {
+    margin: 0 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 30px;
+    padding: 18px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: center;
+    background: rgba(255, 253, 247, 0.88);
+    box-shadow: 0 18px 50px rgba(35, 51, 30, 0.08);
+  }
+
+  .securityNotice.active {
+    border-color: rgba(132, 32, 41, 0.34);
+    background: #fff8ec;
+    box-shadow: 0 20px 60px rgba(132, 32, 41, 0.12);
+  }
+
+  .securityNotice__icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
     color: #842029;
+    background: rgba(132, 32, 41, 0.1);
+    font-size: 1.35rem;
+  }
+
+  .securityNotice__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
   }
 
   .metricGrid {
     display: grid;
     grid-template-columns: 1.25fr repeat(3, minmax(0, 1fr));
     gap: 14px;
+    margin-bottom: 16px;
   }
 
   .metric {
@@ -308,7 +323,6 @@
   }
 
   .commandPanel {
-    margin-top: 16px;
     border: 1px solid var(--line);
     border-radius: 30px;
     padding: clamp(18px, 3vw, 28px);
@@ -330,6 +344,7 @@
   .quick.primary {
     background: var(--accent);
     color: #fffdf7;
+    border-color: transparent;
   }
 
   @media (max-width: 1180px) {
@@ -338,16 +353,10 @@
     }
   }
 
-  @media (max-width: 991.98px) {
-    .page {
-      margin-left: 0;
-      padding: 88px 16px 24px;
-    }
-  }
-
   @media (max-width: 720px) {
     .topbar,
-    .commandPanel {
+    .commandPanel,
+    .securityNotice {
       grid-template-columns: 1fr;
       display: grid;
       align-items: stretch;

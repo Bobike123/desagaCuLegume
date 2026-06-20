@@ -6,7 +6,7 @@
   const links = [
     {
       href: '/admin/dashboard',
-      label: 'Dashboard',
+      label: 'Panou',
       icon: 'bi-house',
       active: (path: string) => path === '/admin/dashboard' || path === '/admin',
     },
@@ -35,6 +35,12 @@
       active: (path: string) => path.startsWith('/admin/messages'),
     },
     {
+      href: '/admin/security',
+      label: 'Securitate',
+      icon: 'bi-shield-exclamation',
+      active: (path: string) => path.startsWith('/admin/security'),
+    },
+    {
       href: '/admin/evenimente',
       label: 'Evenimente',
       icon: 'bi-calendar-event',
@@ -50,15 +56,15 @@
 
   async function handleLogout() {
     await auth.logout();
-    await goto('/admin/login');
+    await goto('/cont');
   }
 </script>
 
 <nav class="adminNav" aria-label="Navigare administrare">
-  <a class="adminNav__brand" href="/admin/dashboard" aria-label="Dashboard admin DeSaga">
+  <a class="adminNav__brand" href="/admin/dashboard" aria-label="Panou admin DeSaga">
     <span class="adminNav__brandIcon"><i class="bi bi-shield-lock"></i></span>
     <span class="adminNav__brandText">
-      <strong>Admin DeSaga</strong>
+      <strong>Administrare DeSaga</strong>
       <small>catalog și comenzi</small>
     </span>
   </a>
@@ -82,7 +88,7 @@
 
     <button class="adminNav__logout" type="button" on:click={handleLogout}>
       <i class="bi bi-box-arrow-right"></i>
-      <span>Logout</span>
+      <span>Deconectare</span>
     </button>
   </div>
 </nav>
@@ -99,6 +105,9 @@
         <i class={`bi ${item.icon}`}></i>
       </a>
     {/each}
+    <button class="adminMobileBar__logout" type="button" on:click={handleLogout} aria-label="Deconectare">
+      <i class="bi bi-box-arrow-right"></i>
+    </button>
   </div>
 </nav>
 
@@ -274,6 +283,19 @@
     .adminMobileBar__links a.active {
       color: var(--desaga-blue, #2699d6);
       background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.12);
+    }
+
+    .adminMobileBar__logout {
+      width: 40px;
+      height: 40px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      color: rgba(220, 53, 69, 0.9);
+      background: rgba(220, 53, 69, 0.1);
+      border: 0;
+      cursor: pointer;
+      flex: 0 0 auto;
     }
   }
 </style>

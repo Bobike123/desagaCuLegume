@@ -1,4 +1,3 @@
-<!-- FILE: src/routes/produse/de-sezon/+page.svelte -->
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
   import ProductCard from "$lib/components/ProductCard.svelte";
@@ -25,7 +24,7 @@
 <Hero
   title="Produse de sezon"
   subtitle="Legume și fructe locale, disponibile în funcție de recoltă."
-  backgroundImage=""
+  backgroundImage="/images/produse/de-sezon-hero.jpg"
   height="300px"
 />
 
@@ -36,7 +35,7 @@
       <div>
         <p class="eyebrow mb-2">Din fermă la rulotă</p>
         <h2>Sezon real, stoc actualizat</h2>
-        <p class="lead mb-0">Aici apar produsele proaspete disponibile acum. Oferta se schimbă natural, în funcție de recoltă și colaboratori.</p>
+        <p class="lead mb-0">Aici apar produsele proaspete disponibile acum. Oferta se schimbă natural, în funcție de recoltă și stoc.</p>
       </div>
       <div class="intro-actions">
         <a href="/produse" class="btn btn-outline-primary"><i class="bi "></i> Toate produsele</a>

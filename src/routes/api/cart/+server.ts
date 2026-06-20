@@ -1,41 +1,16 @@
 import { json } from '@sveltejs/kit';
+import { MAX_CART_QUANTITY } from '$lib/cart-limits';
+import { normalizeCartItems, type CartItem } from '$lib/server/cart-validation';
+import type { ReplaceCartItemsArgs } from '$lib/server/rpc-contracts';
 import { createAdminClient } from '$lib/server/supabase';
 import {
   arrayField,
-  isPlainObject,
   LIMITS,
   numberField,
   readJsonBody,
   requireNumericId,
   validationErrorResponse,
 } from '$lib/server/validation';
-
-type CartInputItem = {
-  productId: string;
-  quantity: number;
-};
-
-async function getOrCreateActiveCart(userId: number) {
-  const admin = createAdminClient();
-  const existing = await admin
-    .from('carts')
-    .select('cart_id, status')
-    .eq('user_id', userId)
-    .eq('status', 'ACTIVE')
-    .maybeSingle();
-
-  if (existing.error) throw existing.error;
-  if (existing.data) return existing.data.cart_id as number;
-
-  const created = await admin
-    .from('carts')
-    .insert({ user_id: userId, status: 'ACTIVE', currency_code: 'RON' })
-    .select('cart_id')
-    .single();
-
-  if (created.error) throw created.error;
-  return created.data.cart_id as number;
-}
 
 async function buildCartResponse(userId: number) {
   const admin = createAdminClient();
@@ -79,76 +54,20 @@ async function buildCartResponse(userId: number) {
   return { cartId: cartRow.data.cart_id, items };
 }
 
-function normalizeCartItems(rawItems: unknown[]): CartInputItem[] {
-  const normalized = rawItems.map((raw, index) => {
-    if (!isPlainObject(raw)) {
-      throw new Error(`Produs invalid în coș la poziția ${index + 1}.`);
-    }
-
-    return {
-      productId: requireNumericId(raw.productId, 'ID produs'),
-      quantity: numberField(raw, 'quantity', {
-        required: true,
-        integer: true,
-        min: 1,
-        max: 99,
-        fieldLabel: 'Cantitatea',
-      }),
-    };
-  });
-
-  const quantities = new Map<string, number>();
-  for (const item of normalized) {
-    quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
-  }
-
-  return [...quantities.entries()].map(([productId, quantity]) => ({
-    productId,
-    quantity: Math.min(quantity, 99),
-  }));
-}
-
-async function replaceCartItems(userId: number, items: CartInputItem[]) {
+async function replaceCartItems(userId: number, items: CartItem[]) {
   const admin = createAdminClient();
-  const cartId = await getOrCreateActiveCart(userId);
+  const { error } = await admin.rpc('replace_cart_items', {
+    p_user_id: userId,
+    p_items: items.map((item) => ({
+      product_id: Number(item.productId),
+      quantity: item.quantity,
+    })),
+  } satisfies ReplaceCartItemsArgs);
 
-  const productIds = items.map((item) => Number(item.productId)).filter((value) => Number.isFinite(value));
-  const productRows = productIds.length
-    ? await admin
-        .from('products')
-        .select('product_id, name, price, stock_quantity, status')
-        .in('product_id', productIds)
-    : { data: [], error: null };
-
-  if (productRows.error) throw productRows.error;
-
-  const productMap = new Map((productRows.data ?? []).map((row: any) => [String(row.product_id), row]));
-
-  const prepared = items
-    .map((item) => {
-      const product = productMap.get(String(item.productId));
-      const quantity = item.quantity;
-      if (!product || quantity <= 0) return null;
-      if (product.status !== 'ACTIVE') throw new Error(`Produsul ${product.name} nu este activ.`);
-      if (quantity > Number(product.stock_quantity ?? 0)) {
-        throw new Error(`Stoc insuficient pentru ${product.name}.`);
-      }
-      return {
-        cart_id: cartId,
-        product_id: product.product_id,
-        quantity,
-        unit_price: Number(product.price ?? 0),
-        currency_code: 'RON',
-      };
-    })
-    .filter(Boolean) as Array<Record<string, unknown>>;
-
-  const { error: deleteError } = await admin.from('cart_items').delete().eq('cart_id', cartId);
-  if (deleteError) throw deleteError;
-
-  if (prepared.length > 0) {
-    const { error: insertError } = await admin.from('cart_items').insert(prepared);
-    if (insertError) throw insertError;
+  if (error) {
+    throw new Error(
+      `Cart transaction failed: ${error.message}. Run the provided replace_cart_items SQL function before production use.`
+    );
   }
 
   return buildCartResponse(userId);
@@ -167,8 +86,8 @@ export async function GET({ locals }) {
     const payload = await buildCartResponse(locals.user.id);
     return json({ authenticated: true, ...payload }, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load cart';
-    return json({ error: message }, { status: 400 });
+    console.error('Cart load failed', error);
+    return json({ error: 'Nu am putut încărca coșul.' }, { status: 400 });
   }
 }
 
@@ -187,7 +106,7 @@ export async function POST({ locals, request }) {
       defaultValue: 1,
       integer: true,
       min: 1,
-      max: 99,
+      max: MAX_CART_QUANTITY,
       fieldLabel: 'Cantitatea',
     });
 
@@ -204,10 +123,10 @@ export async function POST({ locals, request }) {
     const payload = await replaceCartItems(locals.user.id, items);
     return json(payload, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to update cart';
     const validation = validationErrorResponse(error);
     if (validation) return validation;
-    return json({ error: message }, { status: 400 });
+    console.error('Cart update failed', error);
+    return json({ error: 'Nu am putut actualiza coșul.' }, { status: 400 });
   }
 }
 
@@ -228,8 +147,8 @@ export async function PUT({ locals, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Failed to sync cart';
-    return json({ error: message }, { status: 400 });
+    console.error('Cart sync failed', error);
+    return json({ error: 'Nu am putut sincroniza coșul.' }, { status: 400 });
   }
 }
 
@@ -258,7 +177,7 @@ export async function DELETE({ locals }) {
 
     return json({ success: true }, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to clear cart';
-    return json({ error: message }, { status: 400 });
+    console.error('Cart clear failed', error);
+    return json({ error: 'Nu am putut goli coșul.' }, { status: 400 });
   }
 }

@@ -1,6 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
+import { getPagination, getPaginationMeta, noStoreHeaders } from '$lib/server/pagination';
 import {
+  cleanString,
   enumField,
   LIMITS,
   nullableStringField,
@@ -14,10 +16,6 @@ const allowedStatuses = ['NEW', 'CONTACTED', 'OFFER_SENT', 'CLOSED'] as const;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type HorecaStatus = (typeof allowedStatuses)[number];
-
-function cleanString(value: unknown) {
-  return String(value ?? '').trim();
-}
 
 function normalizeStatus(value: unknown): HorecaStatus {
   const status = cleanString(value).toUpperCase();
@@ -46,31 +44,35 @@ function mapRequest(row: any) {
   };
 }
 
-export async function GET({ locals, url }) {
+export async function GET({ locals, url, setHeaders }) {
   if (!locals.isAdmin) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: 'Acces neautorizat.' }, { status: 401 });
   }
 
   try {
     const status = url.searchParams.get('status');
+    const pagination = getPagination(url, { defaultLimit: 50, maxLimit: 100 });
     let query = createAdminClient()
       .from('horeca_requests')
       .select(
-        'request_id, business_name, contact_name, phone, email, business_type, city, address, products_needed, estimated_quantity, frequency, preferred_contact, message, status, admin_note, created_at, updated_at'
-      )
-      .order('created_at', { ascending: false });
+        'request_id, business_name, contact_name, phone, email, business_type, city, address, products_needed, estimated_quantity, frequency, preferred_contact, message, status, admin_note, created_at, updated_at',
+        { count: 'exact' }
+      );
 
     if (status && status !== 'ALL') {
       query = query.eq('status', normalizeStatus(status));
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(pagination.offset, pagination.to);
     if (error) throw error;
 
-    return json({ items: (data ?? []).map(mapRequest) }, { status: 200 });
+    setHeaders(noStoreHeaders);
+    return json({ items: (data ?? []).map(mapRequest), page: getPaginationMeta(pagination, count ?? 0) }, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Nu am putut încărca cererile HORECA.';
-    return json({ error: message }, { status: 400 });
+    console.error('HORECA requests load failed', error);
+    return json({ error: 'Nu am putut încărca cererile HORECA.' }, { status: 400 });
   }
 }
 
@@ -129,14 +131,14 @@ export async function POST({ request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Nu am putut trimite cererea HORECA.';
-    return json({ error: message }, { status: 400 });
+    console.error('HORECA request create failed', error);
+    return json({ error: 'Nu am putut trimite cererea HORECA.' }, { status: 400 });
   }
 }
 
 export async function PATCH({ locals, request }) {
   if (!locals.isAdmin) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: 'Acces neautorizat.' }, { status: 401 });
   }
 
   try {
@@ -169,7 +171,7 @@ export async function PATCH({ locals, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : 'Nu am putut actualiza cererea HORECA.';
-    return json({ error: message }, { status: 400 });
+    console.error('HORECA request update failed', error);
+    return json({ error: 'Nu am putut actualiza cererea HORECA.' }, { status: 400 });
   }
 }

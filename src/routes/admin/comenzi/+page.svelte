@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import AdminNav from '$lib/components/AdminNav.svelte';
 
   const orderStatuses = [
     { value: 'PENDING', label: 'În așteptare' },
@@ -35,7 +34,8 @@
     id: string;
     orderNumber: string;
     customerFullName: string;
-    customerEmail: string;
+    customerEmail: string | null;
+    customerPhone: string | null;
     total: number;
     currency: string;
     status: string;
@@ -46,8 +46,15 @@
 
   let items: OrderItem[] = [];
   let loading = true;
+  let loadingMore = false;
   let error = '';
   let successMessage = '';
+  let searchQuery = '';
+  let statusFilter = '';
+  let sortMode = 'newest';
+  let page = 1;
+  let hasMore = false;
+  const pageLimit = 50;
 
   function getStatusLabel(value: string, statuses: { value: string; label: string }[]): string {
     return statuses.find((s) => s.value === value)?.label || value;
@@ -64,20 +71,55 @@
     return 'badge-secondary';
   }
 
-  async function loadOrders() {
-    loading = true;
+  async function loadOrders(reset = true) {
+    if (reset) {
+      page = 1;
+      loading = true;
+    } else {
+      loadingMore = true;
+    }
     error = '';
     try {
-      const res = await fetch('/api/orders');
+      const params = new URLSearchParams({ limit: String(pageLimit), page: String(page) });
+      if (searchQuery.trim()) params.set('q', searchQuery.trim());
+      if (statusFilter) params.set('status', statusFilter);
+      const res = await fetch(`/api/orders?${params.toString()}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca comenzile.');
-      items = Array.isArray(data?.items) ? data.items : [];
+      const nextItems = Array.isArray(data?.items) ? data.items : [];
+      items = reset ? nextItems : [...items, ...nextItems];
+      hasMore = Boolean(data?.page?.hasMore);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Nu am putut încărca comenzile.';
     } finally {
       loading = false;
+      loadingMore = false;
     }
   }
+
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    page += 1;
+    await loadOrders(false);
+  }
+
+  function orderMatches(item: OrderItem) {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return `${item.orderNumber} ${item.customerFullName ?? ''} ${item.customerEmail ?? ''} ${item.customerPhone ?? ''} ${item.status} ${item.paymentStatus} ${item.fulfillmentStatus}`
+      .toLowerCase()
+      .includes(q);
+  }
+
+  $: filteredItems = items
+    .filter((item) => (!statusFilter || item.status === statusFilter) && orderMatches(item))
+    .slice()
+    .sort((a, b) => {
+      if (sortMode === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (sortMode === 'total-desc') return b.total - a.total;
+      if (sortMode === 'total-asc') return a.total - b.total;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   async function saveOrder(item: OrderItem) {
     successMessage = '';
@@ -102,23 +144,21 @@
     }, 3000);
   }
 
-  onMount(loadOrders);
+  onMount(() => loadOrders());
 </script>
 
 <svelte:head>
   <title>Comenzi - Admin DeSaga</title>
 </svelte:head>
 
-<AdminNav />
-
-<div class="page">
+<div class="admin-page">
   <header class="topbar">
     <div>
       <p class="eyebrow">Operațiuni</p>
       <h1>Comenzi</h1>
       <p>Actualizează statusul comenzilor, plăților și livrărilor fără să pierzi contextul clientului.</p>
     </div>
-    <button class="action" on:click={loadOrders} disabled={loading}>
+    <button class="action" on:click={() => loadOrders()} disabled={loading}>
       <i class="bi bi-arrow-clockwise"></i>
       <span>{loading ? 'Se încarcă…' : 'Reîncarcă'}</span>
     </button>
@@ -138,6 +178,33 @@
     </div>
   {/if}
 
+  <section class="toolbar">
+    <label class="searchBox" aria-label="Caută comenzi">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input
+        type="search"
+        placeholder="Caută #comandă, client, email, telefon sau status"
+        bind:value={searchQuery}
+        on:keydown={(event) => {
+          if (event.key === 'Enter') void loadOrders();
+        }}
+      />
+    </label>
+    <select bind:value={statusFilter} aria-label="Filtrează status comandă" on:change={() => loadOrders()}>
+      <option value="">Toate statusurile</option>
+      {#each orderStatuses as status}
+        <option value={status.value}>{status.label}</option>
+      {/each}
+    </select>
+    <select bind:value={sortMode} aria-label="Sortează comenzi">
+      <option value="newest">Cele mai noi</option>
+      <option value="oldest">Cele mai vechi</option>
+      <option value="total-desc">Total descrescător</option>
+      <option value="total-asc">Total crescător</option>
+    </select>
+    <span class="count">{loading ? '…' : filteredItems.length} comenzi</span>
+  </section>
+
   {#if loading}
     <section class="stateCard">
       <span class="spinner" aria-hidden="true"></span>
@@ -149,9 +216,15 @@
       <h2>Nu sunt comenzi disponibile</h2>
       <p>Comenzile noi vor apărea aici după plasare.</p>
     </section>
+  {:else if filteredItems.length === 0}
+    <section class="emptyCard">
+      <i class="bi bi-search"></i>
+      <h2>Nu am găsit comenzi</h2>
+      <p>Schimbă termenul de căutare sau filtrul de status.</p>
+    </section>
   {:else}
     <section class="ordersGrid" aria-label="Lista comenzilor">
-      {#each items as item (item.id)}
+      {#each filteredItems as item (item.id)}
         <article class="orderCard">
           <header class="orderHead">
             <div>
@@ -164,12 +237,15 @@
           <div class="customerBlock">
             <span>Client</span>
             <strong>{item.customerFullName}</strong>
-            <small>{item.customerEmail}</small>
+            <small>{item.customerEmail ?? 'Fără email'}</small>
+            {#if item.customerPhone}
+              <small>{item.customerPhone}</small>
+            {/if}
           </div>
 
           <div class="statusGrid">
             <label>
-              <span>Status comandă</span>
+              <span>Stare comandă</span>
               <select bind:value={item.status}>
                 {#each orderStatuses as status}
                   <option value={status.value}>{status.label}</option>
@@ -206,60 +282,21 @@
         </article>
       {/each}
     </section>
+    {#if hasMore}
+      <div class="loadMore">
+        <button class="action muted" type="button" on:click={loadMore} disabled={loadingMore}>
+          <i class={`bi ${loadingMore ? 'bi-arrow-repeat' : 'bi-plus-circle'}`}></i>
+          <span>{loadingMore ? 'Se încarcă…' : 'Încarcă mai multe'}</span>
+        </button>
+      </div>
+    {/if}
   {/if}
 </div>
 
 <style>
-  .page {
-    --bg: #f6f1e7;
-    --surface: #fffdf7;
-    --ink: #1d241b;
-    --muted: #6b7165;
-    --line: rgba(31, 42, 28, 0.12);
-    --accent: #274f2a;
-    --green: #8bd450;
-    margin-left: 240px;
-    min-height: 100vh;
-    padding: clamp(18px, 3vw, 34px);
-    background: radial-gradient(900px 420px at 8% -5%, rgba(139, 212, 80, 0.2), transparent 60%), var(--bg);
-    color: var(--ink);
-  }
-
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: end;
-    gap: 20px;
-    margin-bottom: 18px;
-  }
-
-  .eyebrow {
-    margin: 0 0 6px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.13em;
-    font-size: 0.75rem;
-    font-weight: 950;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(2.2rem, 7vw, 4.6rem);
-    line-height: 0.94;
-    letter-spacing: -0.07em;
-    font-weight: 950;
-  }
-
-  .topbar p:not(.eyebrow) {
-    max-width: 700px;
-    margin: 12px 0 0;
-    color: var(--muted);
-  }
-
-  .action,
-  .saveBtn {
+  .action {
     min-height: 46px;
-    border: 0;
+    border: 1px solid var(--line);
     border-radius: 999px;
     padding: 0 18px;
     display: inline-flex;
@@ -268,10 +305,6 @@
     gap: 9px;
     font-weight: 950;
     cursor: pointer;
-  }
-
-  .action {
-    border: 1px solid var(--line);
     background: var(--surface);
     color: var(--ink);
     box-shadow: 0 12px 30px rgba(35, 51, 30, 0.08);
@@ -281,26 +314,60 @@
     opacity: 0.6;
   }
 
-  .notice {
-    margin-bottom: 14px;
-    border-radius: 18px;
-    padding: 14px 16px;
-    display: flex;
+  .action.muted {
+    background: #fff;
+  }
+
+  .toolbar {
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(160px, 220px) minmax(160px, 220px) auto;
     gap: 10px;
     align-items: center;
+  }
+
+  .searchBox {
+    position: relative;
+  }
+
+  .searchBox i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+  }
+
+  .searchBox input,
+  .toolbar select {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink);
     font-weight: 850;
   }
 
-  .notice.danger {
-    background: #fff1f1;
-    border: 1px solid #facaca;
-    color: #842029;
+  .searchBox input {
+    padding: 0 14px 0 38px;
   }
 
-  .notice.success {
-    background: #ecf8df;
-    border: 1px solid #b9e58d;
-    color: #285b20;
+  .toolbar select {
+    padding: 0 14px;
+  }
+
+  .count {
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 253, 247, 0.9);
+    color: var(--muted);
+    font-weight: 950;
+    white-space: nowrap;
   }
 
   .ordersGrid {
@@ -309,16 +376,17 @@
     gap: 14px;
   }
 
-  .orderCard,
-  .stateCard,
-  .emptyCard {
+  .loadMore {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+  }
+
+  .orderCard {
     border: 1px solid var(--line);
     border-radius: 28px;
     background: rgba(255, 253, 247, 0.9);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
-  }
-
-  .orderCard {
     padding: 18px;
     display: grid;
     gap: 16px;
@@ -414,57 +482,34 @@
 
   .badge-success { background: #e7f7dd; color: #25631c; }
   .badge-warning { background: #fff1c2; color: #7a5200; }
-  .badge-danger { background: #ffe2e2; color: #842029; }
+  .badge-danger  { background: #ffe2e2; color: #842029; }
   .badge-secondary { background: #ece8dd; color: #5b5f52; }
 
   .saveBtn {
+    min-height: 46px;
+    border: 0;
+    border-radius: 999px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-weight: 950;
+    cursor: pointer;
     background: var(--accent);
     color: #fffdf7;
   }
 
-  .stateCard,
-  .emptyCard {
-    padding: 36px 20px;
-    display: grid;
-    place-items: center;
-    text-align: center;
-    gap: 12px;
-    color: var(--muted);
-  }
-
-  .emptyCard i {
-    font-size: 2rem;
-    color: var(--accent);
-  }
-
-  .emptyCard h2 {
-    margin: 0;
-    color: var(--ink);
-    font-weight: 950;
-  }
-
-  .spinner {
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    border: 3px solid rgba(39, 79, 42, 0.18);
-    border-top-color: var(--accent);
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  @media (max-width: 991.98px) {
-    .page {
-      margin-left: 0;
-      padding: 88px 16px 24px;
-    }
-  }
-
   @media (max-width: 640px) {
     .topbar,
-    .orderHead {
+    .orderHead,
+    .toolbar {
       align-items: stretch;
+      grid-template-columns: 1fr;
+    }
+
+    .topbar,
+    .orderHead {
       flex-direction: column;
     }
 

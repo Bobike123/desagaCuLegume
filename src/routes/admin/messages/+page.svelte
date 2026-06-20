@@ -1,5 +1,4 @@
 <script lang="ts">
-  import AdminNav from '$lib/components/AdminNav.svelte';
   import MessageThread from '$lib/components/MessageThread.svelte';
 </script>
 
@@ -7,40 +6,22 @@
   <title>Mesaje - Admin DeSaga</title>
 </svelte:head>
 
-<AdminNav />
-
 <div class="admin-page">
   <section class="hero">
     <div>
       <p class="eyebrow">Suport clienți</p>
       <h1>Mesaje</h1>
-      <p>Inbox pentru conversațiile dintre utilizatori și administratori. Caută, filtrează, răspunde și actualizează statusul conversațiilor.</p>
+      <p>Mesagerie pentru conversațiile dintre utilizatori și administratori. Caută, filtrează, răspunde și actualizează starea conversațiilor.</p>
     </div>
     <div class="heroIcon" aria-hidden="true"><i class="bi bi-chat-dots"></i></div>
   </section>
 
   <section class="threadShell">
-    <MessageThread mode="admin" expanded={true} collapsible={false} title="Inbox suport" subtitle="Caută, filtrează, răspunde și schimbă statusul conversațiilor." />
+    <MessageThread mode="admin" expanded={true} collapsible={false} title="Mesagerie suport" subtitle="Caută, filtrează, răspunde și schimbă starea conversațiilor." />
   </section>
 </div>
 
 <style>
-  .admin-page {
-    --bg: #f6f1e7;
-    --surface: #fffdf7;
-    --ink: #1d241b;
-    --muted: #6b7165;
-    --line: rgba(31, 42, 28, 0.12);
-    --accent: #274f2a;
-    margin-left: 240px;
-    min-height: 100vh;
-    padding: clamp(18px, 3vw, 34px);
-    background:
-      radial-gradient(900px 420px at 8% -5%, rgba(139, 212, 80, 0.22), transparent 60%),
-      var(--bg);
-    color: var(--ink);
-  }
-
   .hero {
     border: 1px solid var(--line);
     border-radius: 30px;
@@ -55,21 +36,8 @@
     margin-bottom: 16px;
   }
 
-  .eyebrow {
-    margin: 0 0 8px;
+  .hero .eyebrow {
     color: #bdf48a;
-    font-size: 0.75rem;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    font-weight: 950;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(2.2rem, 7vw, 4.6rem);
-    line-height: 0.94;
-    letter-spacing: -0.07em;
-    font-weight: 950;
   }
 
   .hero p:not(.eyebrow) {
@@ -112,13 +80,6 @@
 
   :global(.threadShell table) {
     width: 100%;
-  }
-
-  @media (max-width: 991.98px) {
-    .admin-page {
-      margin-left: 0;
-      padding: 88px 16px 24px;
-    }
   }
 
   @media (max-width: 640px) {

@@ -34,8 +34,8 @@
     q = '';
   }
 
-  $: availableProducts = products.filter((p) => p.in_stock === true && p.category !== 'horeca');
-  $: totalProducts = products.filter((p) => p.category !== 'horeca').length;
+  $: availableProducts = products.filter((p) => p.in_stock === true);
+  $: totalProducts = products.length;
   $: totalAvailable = availableProducts.length;
   $: filteredProducts = availableProducts.filter((p) => {
     const needle = normalizeText(q.trim());
@@ -53,7 +53,7 @@
 <Hero
   title="Produse disponibile"
   subtitle="Stocul se schimbă în funcție de recoltă. Verifică lista sau sună pentru confirmare."
-  backgroundImage=""
+  backgroundImage="/images/produse/hero-produse-la-borcan.jpg"
   height="300px"
 />
 

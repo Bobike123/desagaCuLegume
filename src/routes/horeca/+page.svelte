@@ -94,7 +94,7 @@
 <Hero
   title="HORECA"
   subtitle="Cereri de ofertă pentru restaurante, cafenele, băcănii și magazine locale. Completează formularul fără cont."
-  backgroundImage=""
+  backgroundImage="/images/horeca/hero-borcane.jpg"
   height="320px"
   eyebrow="Pentru business-uri locale"
   primaryHref="#cerere-horeca"
@@ -115,7 +115,7 @@
         <p class="eyebrow mb-2">De la fermă către business-ul tău</p>
         <h2>Ofertă stabilită pe stoc real, sezon și volum</h2>
         <p>
-          HORECA nu mai este categorie de produse în catalog. Este un flux separat pentru cereri de ofertă, discuții directe și colaborări recurente cu DeSaga cu Legume.
+          HORECA este un flux separat pentru cereri de ofertă, discuții directe și comenzi recurente cu DeSaga cu Legume.
         </p>
       </div>
       <div class="intro-actions">
@@ -137,7 +137,7 @@
       <article class="feature-card">
         <i class="bi bi-calendar-week"></i>
         <h3>Sezon și disponibilitate</h3>
-        <p>Oferta se confirmă în funcție de recoltă, stoc și colaboratori locali.</p>
+        <p>Oferta se confirmă în funcție de recoltă, stoc și disponibilitatea locală.</p>
       </article>
       <article class="feature-card">
         <i class="bi bi-truck"></i>
@@ -281,7 +281,7 @@
           <li><span>1</span><p>Trimiți necesarul și datele de contact.</p></li>
           <li><span>2</span><p>Adminul vede cererea în dashboard.</p></li>
           <li><span>3</span><p>Primești confirmare pentru stoc, preț și livrare.</p></li>
-          <li><span>4</span><p>Stabiliți comanda sau colaborarea recurentă.</p></li>
+          <li><span>4</span><p>Stabiliți comanda recurentă sau ridicarea punctuală.</p></li>
         </ol>
 
         <div class="contact-box">

@@ -1,10 +1,11 @@
 import { browser } from '$app/environment';
+import { MAX_CART_QUANTITY } from '$lib/cart-limits';
 import { derived, writable } from 'svelte/store';
 import type { Product } from '$lib/stores/products';
 
 const STORAGE_KEY = 'desaga-cart-v1';
 
-export interface CartLine {
+interface CartLine {
   productId: string;
   name: string;
   price: number;
@@ -53,7 +54,7 @@ function createCartStore() {
         if (existing) {
           items = state.items.map((item) =>
             item.productId === String(product.id)
-              ? { ...item, quantity: Math.min(999, item.quantity + quantity) }
+              ? { ...item, quantity: Math.min(MAX_CART_QUANTITY, item.quantity + quantity) }
               : item
           );
         } else {
@@ -63,7 +64,7 @@ function createCartStore() {
               productId: String(product.id),
               name: product.name,
               price: Number(product.price ?? 0),
-              quantity,
+              quantity: Math.min(MAX_CART_QUANTITY, Math.max(1, Math.floor(quantity))),
               image_url: product.image_url ?? '',
               category: product.category ?? 'de-sezon',
               in_stock: Boolean(product.in_stock),
@@ -78,7 +79,7 @@ function createCartStore() {
 
     setQuantity(productId: string, quantity: number) {
       update((state) => {
-        const nextQty = Math.max(0, Math.min(999, Math.floor(quantity)));
+        const nextQty = Math.max(0, Math.min(MAX_CART_QUANTITY, Math.floor(quantity)));
         const items =
           nextQty === 0
             ? state.items.filter((item) => item.productId !== productId)
@@ -109,7 +110,4 @@ function createCartStore() {
 export const cart = createCartStore();
 export const cartCount = derived(cart, ($cart) =>
   $cart.items.reduce((sum, item) => sum + item.quantity, 0)
-);
-export const cartSubtotal = derived(cart, ($cart) =>
-  $cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 );

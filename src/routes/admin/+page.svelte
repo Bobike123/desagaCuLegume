@@ -1,14 +1,12 @@
 <script lang="ts">
-  import AdminNav from '$lib/components/AdminNav.svelte';
+  // AdminNav is provided by the admin layout
 </script>
 
 <svelte:head>
   <title>Admin - DeSaga</title>
 </svelte:head>
 
-<AdminNav />
-
-<div class="adminPage">
+<div class="admin-page">
   <section class="hero">
     <div class="hero__copy">
       <p class="eyebrow">DeSaga admin</p>
@@ -25,7 +23,7 @@
     <a href="/admin/dashboard" class="navCard primary">
       <span class="icon"><i class="bi bi-speedometer2"></i></span>
       <span>
-        <strong>Dashboard</strong>
+        <strong>Panou</strong>
         <small>Statistici rapide și scurtături.</small>
       </span>
     </a>
@@ -42,7 +40,7 @@
       <span class="icon"><i class="bi bi-receipt"></i></span>
       <span>
         <strong>Comenzi</strong>
-        <small>Status comandă, plată și livrare.</small>
+        <small>Stare comandă, plată și livrare.</small>
       </span>
     </a>
 
@@ -50,28 +48,17 @@
       <span class="icon"><i class="bi bi-chat-dots"></i></span>
       <span>
         <strong>Mesaje</strong>
-        <small>Inbox suport clienți.</small>
+        <small>Mesagerie suport clienți.</small>
       </span>
     </a>
   </section>
 </div>
 
 <style>
-  .adminPage {
-    --bg: #f6f1e7;
-    --card: rgba(255, 255, 255, 0.92);
-    --ink: #1d241b;
-    --muted: #697161;
-    --line: rgba(34, 43, 30, 0.12);
-    --accent: #274f2a;
-    --accent-2: #8bd450;
-    margin-left: 240px;
-    min-height: 100vh;
-    padding: clamp(18px, 3vw, 36px);
+  .admin-page {
     background:
       radial-gradient(900px 420px at 10% 0%, rgba(139, 212, 80, 0.24), transparent 60%),
       linear-gradient(135deg, #fbf7ef 0%, var(--bg) 100%);
-    color: var(--ink);
   }
 
   .hero {
@@ -90,6 +77,7 @@
     color: #fffdf7;
     overflow: hidden;
     position: relative;
+    margin-bottom: 18px;
   }
 
   .hero::after {
@@ -108,22 +96,8 @@
     z-index: 1;
   }
 
-  .eyebrow {
-    margin: 0 0 10px;
-    font-size: 0.8rem;
-    font-weight: 950;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+  .hero .eyebrow {
     color: #bdf48a;
-  }
-
-  h1 {
-    margin: 0;
-    max-width: 760px;
-    font-size: clamp(2.25rem, 7vw, 5rem);
-    line-height: 0.92;
-    letter-spacing: -0.07em;
-    font-weight: 950;
   }
 
   .lead {
@@ -154,7 +128,6 @@
   }
 
   .navGrid {
-    margin-top: 18px;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
@@ -169,7 +142,7 @@
     padding: 20px;
     border-radius: 26px;
     border: 1px solid var(--line);
-    background: var(--card);
+    background: rgba(255, 255, 255, 0.92);
     color: var(--ink);
     text-decoration: none;
     box-shadow: 0 18px 50px rgba(35, 51, 30, 0.08);
@@ -185,7 +158,7 @@
   }
 
   .navCard.primary {
-    background: #fffdf7;
+    background: var(--surface);
   }
 
   .icon {
@@ -216,13 +189,6 @@
   @media (max-width: 1180px) {
     .navGrid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 991.98px) {
-    .adminPage {
-      margin-left: 0;
-      padding: 88px 16px 24px;
     }
   }
 

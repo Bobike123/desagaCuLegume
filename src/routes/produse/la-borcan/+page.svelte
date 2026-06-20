@@ -1,4 +1,3 @@
-<!-- FILE: src/routes/produse/la-borcan/+page.svelte -->
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
   import ProductCard from "$lib/components/ProductCard.svelte";
@@ -25,7 +24,7 @@
 <Hero
   title="Produse la borcan"
   subtitle="Borcane pregătite cu grijă, pentru gust de casă tot anul."
-  backgroundImage=""
+  backgroundImage="/images/produse/la-borcan-hero.jpg"
   height="300px"
 />
 

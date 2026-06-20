@@ -1,5 +1,6 @@
 import { json } from "@sveltejs/kit";
 import { createAdminClient } from "$lib/server/supabase";
+import { EVENT_TYPES } from "$lib/server/events";
 import {
   booleanField,
   enumField,
@@ -11,8 +12,6 @@ import {
   stringField,
   validationErrorResponse,
 } from "$lib/server/validation";
-
-const EVENT_TYPES = ["FESTIVAL", "PIATA", "ATELIER"] as const;
 
 export async function GET({ locals, params, url }) {
   try {
@@ -26,20 +25,23 @@ export async function GET({ locals, params, url }) {
     if (!isAdminRequest) q = q.eq("published", true);
 
     const { data, error } = await q.single();
-    if (error) return json({ error: error.message }, { status: 400 });
+    if (error) {
+      console.error("Event load failed", error);
+      return json({ error: "Eroare la încărcarea evenimentului." }, { status: 400 });
+    }
 
     return json({ item: data }, { status: 200 });
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : "Eroare la încărcarea evenimentului.";
-    return json({ error: message }, { status: 400 });
+    console.error("Event load failed", error);
+    return json({ error: "Eroare la încărcarea evenimentului." }, { status: 400 });
   }
 }
 
 export async function PATCH({ locals, params, request }) {
-  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!locals.isAdmin) return json({ error: "Acces neautorizat." }, { status: 401 });
 
   try {
     const eventId = requireRouteId(params.id, "ID eveniment");
@@ -75,19 +77,22 @@ export async function PATCH({ locals, params, request }) {
       .select("*")
       .single();
 
-    if (error) return json({ error: error.message }, { status: 400 });
+    if (error) {
+      console.error("Event update failed", error);
+      return json({ error: "Eroare la actualizarea evenimentului." }, { status: 400 });
+    }
     return json({ item: data }, { status: 200 });
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : "Eroare la actualizarea evenimentului.";
-    return json({ error: message }, { status: 400 });
+    console.error("Event update failed", error);
+    return json({ error: "Eroare la actualizarea evenimentului." }, { status: 400 });
   }
 }
 
 export async function DELETE({ locals, params }) {
-  if (!locals.isAdmin) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!locals.isAdmin) return json({ error: "Acces neautorizat." }, { status: 401 });
 
   try {
     const eventId = requireRouteId(params.id, "ID eveniment");
@@ -96,14 +101,17 @@ export async function DELETE({ locals, params }) {
       .delete()
       .eq("id", eventId);
 
-    if (error) return json({ error: error.message }, { status: 400 });
+    if (error) {
+      console.error("Event delete failed", error);
+      return json({ error: "Eroare la ștergerea evenimentului." }, { status: 400 });
+    }
 
     return json({ success: true }, { status: 200 });
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    const message = error instanceof Error ? error.message : "Eroare la ștergerea evenimentului.";
-    return json({ error: message }, { status: 400 });
+    console.error("Event delete failed", error);
+    return json({ error: "Eroare la ștergerea evenimentului." }, { status: 400 });
   }
 }

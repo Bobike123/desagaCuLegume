@@ -1,6 +1,19 @@
 
 import { createAdminClient } from '$lib/server/supabase';
 
+export const PRODUCT_STATUSES = ['ACTIVE', 'OUT_OF_STOCK', 'DISCONTINUED', 'DRAFT'] as const;
+export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
+
+export const PRODUCT_CATEGORIES = [
+  { slug: 'de-sezon', name: 'De sezon' },
+  { slug: 'la-borcan', name: 'La borcan' },
+] as const;
+
+export type ProductCategorySlug = (typeof PRODUCT_CATEGORIES)[number]['slug'];
+
+export const PRODUCT_CATEGORY_SLUGS = PRODUCT_CATEGORIES.map((category) => category.slug);
+const PRODUCT_CATEGORY_SLUG_SET = new Set<string>(PRODUCT_CATEGORY_SLUGS);
+
 export type CategoryRow = {
   category_id: number;
   name: string;
@@ -24,7 +37,7 @@ export type ProductRow = {
   updated_at?: string | null;
 };
 
-export function slugify(value: string) {
+function slugify(value: string) {
   return value
     .trim()
     .toLowerCase()
@@ -40,15 +53,31 @@ export function slugify(value: string) {
 }
 
 function categoryNameFromSlug(slug: string) {
+  const knownCategory = PRODUCT_CATEGORIES.find((category) => category.slug === slug);
+  if (knownCategory) return knownCategory.name;
+
   return slug
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 }
 
+export function normalizeProductCategorySlug(value: string | null | undefined): ProductCategorySlug | null {
+  const slug = slugify(value || 'de-sezon');
+  return PRODUCT_CATEGORY_SLUG_SET.has(slug) ? (slug as ProductCategorySlug) : null;
+}
+
+export function isAllowedProductCategory(value: string | null | undefined) {
+  return normalizeProductCategorySlug(value) !== null;
+}
+
 export async function ensureCategory(value: string): Promise<CategoryRow> {
   const admin = createAdminClient();
-  const slug = slugify(value || 'de-sezon');
+  const slug = normalizeProductCategorySlug(value);
+
+  if (!slug) {
+    throw new Error('Categoria produsului trebuie să fie De sezon sau La borcan.');
+  }
 
   const existing = await admin
     .from('product_categories')
@@ -95,7 +124,9 @@ export async function fetchCategoryMap(ids: Array<number | string | null | undef
 
 export async function findCategoryBySlug(slugValue: string) {
   const admin = createAdminClient();
-  const slug = slugify(slugValue);
+  const slug = normalizeProductCategorySlug(slugValue);
+
+  if (!slug) return null;
 
   const { data, error } = await admin
     .from('product_categories')

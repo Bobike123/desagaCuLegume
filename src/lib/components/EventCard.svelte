@@ -1,5 +1,6 @@
-<!-- FILE: src/lib/components/EventCard.svelte -->
 <script lang="ts">
+  import { fallbackImage, optimizedImageUrl, PLACEHOLDER_IMAGE } from '$lib/images';
+
   type EventCardItem = {
     id: string;
     title: string;
@@ -19,11 +20,6 @@
     location: '',
     event_type: 'festival',
   };
-
-  function fallbackImage(imageEvent: Event) {
-    const img = imageEvent.currentTarget as HTMLImageElement;
-    if (!img.src.endsWith('/placeholder.png')) img.src = '/placeholder.png';
-  }
 
   function validDate(value: string | Date | null | undefined) {
     if (!value) return null;
@@ -70,7 +66,8 @@
   $: title = String(event?.title ?? '').trim() || 'Eveniment DeSaga';
   $: description = String(event?.description ?? '').trim() || 'Detaliile evenimentului vor fi actualizate în curând.';
   $: location = String(event?.location ?? '').trim() || 'Locația se anunță curând';
-  $: imageUrl = String(event?.image_url ?? '').trim() || '/placeholder.png';
+  $: imageUrl = String(event?.image_url ?? '').trim() || PLACEHOLDER_IMAGE;
+  $: cardImageUrl = imageUrl === PLACEHOLDER_IMAGE ? imageUrl : optimizedImageUrl(imageUrl, { width: 760, height: 520 });
   $: typeMeta = getEventTypeLabel(event?.event_type);
   $: statusLabel = isPast(event?.date) ? 'Trecut' : 'Urmează';
 </script>
@@ -78,10 +75,11 @@
 <a href={`/evenimente/${event.id}`} class="event-card" aria-label={`Vezi detalii pentru ${title}`}>
   <div class="media">
     <img
-      src={imageUrl}
+      src={cardImageUrl}
       alt={title}
       class="event-image"
       loading="lazy"
+      decoding="async"
       on:error={fallbackImage}
     />
 

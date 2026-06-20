@@ -1,17 +1,23 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import Navigation from '$lib/components/Navigation.svelte';
   import Footer from '$lib/components/Footer.svelte';
   import ScrollToTop from '$lib/components/ScrollToTop.svelte';
   import CookieConsentBanner from '$lib/components/CookieConsentBanner.svelte';
   import { auth } from '$lib/stores/auth';
   import { cart } from '$lib/stores/cart';
+  import 'bootstrap/dist/css/bootstrap.min.css';
+  import 'bootstrap-icons/font/bootstrap-icons.css';
   import '$lib/styles/global.css';
 
   onMount(() => {
+    void import('bootstrap/dist/js/bootstrap.bundle.min.js');
     cart.hydrate();
     void auth.initAuth();
   });
+
+  $: isAdminRoute = $page.url.pathname.startsWith('/admin');
 </script>
 
 <svelte:head>
@@ -20,26 +26,13 @@
   <title>DeSaga cu Legume - Din Fermă direct la Rulota DeSaga</title>
   <meta
     name="description"
-    content="DeSaga cu Legume - Legume și fructe proaspete de sezon, produse la borcan și colaboratori. Local, Gustos, Sănătos."
+    content="DeSaga cu Legume - Legume și fructe proaspete de sezon și produse la borcan. Local, Gustos, Sănătos."
   />
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-    crossorigin="anonymous"
-  />
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
-    crossorigin="anonymous"
-  />
-  <script
-    defer
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-    crossorigin="anonymous"
-  ></script>
 </svelte:head>
 
-<Navigation />
+{#if !isAdminRoute}
+  <Navigation />
+{/if}
 
 <main class="min-vh-100 bg-white">
   <slot />
@@ -47,7 +40,9 @@
   <CookieConsentBanner />
 </main>
 
-<Footer />
+{#if !isAdminRoute}
+  <Footer />
+{/if}
 
 <style>
   :global(body) {

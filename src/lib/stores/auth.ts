@@ -1,6 +1,6 @@
-import { derived, writable } from 'svelte/store';
+import { writable } from 'svelte/store';
 
-export interface SessionUser {
+interface SessionUser {
   id: number;
   email: string;
   username: string;
@@ -9,7 +9,7 @@ export interface SessionUser {
   status: string;
 }
 
-export interface AuthState {
+interface AuthState {
   isAuthenticated: boolean;
   isAdmin: boolean;
   user: SessionUser | null;
@@ -41,7 +41,7 @@ function createAuthStore() {
         set({
           ...initialState,
           loading: false,
-          error: data?.error ?? 'Failed to fetch session',
+          error: data?.error ?? 'Nu am putut verifica sesiunea.',
         });
         return null;
       }
@@ -60,7 +60,7 @@ function createAuthStore() {
       set({
         ...initialState,
         loading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch session',
+        error: error instanceof Error ? error.message : 'Nu am putut verifica sesiunea.',
       });
       return null;
     }
@@ -79,12 +79,13 @@ function createAuthStore() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(30_000),
         });
 
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          const message = data?.error ?? 'Login failed';
+          const message = data?.error ?? 'Autentificarea a eșuat.';
           update((state) => ({ ...state, loading: false, error: message }));
           throw new Error(message);
         }
@@ -92,9 +93,14 @@ function createAuthStore() {
         await loadSession();
         return data;
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Login failed';
+        const message =
+          error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')
+            ? 'Autentificarea a durat prea mult (30s). Verifică conexiunea și încearcă din nou.'
+            : error instanceof Error
+              ? error.message
+              : 'Autentificarea a eșuat.';
         update((state) => ({ ...state, loading: false, error: message }));
-        throw error;
+        throw new Error(message);
       }
     },
 
@@ -112,12 +118,13 @@ function createAuthStore() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(30_000),
         });
 
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          const message = data?.error ?? 'Registration failed';
+          const message = data?.error ?? 'Înregistrarea a eșuat.';
           update((state) => ({ ...state, loading: false, error: message }));
           throw new Error(message);
         }
@@ -125,9 +132,14 @@ function createAuthStore() {
         await loadSession();
         return data;
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Registration failed';
+        const message =
+          error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')
+            ? 'Înregistrarea a durat prea mult (30s). Verifică conexiunea și încearcă din nou.'
+            : error instanceof Error
+              ? error.message
+              : 'Înregistrarea a eșuat.';
         update((state) => ({ ...state, loading: false, error: message }));
-        throw error;
+        throw new Error(message);
       }
     },
 
@@ -149,7 +161,7 @@ function createAuthStore() {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          const message = data?.error ?? 'Profile update failed';
+          const message = data?.error ?? 'Actualizarea profilului a eșuat.';
           update((state) => ({ ...state, loading: false, error: message }));
           throw new Error(message);
         }
@@ -157,7 +169,7 @@ function createAuthStore() {
         await loadSession();
         return data;
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Profile update failed';
+        const message = error instanceof Error ? error.message : 'Actualizarea profilului a eșuat.';
         update((state) => ({ ...state, loading: false, error: message }));
         throw error;
       }
@@ -176,7 +188,7 @@ function createAuthStore() {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          const message = data?.error ?? 'Password change failed';
+          const message = data?.error ?? 'Schimbarea parolei a eșuat.';
           update((state) => ({ ...state, loading: false, error: message }));
           throw new Error(message);
         }
@@ -184,7 +196,7 @@ function createAuthStore() {
         update((state) => ({ ...state, loading: false, error: null }));
         return data;
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Password change failed';
+        const message = error instanceof Error ? error.message : 'Schimbarea parolei a eșuat.';
         update((state) => ({ ...state, loading: false, error: message }));
         throw error;
       }
@@ -232,8 +244,3 @@ function createAuthStore() {
 }
 
 export const auth = createAuthStore();
-export const { initAuth, logout } = auth;
-
-export const isAdmin = derived(auth, ($auth) => $auth.isAdmin);
-export const isAuthenticated = derived(auth, ($auth) => $auth.isAuthenticated);
-export const currentUser = derived(auth, ($auth) => $auth.user);

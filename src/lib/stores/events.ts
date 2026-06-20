@@ -51,11 +51,13 @@ export const eventsStore = {
     store.update((s) => ({ ...s, loading: true, error: null }));
 
     try {
-      const qs = admin ? '?admin=true' : '';
+      const params = new URLSearchParams({ limit: '100' });
+      if (admin) params.set('admin', 'true');
+      const qs = `?${params.toString()}`;
       const res = await fetch(`/api/evenimente${qs}`);
       const data = await res.json().catch(() => ([]));
 
-      if (!res.ok) throw new Error(data?.error ?? 'Failed to load events');
+      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca evenimentele.');
 
       const rawItems = Array.isArray(data?.items)
         ? data.items
@@ -67,7 +69,7 @@ export const eventsStore = {
       store.set({ items, loading: false, error: null });
       return items;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
+      const msg = err instanceof Error ? err.message : 'Eroare necunoscută.';
       store.set({ items: [], loading: false, error: msg });
       return [];
     }
@@ -77,7 +79,7 @@ export const eventsStore = {
     const res = await fetch(`/api/evenimente/${encodeURIComponent(id)}`);
     const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) throw new Error(data?.error ?? 'Failed to load event');
+    if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca evenimentul.');
 
     const raw = data && typeof data === 'object' && 'item' in data ? data.item : data;
     return normalizeEvent(raw);
@@ -91,7 +93,7 @@ export const eventsStore = {
     });
 
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error ?? 'Failed to update event');
+    if (!res.ok) throw new Error(data?.error ?? 'Nu am putut actualiza evenimentul.');
 
     const raw = data && typeof data === 'object' && 'item' in data ? data.item : data;
     return normalizeEvent(raw);
@@ -103,7 +105,7 @@ export const eventsStore = {
     });
 
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error ?? 'Failed to delete event');
+    if (!res.ok) throw new Error(data?.error ?? 'Nu am putut șterge evenimentul.');
 
     return data as { success: true };
   }
@@ -115,12 +117,4 @@ export async function getAllEvents(admin = false) {
 
 export async function getEventById(id: string) {
   return eventsStore.getById(id);
-}
-
-export async function updateEvent(id: string, patch: Partial<EventItem>) {
-  return eventsStore.update(id, patch);
-}
-
-export async function deleteEvent(id: string) {
-  return eventsStore.remove(id);
 }

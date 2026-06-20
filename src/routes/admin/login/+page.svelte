@@ -24,13 +24,13 @@
 </script>
 
 <svelte:head>
-  <title>Admin Login</title>
+  <title>Autentificare admin - DeSaga</title>
 </svelte:head>
 
 <div class="auth">
   <section class="visualPanel" aria-hidden="true">
     <p class="eyebrow">DeSaga</p>
-    <h1>Admin access</h1>
+    <h1>Acces administrare</h1>
     <p>Intrare securizată pentru administrarea catalogului, comenzilor și conversațiilor.</p>
   </section>
 
@@ -39,7 +39,7 @@
       <div class="logo"><i class="bi bi-shield-lock"></i></div>
       <div>
         <p class="eyebrow">Autentificare</p>
-        <h2>Admin Panel</h2>
+        <h2>Panou administrare</h2>
       </div>
     </header>
 

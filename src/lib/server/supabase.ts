@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
-import { PUBLIC_SUPABASE_URL } from '$env/static/public';
-import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
+import { getServerEnv } from '$lib/server/env';
 
 export const SESSION_COOKIE_NAME = 'desaga_session';
-export const SESSION_TIMEOUT_MINUTES = 60 * 24 * 7;
+export const USER_SESSION_TIMEOUT_MINUTES = 30;
+export const ADMIN_SESSION_TIMEOUT_MINUTES = 60 * 8;
 
 export function createAdminClient() {
-  return createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  const env = getServerEnv();
+
+  return createClient(env.publicSupabaseUrl, env.supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
