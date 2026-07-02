@@ -12,7 +12,9 @@
   import '$lib/styles/global.css';
 
   onMount(() => {
-    void import('bootstrap/dist/js/bootstrap.bundle.min.js');
+    // Bootstrap's JS bundle is intentionally NOT loaded: the only consumer was
+    // the mobile nav drawer, which is now a self-contained Svelte + CSS drawer
+    // (see Navigation.svelte). Everything else uses Bootstrap CSS only.
     cart.hydrate();
     void auth.initAuth();
   });

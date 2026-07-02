@@ -4,7 +4,7 @@
   const logoUrl = '/images/shared/logo.png';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { cartCount } from '$lib/stores/cart';
   import { auth } from '$lib/stores/auth';
 
@@ -20,8 +20,12 @@
     { href: '/produse/la-borcan', label: 'La borcan', icon: '' },
   ];
 
-  let offcanvasEl: HTMLElement | null = null;
-  let offcanvasInstance: any = null;
+  // The mobile drawer is driven entirely by this boolean + CSS — no Bootstrap
+  // JS. The previous version called window.bootstrap.Offcanvas, but Bootstrap's
+  // bundle is imported asynchronously in the parent layout's onMount, and child
+  // components mount before parents, so window.bootstrap was never ready when
+  // this ran — the hamburger silently did nothing on mobile (the only place the
+  // drawer is used).
   let isOpen = false;
 
   // Open/close is a single boolean; the enter/exit animation is driven entirely
@@ -57,53 +61,29 @@
   }
 
   function openMenu() {
-    offcanvasInstance?.show();
-  }
-
-  function closeMenu() {
-    offcanvasInstance?.hide();
-  }
-
-  function toggleMenu() {
-    if (isOpen) {
-      closeMenu();
-      return;
-    }
-
-    openMenu();
-  }
-
-  function handleShown() {
     isOpen = true;
   }
 
-  function handleHidden() {
+  function closeMenu() {
     isOpen = false;
   }
 
-  onMount(() => {
-    if (typeof window === 'undefined') return;
-    if (!offcanvasEl) return;
+  function toggleMenu() {
+    isOpen = !isOpen;
+  }
 
-    const bootstrap = (window as any).bootstrap;
-    if (!bootstrap?.Offcanvas) return;
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape' && isOpen) closeMenu();
+  }
 
-    offcanvasInstance = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl, {
-      backdrop: true,
-      scroll: false,
-    });
-
-    offcanvasEl.addEventListener('shown.bs.offcanvas', handleShown);
-    offcanvasEl.addEventListener('hidden.bs.offcanvas', handleHidden);
-  });
+  // Lock body scroll while the drawer is open (Bootstrap used to do this).
+  $: if (typeof document !== 'undefined') {
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  }
 
   onDestroy(() => {
     clearProductsMenuCloseTimer();
-
-    if (!offcanvasEl) return;
-    offcanvasEl.removeEventListener('shown.bs.offcanvas', handleShown);
-    offcanvasEl.removeEventListener('hidden.bs.offcanvas', handleHidden);
-    offcanvasInstance?.dispose?.();
+    if (typeof document !== 'undefined') document.body.style.overflow = '';
   });
 
   function normalize(path: string) {
@@ -128,6 +108,15 @@
   }
 
   $: currentPath = normalize($page.url.pathname);
+
+  // Close the drawer on any navigation (link taps already call closeMenu, but
+  // this also covers back/forward and programmatic navigation).
+  let lastNavPath: string | null = null;
+  $: if (currentPath !== lastNavPath) {
+    lastNavPath = currentPath;
+    isOpen = false;
+  }
+
   $: isCustomerAuthenticated = $auth.isAuthenticated && !$auth.isAdmin;
   $: accountHref = $auth.isAdmin ? '/admin/dashboard' : isCustomerAuthenticated ? '/utilizator' : '/cont';
   $: accountLabel = $auth.isAdmin
@@ -304,12 +293,23 @@
   </div>
 </nav>
 
+<svelte:window on:keydown={handleKeydown} />
+
+<button
+  type="button"
+  class="mobile-backdrop"
+  class:show={isOpen}
+  tabindex="-1"
+  aria-hidden="true"
+  on:click={closeMenu}
+></button>
+
 <div
   id="mobile-navigation"
-  class="offcanvas offcanvas-end mobile-offcanvas"
-  tabindex="-1"
-  bind:this={offcanvasEl}
+  class="mobile-offcanvas"
+  class:show={isOpen}
   aria-label="Navigare mobilă"
+  aria-hidden={!isOpen}
 >
   <div class="offcanvas-header">
     <a class="mobile-brand" href="/" on:click={closeMenu}>
@@ -813,12 +813,79 @@
     transform: translateY(-8px) rotate(-45deg);
   }
 
+  /* Self-contained slide-in drawer (no Bootstrap offcanvas JS/CSS). Uses
+     top/bottom:0 instead of height:100vh so the Android URL bar can't clip it. */
   .mobile-offcanvas {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
     width: min(92vw, 390px);
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    box-shadow: -14px 0 44px rgba(15, 23, 42, 0.18);
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform 0.28s ease-in-out, visibility 0.28s ease-in-out;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-offcanvas.show {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1040;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: rgba(15, 23, 42, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.28s ease-in-out, visibility 0.28s ease-in-out;
+  }
+
+  .mobile-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-offcanvas,
+    .mobile-backdrop {
+      transition: none;
+    }
+  }
+
+  /* The drawer only exists below the lg breakpoint; keep it out of the way on
+     desktop where the inline navbar is used. */
+  @media (min-width: 992px) {
+    .mobile-offcanvas,
+    .mobile-backdrop {
+      display: none;
+    }
   }
 
   .offcanvas-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 1rem;
     border-bottom: 1px solid var(--desaga-border);
+  }
+
+  .offcanvas-body {
+    flex: 1 1 auto;
+    padding: 1rem;
+    overflow-y: auto;
   }
 
   .mobile-brand {
