@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from '$lib/server/supabase';
 import {
   clearSessionCookie,
@@ -121,8 +122,8 @@ export async function PATCH({ locals, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Profile update failed', error);
-    return json({ error: 'Nu am putut actualiza profilul.' }, { status: 400 });
+    const requestId = logRouteError('Profile update failed', error);
+    return json({ error: 'Nu am putut actualiza profilul.', requestId }, { status: 400 });
   }
 }
 
@@ -241,7 +242,7 @@ export async function DELETE({ locals, request, cookies, getClientAddress }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Account deletion failed', error);
-    return json({ error: 'Nu am putut șterge contul.' }, { status: 400 });
+    const requestId = logRouteError('Account deletion failed', error);
+    return json({ error: 'Nu am putut șterge contul.', requestId }, { status: 400 });
   }
 }

@@ -1,5 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 declare global {
   namespace App {
     interface UserSession {
@@ -19,7 +17,6 @@ declare global {
     }
 
     interface Locals {
-      supabase: SupabaseClient;
       isAdmin: boolean;
       isAuthenticated: boolean;
       user: UserSession | null;

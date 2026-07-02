@@ -1,4 +1,3 @@
-import { createServerClient } from '@supabase/ssr';
 import { json, redirect, type Handle, type HandleServerError, type RequestEvent } from '@sveltejs/kit';
 import {
   clearSessionCookie,
@@ -9,10 +8,11 @@ import {
   touchSession,
 } from '$lib/server/auth';
 import { getServerEnv } from '$lib/server/env';
-import { checkRateLimit, rateLimit } from '$lib/server/rate-limit';
+import { checkRateLimit, rateLimit, rateLimitMany, type ScopedRateLimitConfig } from '$lib/server/rate-limit';
 import { SESSION_COOKIE_NAME } from '$lib/server/supabase';
 import { LIMITS } from '$lib/server/validation';
 import { recordSecurityEvent } from '$lib/server/security-events';
+import { recordUserActivity } from '$lib/server/user-activity';
 import {
   buildDecoyPage,
   isAllowedSameOriginRequest,
@@ -85,44 +85,34 @@ async function enforceRequestEnvelope(event: RequestEvent) {
     return csrfErrorResponse();
   }
 
-  const isAuthAttempt = AUTH_ATTEMPT_PATHS.has(pathname) && event.request.method === 'POST';
-  const authLimit = isAuthAttempt
-    ? await rateLimit(event, {
-        scope: 'api-auth-attempt-v2',
-        limit: AUTH_ATTEMPT_LIMIT,
-        windowMs: AUTH_ATTEMPT_WINDOW_MS,
-      })
-    : null;
+  // All applicable scopes are consumed in one consume_rate_limits round-trip;
+  // the first violated scope (most specific first) produces the 429.
+  const limiterConfigs: ScopedRateLimitConfig[] = [];
 
-  if (authLimit) return authLimit;
+  if (AUTH_ATTEMPT_PATHS.has(pathname) && event.request.method === 'POST') {
+    limiterConfigs.push({
+      scope: 'api-auth-attempt-v2',
+      limit: AUTH_ATTEMPT_LIMIT,
+      windowMs: AUTH_ATTEMPT_WINDOW_MS,
+    });
+  }
 
   if (CHECKOUT_PATHS.has(pathname) && event.request.method === 'POST') {
-    const checkoutLimit = await rateLimit(event, {
-      scope: 'checkout',
-      limit: 20,
-      windowMs: FIFTEEN_MINUTES,
-    });
-
-    if (checkoutLimit) return checkoutLimit;
+    limiterConfigs.push({ scope: 'checkout', limit: 20, windowMs: FIFTEEN_MINUTES });
   }
 
   if (pathname.startsWith('/api/admin')) {
-    const adminLimit = await rateLimit(event, {
-      scope: 'admin-api',
-      limit: 100,
-      windowMs: FIFTEEN_MINUTES,
-    });
-
-    if (adminLimit) return adminLimit;
+    limiterConfigs.push({ scope: 'admin-api', limit: 100, windowMs: FIFTEEN_MINUTES });
   }
 
-  const generalLimit = await rateLimit(event, {
+  limiterConfigs.push({
     scope: event.request.method === 'GET' ? 'api-read' : 'api-write',
     limit: event.request.method === 'GET' ? 300 : 120,
     windowMs: FIFTEEN_MINUTES,
   });
 
-  if (generalLimit) return generalLimit;
+  const limited = await rateLimitMany(event, limiterConfigs);
+  if (limited) return limited;
 
   if (!METHODS_WITH_BODY.has(event.request.method)) return null;
 
@@ -186,16 +176,6 @@ export const handle: Handle = async ({ event, resolve }) => {
     return blockedResponse;
   }
 
-  event.locals.supabase = createServerClient(env.publicSupabaseUrl, env.publicSupabaseAnonKey, {
-    cookies: {
-      get: (name: string) => event.cookies.get(name),
-      set: (name: string, value: string, options: any) =>
-        event.cookies.set(name, value, { ...options, path: '/' }),
-      remove: (name: string, options: any) =>
-        event.cookies.delete(name, { ...options, path: '/' }),
-    },
-  });
-
   event.locals.isAdmin = false;
   event.locals.isAuthenticated = false;
   event.locals.user = null;
@@ -243,6 +223,11 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   const response = await resolve(event);
+
+  if (event.locals.isAuthenticated) {
+    await recordUserActivity(event);
+  }
+
   setSecurityHeaders(response.headers, event, env.publicSupabaseUrl);
   return response;
 };

@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import type { UpdateOrderAdminArgs } from '$lib/server/rpc-contracts';
 import { createAdminClient } from '$lib/server/supabase';
 import {
@@ -44,14 +45,8 @@ function mapOrderItem(row: any) {
 }
 
 function mapOrder(row: any) {
-  const payments = Array.isArray(row.payments) ? row.payments : [];
-  const payment = payments[0] ?? null;
-  let deliveryMethod: 'pickup' | 'delivery' = 'pickup';
-
-  if (payment?.provider_payload) {
-    const payload = typeof payment.provider_payload === 'string' ? JSON.parse(payment.provider_payload) : payment.provider_payload;
-    deliveryMethod = String(payload?.deliveryMethod ?? payload?.delivery_method ?? 'pickup') === 'delivery' ? 'delivery' : 'pickup';
-  }
+  const deliveryMethod: 'pickup' | 'delivery' =
+    String(row.delivery_method ?? 'pickup') === 'delivery' ? 'delivery' : 'pickup';
 
   return {
     id: String(row.order_id),
@@ -81,15 +76,13 @@ export async function GET({ locals, params }) {
   try {
     const orderId = requireNumericId(params.id, 'ID comandă');
     const admin = createAdminClient();
-    let query = admin
+    const { data, error } = await admin
       .from('orders')
       .select(
-        `order_id, order_number, user_id, customer_full_name, customer_email, total_amount, subtotal_amount, shipping_amount, currency_code, status, payment_status, fulfillment_status, created_at, placed_at, order_items(product_id, sku, product_name, quantity, unit_price, line_total, currency_code), payments(provider_payload)`
+        `order_id, order_number, user_id, customer_full_name, customer_email, total_amount, subtotal_amount, shipping_amount, currency_code, status, payment_status, fulfillment_status, delivery_method, created_at, placed_at, order_items(product_id, sku, product_name, quantity, unit_price, line_total, currency_code)`
       )
       .eq('order_id', orderId)
       .maybeSingle();
-
-    const { data, error } = await query;
     if (error) throw error;
     if (!data) return json({ error: 'Comanda nu a fost găsită.' }, { status: 404 });
 
@@ -98,7 +91,6 @@ export async function GET({ locals, params }) {
     }
 
     let orderItems = Array.isArray(data.order_items) ? data.order_items : [];
-    let payments = Array.isArray(data.payments) ? data.payments : [];
 
     if (!Array.isArray(data.order_items)) {
       const { data: itemsData, error: itemsError } = await admin
@@ -109,22 +101,13 @@ export async function GET({ locals, params }) {
       orderItems = Array.isArray(itemsData) ? itemsData : [];
     }
 
-    if (!Array.isArray(data.payments)) {
-      const { data: paymentData, error: paymentError } = await admin
-        .from('payments')
-        .select('provider_payload')
-        .eq('order_id', orderId);
-      if (paymentError) throw paymentError;
-      payments = Array.isArray(paymentData) ? paymentData : [];
-    }
-
-    return json({ item: mapOrder({ ...data, order_items: orderItems, payments }) }, { status: 200 });
+    return json({ item: mapOrder({ ...data, order_items: orderItems }) }, { status: 200 });
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Order load failed', error);
-    return json({ error: 'Nu am putut încărca comanda.' }, { status: 400 });
+    const requestId = logRouteError('Order load failed', error);
+    return json({ error: 'Nu am putut încărca comanda.', requestId }, { status: 400 });
   }
 }
 
@@ -154,6 +137,9 @@ export async function PATCH({ locals, params, request }) {
 
     if (error) {
       if (error.code === 'P0002') return json({ error: 'Comanda nu a fost găsită.' }, { status: 404 });
+      if (error.code === 'P0003') {
+        return json({ error: 'Tranziție de status invalidă pentru comandă.' }, { status: 409 });
+      }
       throw new Error(
         `Order update transaction failed: ${error.message}. Run the provided update_order_admin SQL function before production use.`
       );
@@ -164,7 +150,7 @@ export async function PATCH({ locals, params, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Order update failed', error);
-    return json({ error: 'Nu am putut actualiza comanda.' }, { status: 400 });
+    const requestId = logRouteError('Order update failed', error);
+    return json({ error: 'Nu am putut actualiza comanda.', requestId }, { status: 400 });
   }
 }

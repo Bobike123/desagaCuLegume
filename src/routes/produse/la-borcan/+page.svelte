@@ -1,7 +1,7 @@
 <script lang="ts">
   import Hero from "$lib/components/Hero.svelte";
   import ProductCard from "$lib/components/ProductCard.svelte";
-  import { getAllProducts, type Product } from "$lib/stores/products";
+  import { getAllProducts, sortProductPriority, type Product } from "$lib/stores/products";
   import { onMount } from "svelte";
 
   const categorySlug = "la-borcan";
@@ -12,7 +12,7 @@
 
   onMount(async () => {
     loading = true;
-    products = (await getAllProducts(categorySlug)).filter((p: Product) => p.in_stock === true);
+    products = (await getAllProducts(categorySlug)).filter((p: Product) => p.in_stock === true).sort(sortProductPriority);
     loading = false;
   });
 </script>

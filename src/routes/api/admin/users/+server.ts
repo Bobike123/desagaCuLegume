@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from '$lib/server/supabase';
 import { getPagination, getPaginationMeta, noStoreHeaders } from '$lib/server/pagination';
 import { ORDER_SELECT, mapOrder } from '$lib/server/support';
@@ -51,7 +52,7 @@ async function loadUserExtras(admin: ReturnType<typeof createAdminClient>, userI
     admin
       .from('auth_logs')
       .select('user_id, event_time')
-      .eq('event_type', 'LOGIN')
+      .in('event_type', ['LOGIN', 'LOGIN_SUCCESS'])
       .in('user_id', userIds)
       .order('event_time', { ascending: false })
       .limit(500),
@@ -91,7 +92,7 @@ async function loadUserDetail(admin: ReturnType<typeof createAdminClient>, id: s
   if (userError) throw userError;
   if (!user) return null;
 
-  const [extras, addressesResult, ordersResult, conversationsResult, authLogsResult] = await Promise.all([
+  const [extras, addressesResult, ordersResult, conversationsResult, authLogsResult, sessionsResult, activityResult] = await Promise.all([
     loadUserExtras(admin, [Number(userId)]),
     admin
       .from('user_addresses')
@@ -116,13 +117,27 @@ async function loadUserDetail(admin: ReturnType<typeof createAdminClient>, id: s
       .select('log_id, event_type, event_time, ip_address, user_agent')
       .eq('user_id', userId)
       .order('event_time', { ascending: false })
+      .limit(30),
+    admin
+      .from('sessions')
+      .select('session_id, status, created_at, last_activity_at, expires_at, ended_at, ip_address, user_agent')
+      .eq('user_id', userId)
+      .order('last_activity_at', { ascending: false })
       .limit(20),
+    admin
+      .from('user_activity_events')
+      .select('activity_type, route, method, created_at, ip_address, user_agent')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(40),
   ]);
 
   if (addressesResult.error) throw addressesResult.error;
   if (ordersResult.error) throw ordersResult.error;
   if (conversationsResult.error) throw conversationsResult.error;
   if (authLogsResult.error) throw authLogsResult.error;
+  if (sessionsResult.error) throw sessionsResult.error;
+  if (activityResult.error) throw activityResult.error;
 
   const numericUserId = Number(userId);
   return {
@@ -164,6 +179,49 @@ async function loadUserDetail(admin: ReturnType<typeof createAdminClient>, id: s
       ipAddress: row.ip_address ?? null,
       userAgent: row.user_agent ?? null,
     })),
+    sessions: (sessionsResult.data ?? []).map((row: any) => ({
+      status: row.status,
+      createdAt: row.created_at,
+      lastActivityAt: row.last_activity_at,
+      expiresAt: row.expires_at,
+      endedAt: row.ended_at ?? null,
+      ipAddress: row.ip_address ?? null,
+      userAgent: row.user_agent ?? null,
+    })),
+    activity: (activityResult.data ?? []).map((row: any) => ({
+      activityType: row.activity_type,
+      route: row.route,
+      method: row.method,
+      createdAt: row.created_at,
+      ipAddress: row.ip_address ?? null,
+      userAgent: row.user_agent ?? null,
+    })),
+    timeline: [
+      ...(authLogsResult.data ?? []).map((row: any) => ({
+        type: row.event_type,
+        label: row.event_type,
+        time: row.event_time,
+        route: null,
+        ipAddress: row.ip_address ?? null,
+      })),
+      ...(activityResult.data ?? []).map((row: any) => ({
+        type: row.activity_type,
+        label: row.activity_type,
+        time: row.created_at,
+        route: row.route,
+        ipAddress: row.ip_address ?? null,
+      })),
+      ...(ordersResult.data ?? []).map((row: any) => ({
+        type: 'ORDER_PLACED',
+        label: `Comandă ${row.order_number ?? ''}`.trim(),
+        time: row.created_at,
+        route: null,
+        ipAddress: null,
+      })),
+    ]
+      .filter((item) => item.time)
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 60),
   };
 }
 
@@ -233,7 +291,7 @@ export async function GET({ locals, url, setHeaders }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Admin users load failed', error);
-    return json({ error: 'Nu am putut încărca utilizatorii.' }, { status: 400 });
+    const requestId = logRouteError('Admin users load failed', error);
+    return json({ error: 'Nu am putut încărca utilizatorii.', requestId }, { status: 400 });
   }
 }

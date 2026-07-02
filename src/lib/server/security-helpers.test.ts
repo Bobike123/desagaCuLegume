@@ -108,10 +108,10 @@ describe('security decoy helpers', () => {
     expect(isAllowedSameOriginRequest(req, url)).toBe(false);
   });
 
-  it('allows POST with no origin and no referer headers', () => {
+  it('rejects POST with no origin and no referer headers (cannot prove same-origin)', () => {
     const url = new URL('https://desagaculegume.ro/api/test');
     const req = new Request(url, { method: 'POST' });
-    expect(isAllowedSameOriginRequest(req, url)).toBe(true);
+    expect(isAllowedSameOriginRequest(req, url)).toBe(false);
   });
 
   it('rejects POST with malformed referer URL', () => {
@@ -181,5 +181,20 @@ describe('setSecurityHeaders', () => {
     const headers = new Headers();
     setSecurityHeaders(headers, makeEvent(), 'https://supabase.example.co');
     expect(headers.get('Content-Security-Policy')).toContain('https://supabase.example.co');
+  });
+
+  it('emits a CSP without unsafe-inline scripts', () => {
+    const headers = new Headers();
+    setSecurityHeaders(headers, makeEvent());
+    const csp = headers.get('Content-Security-Policy') ?? '';
+    expect(csp).toContain("script-src 'self'");
+    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+  });
+
+  it('does not overwrite an existing CSP header (SvelteKit page CSP wins)', () => {
+    const headers = new Headers();
+    headers.set('Content-Security-Policy', "script-src 'self' 'nonce-abc'");
+    setSecurityHeaders(headers, makeEvent());
+    expect(headers.get('Content-Security-Policy')).toBe("script-src 'self' 'nonce-abc'");
   });
 });

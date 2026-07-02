@@ -1,9 +1,11 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import ProductCard from "$lib/components/ProductCard.svelte";
+  import ProductImageSlideshow from "$lib/components/ProductImageSlideshow.svelte";
   import { cart } from "$lib/stores/cart";
-  import { productsStore, type Product } from "$lib/stores/products";
-  import { fallbackImage, PLACEHOLDER_IMAGE } from "$lib/images";
+  import { productImageUrls, productsStore, sortProductPriority, type Product } from "$lib/stores/products";
+  import { PLACEHOLDER_IMAGE } from "$lib/images";
+  import { productMeasureUnitSuffix, productPromotionBadges } from "$lib/format";
   import { onDestroy } from "svelte";
 
   let product: Product | null = null;
@@ -25,10 +27,14 @@
     void loadProduct(productId);
   }
 
-  $: imageUrl = product?.image_url?.trim() ? product.image_url.trim() : PLACEHOLDER_IMAGE;
+  $: imageUrls = productImageUrls(product);
+  $: slideshowImages = imageUrls.length > 0 ? imageUrls : [PLACEHOLDER_IMAGE];
   $: currentQty = product ? ($cart.items.find((item) => item.productId === String(product?.id))?.quantity ?? 0) : 0;
   $: categoryMeta = getCategoryMeta(product?.category ?? "de-sezon");
   $: categoryHref = product?.category === "la-borcan" ? "/produse/la-borcan" : "/produse/de-sezon";
+  $: measureUnitSuffix = productMeasureUnitSuffix(product?.measure_unit);
+  $: promotionBadges = productPromotionBadges(product?.promotion_label);
+  $: hasPromotion = promotionBadges.length > 0;
   $: stockLabel = product?.in_stock
     ? product.stock_quantity && product.stock_quantity > 0
       ? `${product.stock_quantity} disponibile`
@@ -51,9 +57,10 @@
       const allProducts = await productsStore.loadAll(p.category);
       if (!alive || t !== token) return;
 
-    relatedProducts = allProducts
-  .filter((x: Product) => String(x.id) !== String(p.id) && x.in_stock === true)
-  .slice(0, 4);
+      relatedProducts = allProducts
+        .filter((x: Product) => String(x.id) !== String(p.id) && x.in_stock === true)
+        .sort(sortProductPriority)
+        .slice(0, 4);
     } catch (e) {
       if (!alive || t !== token) return;
       error = e instanceof Error ? e.message : "Eroare necunoscută";
@@ -104,9 +111,17 @@
         </ol>
       </nav>
 
-      <section class="product-shell">
+      <section class:promoted={hasPromotion} class="product-shell">
         <div class="product-media">
-          <img src={imageUrl} alt={product.name} on:error={fallbackImage} />
+          <ProductImageSlideshow images={slideshowImages} alt={product.name} variant="detail" interactive={true} />
+          {#if hasPromotion}
+            <div class="promotion-ribbons" aria-label="Etichete produs">
+              {#each promotionBadges as badge}
+                <span>{badge}</span>
+              {/each}
+            </div>
+          {/if}
+
           <div class={`stock-ribbon ${product.in_stock ? "stock-ribbon--ok" : "stock-ribbon--off"}`}>
             <i class={`bi ${product.in_stock ? "bi-check2-circle" : "bi-exclamation-circle"}`}></i>
             {stockLabel}
@@ -116,9 +131,16 @@
         <div class="product-info">
           <a href="/produse" class="back-link"><i class="bi bi-arrow-left"></i> Înapoi la produse</a>
 
-          <div class="category-pill">
-            <i class={`bi ${categoryMeta.icon}`}></i>
-            {categoryMeta.label}
+          <div class="top-pills">
+            <div class="category-pill">
+              <i class={`bi ${categoryMeta.icon}`}></i>
+              {categoryMeta.label}
+            </div>
+            {#if hasPromotion}
+              {#each promotionBadges as badge}
+                <span class="promo-pill">{badge}</span>
+              {/each}
+            {/if}
           </div>
 
           <h1>{product.name}</h1>
@@ -131,8 +153,12 @@
 
           <div class="purchase-card">
             <div>
-              <div class="price-label">Preț</div>
-              <div class="price">{product.price.toFixed(2)} <span>RON</span></div>
+              <div class="price-label">Preț / {measureUnitSuffix}</div>
+              <div class="price">
+                {Number(product.price ?? 0).toFixed(2)}
+                <span>RON</span>
+                <span class="price-unit">/ {measureUnitSuffix}</span>
+              </div>
             </div>
 
             <div class="status-box">
@@ -259,11 +285,38 @@
     box-shadow: 0 16px 34px rgba(0, 0, 0, 0.08);
   }
 
-  .product-media img {
-    width: 100%;
-    aspect-ratio: 1 / 0.86;
-    object-fit: cover;
-    display: block;
+  .product-shell.promoted .product-media,
+  .product-shell.promoted .purchase-card {
+    border-color: rgba(194, 37, 45, 0.4);
+    box-shadow: 0 18px 44px rgba(194, 37, 45, 0.16), 0 0 0 5px rgba(194, 37, 45, 0.05);
+  }
+
+  .promotion-ribbons {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    z-index: 2;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .promotion-ribbons span,
+  .promo-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    background: #c2252d;
+    color: #fffdf7;
+    box-shadow: 0 10px 24px rgba(194, 37, 45, 0.28);
+    padding: 0.42rem 0.78rem;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
 
   .stock-ribbon {
@@ -305,6 +358,14 @@
     margin-bottom: 18px;
   }
 
+  .top-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
   .category-pill {
     display: inline-flex;
     align-items: center;
@@ -315,7 +376,11 @@
     border-radius: 999px;
     padding: 7px 12px;
     font-weight: 900;
-    margin-bottom: 12px;
+  }
+
+  .promo-pill {
+    box-shadow: none;
+    padding: 7px 12px;
   }
 
   h1 {
@@ -359,9 +424,18 @@
     line-height: 1;
   }
 
+  .product-shell.promoted .price {
+    color: #c2252d;
+  }
+
   .price span {
     font-size: 1rem;
     opacity: 0.72;
+  }
+
+  .price-unit {
+    margin-left: 4px;
+    font-weight: 850;
   }
 
   .status-box {

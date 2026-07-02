@@ -31,14 +31,18 @@ const securityEventMocks = vi.hoisted(() => ({
 vi.mock('$lib/server/security-events', () => ({
   getSecurityDashboardData: securityEventMocks.getSecurityDashboardData,
   markSecurityEventsRead: securityEventMocks.markSecurityEventsRead,
+  reviewSecurityEvent: vi.fn(async () => undefined),
+  revokeSecuritySession: vi.fn(async () => ({ revoked: 1 })),
+  revokeUserSecuritySessions: vi.fn(async () => ({ revoked: 1 })),
 }));
 
 const { GET, PATCH } = await import('./+server');
 
 function event(isAdmin: boolean, url = 'https://desagaculegume.ro/api/admin/security-events') {
   return {
-    locals: { isAdmin },
+    locals: { isAdmin, user: isAdmin ? { id: 1 } : null },
     url: new URL(url),
+    request: new Request(url, { method: 'PATCH' }),
     setHeaders: vi.fn(),
   } as any;
 }

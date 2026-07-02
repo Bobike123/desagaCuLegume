@@ -271,3 +271,31 @@ export function buildConversationItems(
   mapped.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   return mapped;
 }
+
+export function senderLabel(senderType: string | null | undefined, mode: Mode) {
+  const normalized = normalizeStatus(senderType);
+  if (normalized === 'SYSTEM') return 'Sistem';
+  if (mode === 'admin') return normalized === 'ADMIN' ? 'Admin' : 'Client';
+  return normalized === 'ADMIN' ? 'Admin' : 'Tu';
+}
+
+export function messageBubbleClass(senderType: string | null | undefined, mode: Mode) {
+  const normalized = normalizeStatus(senderType);
+  if (normalized === 'SYSTEM') return 'msg-system';
+  const isOwnMessage = mode === 'admin' ? normalized === 'ADMIN' : normalized === 'USER';
+  return isOwnMessage ? 'msg-own' : 'msg-other';
+}
+
+export function formatMessageDate(value: string | null | undefined, mode: Mode) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+
+  return date.toLocaleString('ro-RO', {
+    day: '2-digit',
+    month: 'short',
+    year: mode === 'user' ? 'numeric' : undefined,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

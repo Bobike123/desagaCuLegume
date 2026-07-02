@@ -29,7 +29,6 @@ Thumbs.db
 .vscode/
 .fallow/
 .claude/
-
 # Caches and temporary files
 .cache/
 .parcel-cache/

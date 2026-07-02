@@ -173,18 +173,6 @@ export function mapConversation(row: SupportConversationRow, user: any, messages
   };
 }
 
-export async function archiveEligibleConversations(admin: ReturnType<typeof createAdminClient>) {
-  const cutoff = new Date(Date.now() - 20 * 60 * 1000).toISOString();
-  const { error } = await admin
-    .from('support_conversations')
-    .update({ status: 'ARCHIVED', updated_at: new Date().toISOString() })
-    .eq('status', 'CLOSED')
-    .not('closed_at', 'is', null)
-    .lte('closed_at', cutoff);
-
-  if (error) throw error;
-}
-
 export async function loadConversationSummaries(
   admin: ReturnType<typeof createAdminClient>,
   locals: App.Locals,

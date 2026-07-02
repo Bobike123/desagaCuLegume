@@ -1,5 +1,4 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
-import { isIP } from 'node:net';
 import { promisify } from 'node:util';
 import type { Cookies } from '@sveltejs/kit';
 import {
@@ -8,6 +7,7 @@ import {
   USER_SESSION_TIMEOUT_MINUTES,
   createAdminClient,
 } from '$lib/server/supabase';
+import { trustedIpFromHeaders } from '$lib/server/rate-limit';
 import type { ResolveSessionArgs } from '$lib/server/rpc-contracts';
 
 export type SessionUser = {
@@ -37,7 +37,14 @@ let warnedAboutSessionRpc = false;
 const PASSWORD_KEY_BYTES = 64;
 const PASSWORD_HASH_VERSION = 'scrypt:v1';
 const SESSION_TOUCH_THROTTLE_MS = 5 * 60 * 1000;
+const SESSION_ABSOLUTE_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const scryptAsync = promisify(scrypt);
+
+// Real scrypt hash of a random throwaway secret. Login verifies unknown users
+// against this so the response time is the same whether or not the account
+// exists (otherwise the missing scrypt run is a user-enumeration oracle).
+export const DUMMY_PASSWORD_HASH =
+  'scrypt:v1:6e0d3b459a85aa9cd3e1cf9b2f3ee186:018204c79a61ae7d8ec85eac60a0b11892806ae0ba02f00c434920ef56c61af054498ed1fef2a60020d2a8ad356b254dc13ed9d8457f9afbd29aace9c91c9641';
 
 export function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
@@ -143,6 +150,15 @@ function isExpiredSessionRow(row: { expires_at?: string | null }) {
   return !Number.isFinite(expiresAt) || expiresAt <= Date.now();
 }
 
+// Absolute lifetime cap: sliding idle timeouts alone let an active session
+// renew forever. Rows without created_at (pre-migration RPC) pass — the SQL
+// filter in resolve_session enforces the cap once 20260702_04 is applied.
+function isBeyondAbsoluteLifetime(row: { created_at?: string | null }) {
+  if (row.created_at == null) return false;
+  const createdAt = new Date(row.created_at).getTime();
+  return !Number.isFinite(createdAt) || Date.now() - createdAt >= SESSION_ABSOLUTE_LIFETIME_MS;
+}
+
 export async function getRolesForUser(userId: number) {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -229,7 +245,7 @@ export async function createSession(
   await insertAuthLog({
     userId,
     sessionId: data.session_id,
-    eventType: 'LOGIN',
+    eventType: 'LOGIN_SUCCESS',
     meta,
   });
 
@@ -242,15 +258,17 @@ async function resolveSessionFromTokenFallback(
 ): Promise<ResolvedSession | null> {
   const { data: sessionRow, error } = await admin
     .from('sessions')
-    .select('session_id, user_id, status, expires_at, last_activity_at')
+    .select('session_id, user_id, status, expires_at, last_activity_at, created_at')
     .eq('session_token_hash', tokenHash)
     .eq('status', 'ACTIVE')
     .gt('expires_at', new Date().toISOString())
+    .gt('created_at', new Date(Date.now() - SESSION_ABSOLUTE_LIFETIME_MS).toISOString())
     .maybeSingle();
 
   if (error) throw error;
   if (!sessionRow) return null;
   if (isExpiredSessionRow(sessionRow)) return null;
+  if (isBeyondAbsoluteLifetime(sessionRow)) return null;
 
   const { data: userRow, error: userError } = await admin
     .from('users')
@@ -298,6 +316,7 @@ export async function resolveSessionFromToken(token: string): Promise<ResolvedSe
 
   if (!sessionRow) return null;
   if (isExpiredSessionRow(sessionRow as any)) return null;
+  if (isBeyondAbsoluteLifetime(sessionRow as any)) return null;
 
   return mapResolvedSessionRow(sessionRow);
 }
@@ -364,26 +383,9 @@ function safeHeader(value: string | null, maxLength = 240) {
   return value?.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, maxLength) || null;
 }
 
-function trustedProxyIp(request: Request) {
-  if (process.env.TRUST_PROXY_HEADERS !== 'true') return null;
-
-  const candidates = [
-    request.headers.get('cf-connecting-ip'),
-    request.headers.get('x-real-ip'),
-    request.headers.get('x-forwarded-for')?.split(',')[0],
-  ];
-
-  for (const candidate of candidates) {
-    const value = candidate?.trim().slice(0, 64);
-    if (value && isIP(value)) return value;
-  }
-
-  return null;
-}
-
 export function getRequestMeta(request: Request, clientIp?: string | null) {
   return {
-    ipAddress: trustedProxyIp(request) ?? safeHeader(clientIp ?? null, 64),
+    ipAddress: trustedIpFromHeaders(request.headers) ?? safeHeader(clientIp ?? null, 64),
     userAgent: safeHeader(request.headers.get('user-agent'), 240),
   } satisfies RequestMeta;
 }

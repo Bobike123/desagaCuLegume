@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from '$lib/server/supabase';
 import { getPagination, getPaginationMeta } from '$lib/server/pagination';
 import {
@@ -6,7 +7,6 @@ import {
   CONVERSATION_STATUSES,
   ORDER_SELECT,
   type SupportConversationRow,
-  archiveEligibleConversations,
   mapConversation,
   mapConversationUpdate,
   mapMessage,
@@ -58,7 +58,6 @@ export async function GET({ locals, params, url }) {
 
   try {
     const admin = createAdminClient();
-    await archiveEligibleConversations(admin);
     const conversation = await fetchConversation(admin, params.id);
     if (!conversation) return json({ error: 'Conversația nu există.' }, { status: 404 });
 
@@ -97,8 +96,8 @@ export async function GET({ locals, params, url }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Conversation load failed', error);
-    return json({ error: 'Nu am putut încărca conversația.' }, { status: 400 });
+    const requestId = logRouteError('Conversation load failed', error);
+    return json({ error: 'Nu am putut încărca conversația.', requestId }, { status: 400 });
   }
 }
 
@@ -154,8 +153,8 @@ export async function POST({ locals, params, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Conversation reply failed', error);
-    return json({ error: 'Nu am putut trimite răspunsul.' }, { status: 400 });
+    const requestId = logRouteError('Conversation reply failed', error);
+    return json({ error: 'Nu am putut trimite răspunsul.', requestId }, { status: 400 });
   }
 }
 
@@ -219,8 +218,8 @@ export async function PATCH({ locals, params, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Conversation update failed', error);
-    return json({ error: 'Nu am putut actualiza conversația.' }, { status: 400 });
+    const requestId = logRouteError('Conversation update failed', error);
+    return json({ error: 'Nu am putut actualiza conversația.', requestId }, { status: 400 });
   }
 }
 
@@ -247,7 +246,7 @@ export async function DELETE({ locals, params }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Conversation close failed', error);
-    return json({ error: 'Nu am putut închide conversația.' }, { status: 400 });
+    const requestId = logRouteError('Conversation close failed', error);
+    return json({ error: 'Nu am putut închide conversația.', requestId }, { status: 400 });
   }
 }

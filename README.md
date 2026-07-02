@@ -33,9 +33,15 @@ Vezi [`.env.example`](./.env.example). Aplicația citește doar:
 | `PUBLIC_SUPABASE_ANON_KEY` | da | publică |
 | `SUPABASE_SERVICE_ROLE_KEY` | da | doar server |
 | `SECURITY_ENFORCE_HTTPS` | nu | doar server |
-| `SECURITY_LOG_RETENTION_DAYS` | nu | doar server |
-| `TRUST_PROXY_HEADERS` | nu | doar server |
+| `TRUSTED_PROXY` | nu | doar server |
+| `SUPABASE_FETCH_TIMEOUT_MS` | nu | doar server |
 | `NODE_ENV` | nu | runtime |
+
+`TRUSTED_PROXY` selectează un singur header de IP de încredere, potrivit
+proxy-ului real din fața aplicației: `vercel` → `x-real-ip`, `cloudflare` →
+`cf-connecting-ip`. Nelăsat/`none` → se folosește doar adresa directă a
+conexiunii. Nu folosi o listă de headere: `cf-connecting-ip` trece nefiltrat
+prin Vercel și poate fi falsificat de client.
 
 `SUPABASE_SERVICE_ROLE_KEY` nu se importă în cod client. Validarea server-side
 refuză valori lipsă, placeholder sau service-role identic cu anon key.
@@ -66,6 +72,16 @@ aplicație:
 - `resolve_session`
 - `consume_rate_limit`
 - `place_order`
+
+După schema de bază, aplică în ordine migrările incrementale
+`supabase/migrations/20260619_admin_panels_patch.sql`,
+`20260620_guest_checkout.sql` și seria `20260702_*` (hardening privilegii
+funcții, coș atomic `add_cart_item`/`get_cart`, ledger stoc
+`admin_set_product_stock`, `orders.delivery_method` + mașina de stări,
+lockout login `peek_rate_limit`/`reset_rate_limit`, indexuri +
+`product_images`). Fișierul `20260702_00_verify_rls_readonly.sql` este doar de
+verificare (read-only) — rulează-l și compară rezultatele cu comentariile din
+el.
 
 Seed minim inclus:
 
@@ -118,7 +134,7 @@ Recomandat în producție:
 
 ```text
 NODE_ENV=production
-TRUST_PROXY_HEADERS=true
+TRUSTED_PROXY=vercel
 SECURITY_ENFORCE_HTTPS=true
 ```
 
@@ -154,23 +170,29 @@ Scriptul include fișierele urmărite/neignorate și exclude automat `.git`,
 - Ruta `/security-decoy` și path-urile decoy din `hooks.server.ts` sunt
   deliberate: înregistrează accesări suspecte în `security_events`.
 
+### Retenție Date / GDPR
+
+Ștergerea contului (`DELETE /api/user`) anonimizează rândul din `users`
+(email, username, nume, telefon, hash parolă) și închide sesiunile. Datele de
+facturare din `orders` (nume, email, telefon, adrese) și conversațiile de
+suport sunt păstrate intenționat: comenzile sunt documente
+contabile/fiscale cu termen legal de arhivare. Nu se șterg la ștergerea
+contului; documentează acest lucru în politica de confidențialitate.
+
 ## Cleanup Periodic
 
-Rulează periodic, prin `pg_cron` sau un endpoint Vercel Cron protejat:
+Cleanup-ul este automatizat prin `pg_cron` — activează extensia în Supabase
+(Dashboard → Database → Extensions) și rulează
+`supabase/migrations/20260710_07_pg_cron_cleanup.sql`. Migrarea creează câte o
+funcție `run_cleanup_*` pentru sesiuni expirate, `app_rate_limits`,
+`checkout_idempotency_keys`, `security_events`, `auth_logs`, coșuri abandonate
+și arhivarea conversațiilor închise, plus programările `cron.schedule`.
+Verifică rulările cu:
 
 ```sql
-update public.sessions
-set status = 'TIMED_OUT',
-    ended_at = now()
-where status = 'ACTIVE'
-  and expires_at <= now();
-
-delete from public.app_rate_limits
-where reset_at < now() - interval '1 day';
-
-delete from public.checkout_idempotency_keys
-where created_at < now() - interval '7 days';
-
-delete from public.security_events
-where created_at < now() - interval '30 days';
+select * from cron.job;
+select * from cron.job_run_details order by start_time desc limit 20;
 ```
+
+Funcțiile pot fi rulate și manual (ex. `select public.run_cleanup_sessions();`)
+dacă vrei cleanup imediat.

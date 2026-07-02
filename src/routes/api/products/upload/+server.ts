@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import type { RequestEvent } from '@sveltejs/kit';
 import { Buffer } from 'node:buffer';
 import { createAdminClient } from '$lib/server/supabase';
@@ -226,7 +227,7 @@ export async function POST(event: RequestEvent) {
       return json({ error: error.message }, { status: error.status });
     }
 
-    console.error('Product image upload failed', error);
-    return json({ error: 'Încărcarea a eșuat.' }, { status: 500 });
+    const requestId = logRouteError('Product image upload failed', error);
+    return json({ error: 'Încărcarea a eșuat.', requestId }, { status: 500 });
   }
 }

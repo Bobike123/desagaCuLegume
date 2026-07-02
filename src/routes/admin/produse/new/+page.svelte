@@ -1,8 +1,17 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { flip } from 'svelte/animate';
   import { fallbackImage, PLACEHOLDER_IMAGE } from '$lib/images';
 
   type Option = { value: string; label: string; hint?: string };
+  type MediaItem = {
+    key: string;
+    url: string;
+    file: File | null;
+    preview: string;
+    source: 'url' | 'upload' | 'existing';
+  };
+
   const categories: Option[] = [
     { value: 'de-sezon', label: 'De sezon', hint: 'Legume și fructe proaspete' },
     { value: 'la-borcan', label: 'La borcan', hint: 'Conserve, murături, sosuri' },
@@ -13,6 +22,16 @@
     { value: 'DISCONTINUED', label: 'Scos din ofertă', hint: 'Ascuns pentru clienți' },
     { value: 'DRAFT', label: 'Draft', hint: 'Ascuns până este pregătit' },
   ];
+  const measureUnits: Option[] = [
+    { value: 'PER_KG', label: 'per kg', hint: 'Prețul se afișează pentru un kilogram' },
+    { value: 'PER_BUC', label: 'pe buc.', hint: 'Prețul se afișează pentru o bucată' },
+  ];
+  const promotionLabels: Option[] = [
+    { value: 'NONE', label: 'Fără promoție', hint: 'Produsul se afișează normal' },
+    { value: 'NOU', label: 'NOU', hint: 'Etichetă roșie pentru produse noi' },
+    { value: 'PROMOTIE', label: 'PROMOȚIE', hint: 'Etichetă roșie pentru ofertă sau produs evidențiat' },
+    { value: 'NOU_PROMOTIE', label: 'NOU + PROMOȚIE', hint: 'Afișează ambele etichete pe card și în coș' },
+  ];
 
   let form = {
     sku: '',
@@ -20,49 +39,99 @@
     category: 'de-sezon',
     description: '',
     price: 0,
+    measure_unit: 'PER_KG',
+    promotion_label: 'NONE',
     stock_quantity: 0,
     status: 'ACTIVE',
-    image_url: '',
   };
-  let imageFile: File | null = null;
-  let imagePreview = '';
+
+  let mediaItems: MediaItem[] = [];
+  let urlDraft = '';
   let error = '';
   let loading = false;
 
   $: selectedCategory = categories.find((item) => item.value === form.category) ?? categories[0];
   $: selectedStatus = statuses.find((item) => item.value === form.status) ?? statuses[0];
-  $: previewUrl = imagePreview || form.image_url || PLACEHOLDER_IMAGE;
+  $: selectedMeasureUnit = measureUnits.find((item) => item.value === form.measure_unit) ?? measureUnits[0];
+  $: selectedPromotionLabel = promotionLabels.find((item) => item.value === form.promotion_label) ?? promotionLabels[0];
+  $: previewUrl = mediaItems[0]?.preview || mediaItems[0]?.url || PLACEHOLDER_IMAGE;
   $: stockWarning = form.status === 'ACTIVE' && Number(form.stock_quantity) <= 0;
 
-  function handleImage(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-    imageFile = file;
-    if (!file) {
-      imagePreview = '';
+  function mediaKey() {
+    return `media-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function addUrl() {
+    const url = urlDraft.trim();
+    if (!url) return;
+    if (mediaItems.some((item) => item.url === url)) {
+      urlDraft = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      imagePreview = typeof reader.result === 'string' ? reader.result : '';
-    };
-    reader.readAsDataURL(file);
+    mediaItems = [...mediaItems, { key: mediaKey(), url, file: null, preview: url, source: 'url' }];
+    urlDraft = '';
   }
 
-  function clearImage() {
-    imageFile = null;
-    imagePreview = '';
-    form.image_url = '';
+  function handleUrlKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    addUrl();
   }
 
-  async function uploadImageIfNeeded() {
-    if (!imageFile) return form.image_url;
+  function handleImages(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    for (const file of files) {
+      const key = mediaKey();
+      mediaItems = [...mediaItems, { key, url: '', file, preview: '', source: 'upload' }];
+      const reader = new FileReader();
+      reader.onload = () => {
+        const preview = typeof reader.result === 'string' ? reader.result : '';
+        mediaItems = mediaItems.map((item) => (item.key === key ? { ...item, preview } : item));
+      };
+      reader.readAsDataURL(file);
+    }
+    input.value = '';
+  }
+
+  function removeMedia(index: number) {
+    mediaItems = mediaItems.filter((_, itemIndex) => itemIndex !== index);
+  }
+
+  function moveMedia(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= mediaItems.length) return;
+    const next = [...mediaItems];
+    [next[index], next[target]] = [next[target], next[index]];
+    mediaItems = next;
+  }
+
+  function clearImages() {
+    mediaItems = [];
+    urlDraft = '';
+  }
+
+  async function uploadImage(file: File) {
     const formData = new FormData();
-    formData.append('file', imageFile);
+    formData.append('file', file);
     const res = await fetch('/api/products/upload', { method: 'POST', body: formData });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error ?? 'Încărcarea imaginii a eșuat.');
     return data.url as string;
+  }
+
+  async function uploadImagesIfNeeded() {
+    const urls: string[] = [];
+    const seen = new Set<string>();
+
+    for (const item of mediaItems) {
+      const url = item.file ? await uploadImage(item.file) : item.url.trim();
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      urls.push(url);
+    }
+
+    return urls;
   }
 
   async function submit(event: Event) {
@@ -70,11 +139,11 @@
     loading = true;
     error = '';
     try {
-      const image_url = await uploadImageIfNeeded();
+      const images = await uploadImagesIfNeeded();
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, image_url }),
+        body: JSON.stringify({ ...form, image_url: images[0] ?? '', images }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Nu s-a putut salva produsul.');
@@ -96,7 +165,7 @@
     <div>
       <p class="eyebrow">Catalog</p>
       <h1>Produs nou</h1>
-      <p>Adaugă un produs nou și controlează categoria, prețul, stocul și imaginea.</p>
+      <p>Adaugă un produs nou și controlează categoria, prețul, stocul și galeria de imagini.</p>
     </div>
     <div class="actions">
       <a href="/admin/produse" class="pill"><i class="bi bi-arrow-left"></i> Înapoi</a>
@@ -158,6 +227,24 @@
           </div>
         </label>
         <label>
+          <span>Unitate măsură</span>
+          <select bind:value={form.measure_unit} disabled={loading}>
+            {#each measureUnits as unit}
+              <option value={unit.value}>{unit.label}</option>
+            {/each}
+          </select>
+          <small>{selectedMeasureUnit.hint}</small>
+        </label>
+        <label>
+          <span>Etichetă produs</span>
+          <select bind:value={form.promotion_label} disabled={loading}>
+            {#each promotionLabels as label}
+              <option value={label.value}>{label.label}</option>
+            {/each}
+          </select>
+          <small>{selectedPromotionLabel.hint}</small>
+        </label>
+        <label>
           <span>Stoc *</span>
           <input type="number" bind:value={form.stock_quantity} min="0" required disabled={loading} />
         </label>
@@ -170,32 +257,53 @@
     </section>
 
     <aside class="side">
-      <section class="panel">
+      <section class="panel media-panel">
         <div class="panelHead compact">
           <div>
             <p class="eyebrow">Media</p>
-            <h2>Imagine</h2>
+            <h2>Galerie produs</h2>
           </div>
+          <span>{mediaItems.length} imagini</span>
         </div>
+
         <div class="preview">
           <img src={previewUrl} alt="Preview produs" on:error={fallbackImage} />
+          {#if mediaItems.length > 1}
+            <small>{mediaItems.length} imagini în slideshow</small>
+          {/if}
         </div>
+
         <label>
-          <span>Imagine URL</span>
-          <input bind:value={form.image_url} placeholder="https://..." disabled={loading} />
+          <span>Upload imagini</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp" multiple on:change={handleImages} disabled={loading} />
+          <small>Prima imagine din listă devine imaginea principală.</small>
         </label>
-        <label>
-          <span>Upload imagine</span>
-          <input type="file" accept="image/jpeg,image/png,image/webp" on:change={handleImage} disabled={loading} />
-        </label>
-        <button
-          class="clearBtn"
-          type="button"
-          on:click={clearImage}
-          disabled={loading || (!form.image_url && !imageFile && !imagePreview)}
-        >
-          Șterge imaginea
-        </button>
+
+        <div class="urlRow">
+          <input bind:value={urlDraft} placeholder="https://..." disabled={loading} on:keydown={handleUrlKeydown} />
+          <button type="button" class="miniBtn" on:click={addUrl} disabled={loading || !urlDraft.trim()}>Adaugă URL</button>
+        </div>
+
+        {#if mediaItems.length > 0}
+          <div class="media-list">
+            {#each mediaItems as item, index (item.key)}
+              <div class="media-item" animate:flip={{ duration: 180 }}>
+                <img src={item.preview || item.url || PLACEHOLDER_IMAGE} alt={`Imagine ${index + 1}`} on:error={fallbackImage} />
+                <div>
+                  <strong>{index === 0 ? 'Principală' : `Imagine ${index + 1}`}</strong>
+                  <small>{item.file ? item.file.name : item.url}</small>
+                  <div class="media-actions">
+                    <button type="button" on:click={() => moveMedia(index, -1)} disabled={loading || index === 0}>Sus</button>
+                    <button type="button" on:click={() => moveMedia(index, 1)} disabled={loading || index === mediaItems.length - 1}>Jos</button>
+                    <button type="button" class="dangerText" on:click={() => removeMedia(index)} disabled={loading}>Elimină</button>
+                  </div>
+                </div>
+              </div>
+            {/each}
+          </div>
+
+          <button class="clearBtn" type="button" on:click={clearImages} disabled={loading}>Șterge toate imaginile</button>
+        {/if}
       </section>
 
       <section class="panel summary">
@@ -204,7 +312,10 @@
         <div><span>Categorie</span><strong>{selectedCategory.label}</strong></div>
         <div><span>Stare</span><strong>{selectedStatus.label}</strong></div>
         <div><span>Stoc</span><strong>{Number(form.stock_quantity || 0)}</strong></div>
-        <div><span>Preț</span><strong>{Number(form.price || 0).toFixed(2)} RON</strong></div>
+        <div><span>Unitate</span><strong>{selectedMeasureUnit.label}</strong></div>
+        <div><span>Etichetă</span><strong>{selectedPromotionLabel.label}</strong></div>
+        <div><span>Imagini</span><strong>{mediaItems.length}</strong></div>
+        <div><span>Preț</span><strong>{Number(form.price || 0).toFixed(2)} RON / {selectedMeasureUnit.value === 'PER_BUC' ? 'buc.' : 'kg'}</strong></div>
         <button class="submitBtn" type="submit" disabled={loading}>
           {loading ? 'Se salvează…' : 'Salvează produsul'}
         </button>
@@ -223,7 +334,8 @@
 
   .pill,
   .clearBtn,
-  .submitBtn {
+  .submitBtn,
+  .miniBtn {
     min-height: 46px;
     border: 1px solid var(--line);
     border-radius: 999px;
@@ -267,9 +379,112 @@
     font-weight: 950;
   }
 
+  .media-panel {
+    display: grid;
+    gap: 12px;
+  }
+
+  .preview {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .preview img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview small {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    background: rgba(255, 255, 255, 0.9);
+    font-weight: 900;
+  }
+
+  .urlRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .urlRow input {
+    min-width: 0;
+  }
+
+  .miniBtn {
+    min-height: 42px;
+    background: rgba(var(--accent-rgb, 36, 146, 204), 0.1);
+    color: var(--accent, #2492cc);
+  }
+
+  .media-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .media-item {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    padding: 9px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.02);
+    will-change: transform;
+  }
+
+  .media-item img {
+    width: 76px;
+    height: 76px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .media-item strong,
+  .media-item small {
+    display: block;
+  }
+
+  .media-item small {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .media-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 7px;
+  }
+
+  .media-actions button {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    padding: 0.25rem 0.55rem;
+    font-weight: 900;
+    font-size: 0.78rem;
+  }
+
+  .dangerText {
+    color: #842029;
+  }
+
   .clearBtn {
     width: 100%;
-    margin-top: 6px;
+    margin-top: 2px;
   }
 
   .summary {
@@ -305,10 +520,20 @@
     margin-top: 6px;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .media-item {
+      transition: none;
+    }
+  }
+
   @media (max-width: 991.98px) {
     .actions,
     .pill {
       width: 100%;
+    }
+
+    .urlRow {
+      grid-template-columns: 1fr;
     }
   }
 </style>

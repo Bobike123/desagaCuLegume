@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import type { RequestEvent } from '@sveltejs/kit';
 import { createAdminClient } from '$lib/server/supabase';
 import {
@@ -106,7 +107,7 @@ export async function POST(event: RequestEvent) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Register failed', error);
-    return json({ error: 'Înregistrarea a eșuat.' }, { status: 500 });
+    const requestId = logRouteError('Register failed', error);
+    return json({ error: 'Înregistrarea a eșuat.', requestId }, { status: 500 });
   }
 }

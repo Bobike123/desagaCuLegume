@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import { normalizeCartItems } from '$lib/server/cart-validation';
 import { mapRpcError } from '$lib/server/checkout-errors';
 import { createAdminClient } from '$lib/server/supabase';
@@ -28,9 +29,13 @@ type CheckoutRpcOrder = {
 const IDEMPOTENCY_KEY_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function optionalIdempotencyKey(value: unknown) {
+// Required: without a key, place_order skips all replay protection and a
+// retried POST creates a duplicate order. The client always sends one.
+function requireIdempotencyKey(value: unknown) {
   const key = cleanString(value);
-  if (!key) return null;
+  if (!key) {
+    throw new RequestValidationError('Cheia de idempotency este obligatorie.');
+  }
   if (!IDEMPOTENCY_KEY_PATTERN.test(key)) {
     throw new RequestValidationError('Cheia de idempotency este invalidă.');
   }
@@ -41,8 +46,8 @@ function checkoutErrorResponse(error: unknown) {
   const match = mapRpcError(error);
   if (match) return json({ error: match.error }, { status: match.status });
 
-  console.error('Checkout RPC failed', error);
-  return json({ error: 'Nu am putut finaliza comanda. Încearcă din nou.' }, { status: 500 });
+  const requestId = logRouteError('Checkout RPC failed', error);
+  return json({ error: 'Nu am putut finaliza comanda. Încearcă din nou.', requestId }, { status: 500 });
 }
 
 export async function POST({ locals, request }) {
@@ -104,7 +109,7 @@ export async function POST({ locals, request }) {
       return json({ error: 'Adresa de livrare este incompletă.' }, { status: 400 });
     }
 
-    const idempotencyKey = optionalIdempotencyKey(body.idempotencyKey ?? request.headers.get('idempotency-key'));
+    const idempotencyKey = requireIdempotencyKey(body.idempotencyKey ?? request.headers.get('idempotency-key'));
     const admin = createAdminClient();
     const orderResult = await admin
       .rpc('place_order', {

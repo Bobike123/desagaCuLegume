@@ -1,11 +1,13 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { MAX_CART_QUANTITY } from '$lib/cart-limits';
-  import { computeCartSummary, FREE_DELIVERY_THRESHOLD } from '$lib/cart-summary';
-  import { formatMoney, formatDate, statusLabel } from '$lib/format';
+  import { computeCartSummary, DEFAULT_SHIPPING_RULES, type ShippingRules } from '$lib/cart-summary';
+  import { apiFetch } from '$lib/api-client';
+  import { formatMoney } from '$lib/format';
   import { auth } from '$lib/stores/auth';
   import { cart } from '$lib/stores/cart';
+  import CartItemsList from '$lib/components/cart/CartItemsList.svelte';
+  import OrderHistory from '$lib/components/cart/OrderHistory.svelte';
   import MessageThread from '$lib/components/MessageThread.svelte';
 
   type OrderItem = {
@@ -26,6 +28,11 @@
     price?: number | string;
     quantity?: number | string;
     image_url?: string | null;
+    images?: Array<{ url?: string | null; image_url?: string | null } | string> | null;
+    measure_unit?: string | null;
+    promotion_label?: string | null;
+    category?: string | null;
+    in_stock?: boolean | null;
   };
 
   const SUPPORT_PHONE = '+40 729 969 822';
@@ -132,8 +139,11 @@
               price: Number(item.price ?? 0),
               quantity: Number(item.quantity ?? 0),
               image_url: item.image_url ?? '',
-              category: 'de-sezon',
-              in_stock: true,
+              images: item.images ?? [],
+              category: item.category ?? 'de-sezon',
+              measure_unit: item.measure_unit ?? 'PER_KG',
+              promotion_label: item.promotion_label ?? 'NONE',
+              in_stock: item.in_stock ?? true,
             }))
           );
         }
@@ -210,9 +220,24 @@
     }
   }
 
+  let shippingRules: ShippingRules = { ...DEFAULT_SHIPPING_RULES };
+
+  async function loadShippingRules() {
+    try {
+      const data = await apiFetch<{ shipping?: Partial<ShippingRules> }>('/api/config');
+      shippingRules = {
+        freeDeliveryThreshold: Number(data?.shipping?.freeDeliveryThreshold ?? DEFAULT_SHIPPING_RULES.freeDeliveryThreshold),
+        deliveryFee: Number(data?.shipping?.deliveryFee ?? DEFAULT_SHIPPING_RULES.deliveryFee),
+      };
+    } catch {
+      shippingRules = { ...DEFAULT_SHIPPING_RULES };
+    }
+  }
+
   $: ({ itemCount, subtotal, shippingFee, remainingForFreeDelivery, total } = computeCartSummary(
     $cart.items,
-    checkoutForm.deliveryMethod
+    checkoutForm.deliveryMethod,
+    shippingRules
   ));
   $: hasItems = $cart.items.length > 0;
   $: checkoutDisabled = !hasItems || checkoutSubmitting || syncingCart || $auth.loading || $auth.isAdmin;
@@ -233,6 +258,7 @@
   }
 
   onMount(() => {
+    void loadShippingRules();
     if ($auth.isAuthenticated && !$auth.isAdmin) {
       loadedDataForUserId = String($auth.user?.id ?? '');
       void loadOrders();
@@ -316,51 +342,7 @@
               </div>
             </div>
           {:else}
-            <div class="cart-list" role="list">
-              {#each $cart.items as item (item.productId)}
-                <div class="cart-row" role="listitem">
-                  <div class="cart-main">
-                    <a class="thumb" href={`/produse/${item.productId}`} aria-label={`Vezi ${item.name}`}>
-                      {#if item.image_url}
-                        <img src={item.image_url} alt={item.name} />
-                      {:else}
-                        <i class="bi bi-bag"></i>
-                      {/if}
-                    </a>
-                    <div class="cart-info">
-                      <a class="cart-title" href={`/produse/${item.productId}`}>{item.name}</a>
-                      <div class="cart-sub">{formatMoney(item.price)} / buc</div>
-                      <div class="cart-actions">
-                        <div class="qty" aria-label={`Cantitate pentru ${item.name}`}>
-                          <button class="qty-btn" type="button" aria-label="Scade cantitatea" on:click={() => setQty(item.productId, item.quantity - 1)}>
-                            <i class="bi bi-dash"></i>
-                          </button>
-                          <input
-                            class="qty-input"
-                            inputmode="numeric"
-                            min="0"
-                            max={MAX_CART_QUANTITY}
-                            aria-label="Cantitate"
-                            value={item.quantity}
-                            on:input={(e) => setQty(item.productId, Number((e.target as HTMLInputElement).value))}
-                          />
-                          <button class="qty-btn" type="button" aria-label="Crește cantitatea" on:click={() => setQty(item.productId, item.quantity + 1)}>
-                            <i class="bi bi-plus"></i>
-                          </button>
-                        </div>
-                        <button class="remove-btn" type="button" on:click={() => remove(item.productId)}>
-                          <i class="bi bi-x-lg"></i> Elimină
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="cart-price">
-                    <div class="price">{formatMoney(item.price * item.quantity)}</div>
-                    <div class="muted small">Total linie</div>
-                  </div>
-                </div>
-              {/each}
-            </div>
+            <CartItemsList items={$cart.items} onQuantityChange={setQty} onRemove={remove} />
           {/if}
         </div>
 
@@ -400,7 +382,7 @@
             <div class="delivery-hint">
               Adaugă produse de {formatMoney(remainingForFreeDelivery)} pentru livrare gratuită.
             </div>
-          {:else if checkoutForm.deliveryMethod === 'delivery' && subtotal >= FREE_DELIVERY_THRESHOLD}
+          {:else if checkoutForm.deliveryMethod === 'delivery' && subtotal >= shippingRules.freeDeliveryThreshold}
             <div class="delivery-hint success">Livrare gratuită aplicată.</div>
           {/if}
 
@@ -492,27 +474,7 @@
             <div class="panel-head">
               <h2 class="h5 fw-bold m-0"><i class="bi bi-clock-history"></i> Comenzile mele</h2>
             </div>
-            {#if loadingOrders}
-              <div class="muted">Se încarcă comenzile…</div>
-            {:else if orders.length === 0}
-              <div class="muted">Nu ai comenzi încă.</div>
-            {:else}
-              <div class="orderList">
-                {#each orders as order (order.id)}
-                  <div class="orderCard">
-                    <div class="orderTop">
-                      <div class="fw-bold">{order.orderNumber}</div>
-                      <span>{statusLabel(order.status)}</span>
-                    </div>
-                    <div class="small muted">{formatDate(order.createdAt)}</div>
-                    <div class="mt-2">Total: {order.total.toFixed(2)} {order.currency}</div>
-                    <div class="small mt-1 muted">
-                      Plată: {statusLabel(order.paymentStatus)} · Livrare: {statusLabel(order.fulfillmentStatus)}
-                    </div>
-                  </div>
-                {/each}
-              </div>
-            {/if}
+            <OrderHistory {orders} loading={loadingOrders} />
           </div>
         {/if}
       </div>
@@ -595,8 +557,7 @@
     margin-bottom: 12px;
   }
 
-  .muted,
-  .cart-sub {
+  .muted {
     color: rgba(0, 0, 0, 0.65);
   }
 
@@ -659,112 +620,6 @@
     background: var(--desaga-blue);
   }
 
-  .cart-list {
-    display: grid;
-    gap: 12px;
-  }
-
-  .cart-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 12px;
-    border-radius: 16px;
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.04);
-  }
-
-  .cart-main {
-    display: flex;
-    gap: 12px;
-    min-width: 0;
-  }
-
-  .thumb {
-    width: 78px;
-    height: 78px;
-    border-radius: 16px;
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.05);
-    display: grid;
-    place-items: center;
-    color: rgba(0, 0, 0, 0.45);
-    flex: 0 0 auto;
-    text-decoration: none;
-  }
-
-  .thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .cart-info {
-    min-width: 0;
-  }
-
-  .cart-title {
-    display: inline-block;
-    font-weight: 900;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .cart-title:hover {
-    color: var(--desaga-blue);
-  }
-
-  .cart-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-    margin-top: 10px;
-  }
-
-  .qty {
-    display: inline-flex;
-    align-items: center;
-    overflow: hidden;
-    border-radius: 12px;
-    border: 1px solid rgba(36, 146, 204, 0.35);
-    background: #fff;
-  }
-
-  .qty-btn {
-    border: 0;
-    background: rgba(36, 146, 204, 0.1);
-    width: 36px;
-    height: 36px;
-    color: var(--desaga-blue);
-    font-weight: 900;
-  }
-
-  .qty-input {
-    width: 56px;
-    border: 0;
-    text-align: center;
-    height: 36px;
-    font-weight: 900;
-  }
-
-  .remove-btn {
-    border: 0;
-    background: transparent;
-    color: #dc3545;
-    font-weight: 800;
-  }
-
-  .cart-price {
-    text-align: right;
-    min-width: 120px;
-  }
-
-  .price {
-    font-weight: 900;
-    font-size: 1.05rem;
-  }
-
   .summary-row {
     display: flex;
     justify-content: space-between;
@@ -807,35 +662,6 @@
     gap: 5px;
     font-size: 0.9rem;
     font-weight: 800;
-  }
-
-  .orderList {
-    display: grid;
-    gap: 10px;
-  }
-
-  .orderCard {
-    padding: 12px;
-    border-radius: 14px;
-    background: rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(0, 0, 0, 0.04);
-  }
-
-  .orderTop {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .orderTop span {
-    padding: 0.2rem 0.5rem;
-    border-radius: 999px;
-    background: rgba(36, 146, 204, 0.1);
-    color: var(--desaga-blue);
-    font-size: 0.75rem;
-    font-weight: 900;
-    white-space: nowrap;
   }
 
   .phone-fallback {
@@ -897,15 +723,8 @@
       grid-template-columns: 1fr;
     }
 
-    .cart-row,
     .empty-state {
       flex-direction: column;
-    }
-
-    .cart-price {
-      width: 100%;
-      text-align: left;
-      min-width: 0;
     }
 
     .head-actions {

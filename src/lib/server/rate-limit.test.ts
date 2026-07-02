@@ -75,28 +75,48 @@ describe('rate limiting', () => {
     expect(second!.status).toBe(429);
   });
 
-  it('does not trust spoofable proxy headers unless explicitly configured', () => {
-    const previous = process.env.TRUST_PROXY_HEADERS;
-    process.env.TRUST_PROXY_HEADERS = 'false';
+  it('does not trust proxy headers unless TRUSTED_PROXY is configured', () => {
+    const previous = process.env.TRUSTED_PROXY;
+    delete process.env.TRUSTED_PROXY;
 
     const event = {
       request: new Request('https://desagaculegume.ro/.env', {
         headers: {
           'x-forwarded-for': '198.51.100.99',
           'x-real-ip': '198.51.100.98',
+          'cf-connecting-ip': '198.51.100.97',
         },
       }),
       getClientAddress: () => '203.0.113.20',
     } as any;
 
     expect(getClientIp(event)).toBe('203.0.113.20');
-    if (previous == null) delete process.env.TRUST_PROXY_HEADERS;
-    else process.env.TRUST_PROXY_HEADERS = previous;
+    if (previous == null) delete process.env.TRUSTED_PROXY;
+    else process.env.TRUSTED_PROXY = previous;
   });
 
-  it('trusts cf-connecting-ip when TRUST_PROXY_HEADERS=true', () => {
-    const previous = process.env.TRUST_PROXY_HEADERS;
-    process.env.TRUST_PROXY_HEADERS = 'true';
+  it('trusts only x-real-ip when TRUSTED_PROXY=vercel (cf-connecting-ip is client-spoofable)', () => {
+    const previous = process.env.TRUSTED_PROXY;
+    process.env.TRUSTED_PROXY = 'vercel';
+
+    const event = {
+      request: new Request('https://desagaculegume.ro/api/test', {
+        headers: {
+          'x-real-ip': '198.51.100.50',
+          'cf-connecting-ip': '203.0.113.99',
+        },
+      }),
+      getClientAddress: () => '10.0.0.2',
+    } as any;
+
+    expect(getClientIp(event)).toBe('198.51.100.50');
+    if (previous == null) delete process.env.TRUSTED_PROXY;
+    else process.env.TRUSTED_PROXY = previous;
+  });
+
+  it('trusts cf-connecting-ip when TRUSTED_PROXY=cloudflare', () => {
+    const previous = process.env.TRUSTED_PROXY;
+    process.env.TRUSTED_PROXY = 'cloudflare';
 
     const event = {
       request: new Request('https://desagaculegume.ro/api/test', {
@@ -106,41 +126,24 @@ describe('rate limiting', () => {
     } as any;
 
     expect(getClientIp(event)).toBe('203.0.113.99');
-    process.env.TRUST_PROXY_HEADERS = previous ?? '';
+    if (previous == null) delete process.env.TRUSTED_PROXY;
+    else process.env.TRUSTED_PROXY = previous;
   });
 
-  it('falls back to x-real-ip when cf-connecting-ip is absent', () => {
-    const previous = process.env.TRUST_PROXY_HEADERS;
-    process.env.TRUST_PROXY_HEADERS = 'true';
+  it('falls back to direct IP when the trusted header contains an invalid IP', () => {
+    const previous = process.env.TRUSTED_PROXY;
+    process.env.TRUSTED_PROXY = 'vercel';
 
     const event = {
       request: new Request('https://desagaculegume.ro/api/test', {
-        headers: { 'x-real-ip': '198.51.100.50' },
-      }),
-      getClientAddress: () => '10.0.0.2',
-    } as any;
-
-    expect(getClientIp(event)).toBe('198.51.100.50');
-    process.env.TRUST_PROXY_HEADERS = previous ?? '';
-  });
-
-  it('falls back to direct IP when proxy headers contain invalid IPs', () => {
-    const previous = process.env.TRUST_PROXY_HEADERS;
-    process.env.TRUST_PROXY_HEADERS = 'true';
-
-    const event = {
-      request: new Request('https://desagaculegume.ro/api/test', {
-        headers: {
-          'cf-connecting-ip': 'not-an-ip',
-          'x-real-ip': 'also-invalid',
-          'x-forwarded-for': 'bad,values',
-        },
+        headers: { 'x-real-ip': 'not-an-ip' },
       }),
       getClientAddress: () => '203.0.113.77',
     } as any;
 
     expect(getClientIp(event)).toBe('203.0.113.77');
-    process.env.TRUST_PROXY_HEADERS = previous ?? '';
+    if (previous == null) delete process.env.TRUSTED_PROXY;
+    else process.env.TRUSTED_PROXY = previous;
   });
 });
 

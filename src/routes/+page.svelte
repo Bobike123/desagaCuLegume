@@ -2,14 +2,30 @@
   import Hero from '$lib/components/Hero.svelte';
   import ProductCard from '$lib/components/ProductCard.svelte';
   import EventCard from '$lib/components/EventCard.svelte';
-  import { getAllProducts, type Product } from '$lib/stores/products';
+  import { getAllProducts, sortProductPriority, type Product } from '$lib/stores/products';
   import { getAllEvents, type Event } from '$lib/stores/events';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
+
+  const MAX_VISIBLE_SLIDER_ITEMS = 4;
+  const SLIDER_SETTLE_DELAY = 130;
 
   let products: Product[] = [];
   let events: Event[] = [];
   let loadingProducts = true;
   let loadingEvents = true;
+  let borcaneSlideIndex = 0;
+  let sezonSlideIndex = 0;
+  let visibleSliderItems = MAX_VISIBLE_SLIDER_ITEMS;
+  let borcaneSliderViewport: HTMLDivElement | null = null;
+  let sezonSliderViewport: HTMLDivElement | null = null;
+  let borcaneScrollTimer: number | null = null;
+  let sezonScrollTimer: number | null = null;
+  let sortedProducts: Product[] = [];
+  let borcaneProducts: Product[] = [];
+  let sezonProducts: Product[] = [];
+  let borcaneMaxIndex = 0;
+  let sezonMaxIndex = 0;
+  let hasCatalogProducts = false;
 
   const heroTitle = 'Legume locale, proaspete, în\u00A0Cluj\u2011Napoca';
 
@@ -87,26 +103,260 @@
     },
   ];
 
-  onMount(async () => {
-    try {
-      loadingProducts = true;
-      products = await getAllProducts();
-    } finally {
-      loadingProducts = false;
-    }
+  onMount(() => {
+    let mounted = true;
 
-    try {
-      loadingEvents = true;
-      events = await getAllEvents();
-    } finally {
-      loadingEvents = false;
-    }
+    void (async () => {
+      try {
+        loadingProducts = true;
+        const loadedProducts = await getAllProducts();
+
+        if (mounted) {
+          products = loadedProducts;
+        }
+      } finally {
+        if (mounted) {
+          loadingProducts = false;
+        }
+      }
+
+      try {
+        loadingEvents = true;
+        const loadedEvents = await getAllEvents();
+
+        if (mounted) {
+          events = loadedEvents;
+        }
+      } finally {
+        if (mounted) {
+          loadingEvents = false;
+        }
+      }
+
+      if (mounted) {
+        updateVisibleSliderItems();
+      }
+    })();
+
+    window.addEventListener('resize', updateVisibleSliderItems);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('resize', updateVisibleSliderItems);
+      clearSliderTimers();
+    };
   });
 
-  $: featured = [...products]
-    .sort((a, b) => Number(Boolean(b.in_stock)) - Number(Boolean(a.in_stock)))
-    .slice(0, 12);
+  function productCategory(product: Product) {
+    const raw = String(product.category ?? '').toLowerCase().trim();
 
+    if (raw === 'la-borcan' || raw === 'borcane' || raw.includes('borcan')) {
+      return 'la-borcan';
+    }
+
+    return 'de-sezon';
+  }
+
+  function updateVisibleSliderItems() {
+    if (typeof window === 'undefined') return;
+
+    if (window.innerWidth >= 992) {
+      visibleSliderItems = 4;
+    } else if (window.innerWidth >= 576) {
+      visibleSliderItems = 2;
+    } else {
+      visibleSliderItems = 1;
+    }
+
+    void syncSliderPositions(false);
+  }
+
+  async function syncSliderPositions(smooth = false) {
+    await tick();
+
+    borcaneSlideIndex = clampSliderIndex(borcaneSlideIndex, borcaneMaxIndex);
+    sezonSlideIndex = clampSliderIndex(sezonSlideIndex, sezonMaxIndex);
+
+    await scrollSliderToIndex(borcaneSliderViewport, borcaneSlideIndex, smooth);
+    await scrollSliderToIndex(sezonSliderViewport, sezonSlideIndex, smooth);
+  }
+
+  function clearSliderTimers() {
+    if (typeof window === 'undefined') return;
+
+    if (borcaneScrollTimer !== null) {
+      window.clearTimeout(borcaneScrollTimer);
+      borcaneScrollTimer = null;
+    }
+
+    if (sezonScrollTimer !== null) {
+      window.clearTimeout(sezonScrollTimer);
+      sezonScrollTimer = null;
+    }
+  }
+
+  function clampSliderIndex(value: number, max: number) {
+    return Math.min(Math.max(value, 0), max);
+  }
+
+  function shouldAnimateSlider() {
+    if (typeof window === 'undefined') return false;
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function getSliderItems(viewport: HTMLDivElement | null) {
+    if (!viewport) return [];
+    return Array.from(viewport.querySelectorAll<HTMLElement>('[data-slide-index]'));
+  }
+
+  function getSliderLeftForIndex(viewport: HTMLDivElement | null, index: number) {
+    const items = getSliderItems(viewport);
+    const first = items[0];
+    const target = items[index];
+
+    if (!first || !target) return 0;
+
+    return Math.max(0, target.offsetLeft - first.offsetLeft);
+  }
+
+  function getNearestSliderIndex(viewport: HTMLDivElement | null, maxIndex: number) {
+    const items = getSliderItems(viewport);
+    const first = items[0];
+
+    if (!viewport || !first || items.length === 0) return 0;
+
+    const currentLeft = viewport.scrollLeft;
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    for (const item of items) {
+      const index = Number(item.dataset.slideIndex ?? 0);
+      const itemLeft = Math.max(0, item.offsetLeft - first.offsetLeft);
+      const distance = Math.abs(currentLeft - itemLeft);
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    }
+
+    return clampSliderIndex(nearestIndex, maxIndex);
+  }
+
+  async function scrollSliderToIndex(viewport: HTMLDivElement | null, index: number, smooth = true) {
+    await tick();
+
+    if (!viewport) return;
+
+    const left = getSliderLeftForIndex(viewport, index);
+
+    viewport.scrollTo({
+      left,
+      behavior: smooth && shouldAnimateSlider() ? 'smooth' : 'auto',
+    });
+  }
+
+  function settleSlider(
+    viewport: HTMLDivElement | null,
+    maxIndex: number,
+    setIndex: (index: number) => void
+  ) {
+    if (!viewport) return;
+
+    const nearestIndex = getNearestSliderIndex(viewport, maxIndex);
+    setIndex(nearestIndex);
+    void scrollSliderToIndex(viewport, nearestIndex, true);
+  }
+
+  function settleBorcaneSlider() {
+    settleSlider(borcaneSliderViewport, borcaneMaxIndex, (index) => {
+      borcaneSlideIndex = index;
+    });
+  }
+
+  function settleSezonSlider() {
+    settleSlider(sezonSliderViewport, sezonMaxIndex, (index) => {
+      sezonSlideIndex = index;
+    });
+  }
+
+  function scheduleBorcaneSettle() {
+    if (typeof window === 'undefined') return;
+
+    if (borcaneScrollTimer !== null) {
+      window.clearTimeout(borcaneScrollTimer);
+    }
+
+    borcaneScrollTimer = window.setTimeout(() => {
+      borcaneScrollTimer = null;
+      settleBorcaneSlider();
+    }, SLIDER_SETTLE_DELAY);
+  }
+
+  function scheduleSezonSettle() {
+    if (typeof window === 'undefined') return;
+
+    if (sezonScrollTimer !== null) {
+      window.clearTimeout(sezonScrollTimer);
+    }
+
+    sezonScrollTimer = window.setTimeout(() => {
+      sezonScrollTimer = null;
+      settleSezonSlider();
+    }, SLIDER_SETTLE_DELAY);
+  }
+
+  function handleBorcaneScroll() {
+    if (!borcaneSliderViewport) return;
+
+    const nearestIndex = getNearestSliderIndex(borcaneSliderViewport, borcaneMaxIndex);
+
+    if (nearestIndex !== borcaneSlideIndex) {
+      borcaneSlideIndex = nearestIndex;
+    }
+
+    scheduleBorcaneSettle();
+  }
+
+  function handleSezonScroll() {
+    if (!sezonSliderViewport) return;
+
+    const nearestIndex = getNearestSliderIndex(sezonSliderViewport, sezonMaxIndex);
+
+    if (nearestIndex !== sezonSlideIndex) {
+      sezonSlideIndex = nearestIndex;
+    }
+
+    scheduleSezonSettle();
+  }
+
+  function moveBorcaneSlider(direction: 1 | -1) {
+    const nextIndex = clampSliderIndex(borcaneSlideIndex + direction, borcaneMaxIndex);
+    if (nextIndex === borcaneSlideIndex) return;
+
+    borcaneSlideIndex = nextIndex;
+    void scrollSliderToIndex(borcaneSliderViewport, borcaneSlideIndex);
+  }
+
+  function moveSezonSlider(direction: 1 | -1) {
+    const nextIndex = clampSliderIndex(sezonSlideIndex + direction, sezonMaxIndex);
+    if (nextIndex === sezonSlideIndex) return;
+
+    sezonSlideIndex = nextIndex;
+    void scrollSliderToIndex(sezonSliderViewport, sezonSlideIndex);
+  }
+
+  $: sortedProducts = [...products].sort((a, b) => {
+    const stockRank = Number(Boolean(b.in_stock)) - Number(Boolean(a.in_stock));
+    return stockRank || sortProductPriority(a, b);
+  });
+  $: borcaneProducts = sortedProducts.filter((product) => productCategory(product) === 'la-borcan');
+  $: sezonProducts = sortedProducts.filter((product) => productCategory(product) === 'de-sezon');
+  $: borcaneMaxIndex = Math.max(0, borcaneProducts.length - visibleSliderItems);
+  $: sezonMaxIndex = Math.max(0, sezonProducts.length - visibleSliderItems);
+  $: if (borcaneSlideIndex > borcaneMaxIndex) borcaneSlideIndex = borcaneMaxIndex;
+  $: if (sezonSlideIndex > sezonMaxIndex) sezonSlideIndex = sezonMaxIndex;
+  $: hasCatalogProducts = borcaneProducts.length > 0 || sezonProducts.length > 0;
   $: availableCount = products.filter((product) => product.in_stock).length;
   $: upcoming = events.slice(0, 3);
 </script>
@@ -194,12 +444,29 @@
     </div>
 
     {#if loadingProducts}
-      <div class="grid products-grid" aria-label="Se încarcă produsele">
-        {#each Array(12) as _}
-          <div class="skeleton-card skeleton-product"></div>
+      <div class="catalog-sliders" aria-label="Se încarcă produsele">
+        {#each ['Produse la borcan', 'Produse de sezon'] as title}
+          <div class="product-slider-panel">
+            <div class="slider-head">
+              <div>
+                <span class="slider-kicker">Catalog</span>
+                <h3>{title}</h3>
+              </div>
+              <div class="slider-controls skeleton-controls">
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="slider-grid">
+              {#each Array(4) as _}
+                <div class="skeleton-card skeleton-product"></div>
+              {/each}
+            </div>
+          </div>
         {/each}
       </div>
-    {:else if featured.length === 0}
+    {:else if !hasCatalogProducts}
       <div class="empty-state">
         <div class="empty-title">Nu avem produse afișate momentan</div>
         <div class="empty-sub">
@@ -215,12 +482,130 @@
         </div>
       </div>
     {:else}
-      <div class="grid products-grid" aria-label="Produse recomandate">
-        {#each featured as product (product.id)}
-          <div class="grid-item">
-            <ProductCard {product} />
+      <div class="catalog-sliders">
+        <section class="product-slider-panel" aria-labelledby="borcane-slider-title">
+          <div class="slider-head">
+            <div>
+              <span class="slider-kicker">La borcan</span>
+              <h3 id="borcane-slider-title">Borcane</h3>
+            </div>
+
+            <div class="slider-controls">
+              <span class="slider-count">
+                {#if borcaneProducts.length > 0}
+                  {borcaneSlideIndex + 1}–{Math.min(borcaneSlideIndex + visibleSliderItems, borcaneProducts.length)} din {borcaneProducts.length}
+                {:else}
+                  0 produse
+                {/if}
+              </span>
+              <button
+                type="button"
+                class="slider-btn"
+                aria-label="Produsele la borcan anterioare"
+                disabled={borcaneSlideIndex === 0}
+                on:click={() => moveBorcaneSlider(-1)}
+              >
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <button
+                type="button"
+                class="slider-btn"
+                aria-label="Produsele la borcan următoare"
+                disabled={borcaneSlideIndex >= borcaneMaxIndex}
+                on:click={() => moveBorcaneSlider(1)}
+              >
+                <i class="bi bi-chevron-right"></i>
+              </button>
+            </div>
           </div>
-        {/each}
+
+          {#if borcaneProducts.length === 0}
+            <div class="category-empty">
+              Nu avem produse la borcan afișate momentan.
+            </div>
+          {:else}
+            <div
+              class="slider-window"
+              bind:this={borcaneSliderViewport}
+              aria-label="Slider produse la borcan"
+              aria-live="polite"
+              role="region"
+              on:scroll={handleBorcaneScroll}
+              on:touchend={settleBorcaneSlider}
+              on:pointerup={settleBorcaneSlider}
+            >
+              <div class="slider-track">
+                {#each borcaneProducts as product, index (product.id)}
+                  <div class="grid-item slider-item" data-slide-index={index}>
+                    <ProductCard {product} />
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        </section>
+
+        <section class="product-slider-panel" aria-labelledby="sezon-slider-title">
+          <div class="slider-head">
+            <div>
+              <span class="slider-kicker">De sezon</span>
+              <h3 id="sezon-slider-title">Produse de sezon</h3>
+            </div>
+
+            <div class="slider-controls">
+              <span class="slider-count">
+                {#if sezonProducts.length > 0}
+                  {sezonSlideIndex + 1}–{Math.min(sezonSlideIndex + visibleSliderItems, sezonProducts.length)} din {sezonProducts.length}
+                {:else}
+                  0 produse
+                {/if}
+              </span>
+              <button
+                type="button"
+                class="slider-btn"
+                aria-label="Produsele de sezon anterioare"
+                disabled={sezonSlideIndex === 0}
+                on:click={() => moveSezonSlider(-1)}
+              >
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <button
+                type="button"
+                class="slider-btn"
+                aria-label="Produsele de sezon următoare"
+                disabled={sezonSlideIndex >= sezonMaxIndex}
+                on:click={() => moveSezonSlider(1)}
+              >
+                <i class="bi bi-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+
+          {#if sezonProducts.length === 0}
+            <div class="category-empty">
+              Nu avem produse de sezon afișate momentan.
+            </div>
+          {:else}
+            <div
+              class="slider-window"
+              bind:this={sezonSliderViewport}
+              aria-label="Slider produse de sezon"
+              aria-live="polite"
+              role="region"
+              on:scroll={handleSezonScroll}
+              on:touchend={settleSezonSlider}
+              on:pointerup={settleSezonSlider}
+            >
+              <div class="slider-track">
+                {#each sezonProducts as product, index (product.id)}
+                  <div class="grid-item slider-item" data-slide-index={index}>
+                    <ProductCard {product} />
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        </section>
       </div>
     {/if}
 
@@ -450,6 +835,177 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .catalog-sliders {
+    display: grid;
+    gap: 18px;
+  }
+
+  .product-slider-panel {
+    overflow: hidden;
+    border-radius: 22px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+  }
+
+  .slider-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.08), rgba(255, 255, 255, 0.94));
+  }
+
+  .slider-kicker {
+    display: inline-flex;
+    margin-bottom: 0.28rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .slider-head h3 {
+    margin: 0;
+    font-size: 1.08rem;
+    font-weight: 950;
+    letter-spacing: -0.01em;
+  }
+
+  .slider-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  .slider-count {
+    display: none;
+    color: rgba(0, 0, 0, 0.62);
+    font-size: 0.82rem;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .slider-btn {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--accent-rgb), 0.26);
+    background: rgba(var(--accent-rgb), 0.1);
+    color: var(--accent);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 0.12s ease,
+      background 0.12s ease,
+      border-color 0.12s ease,
+      opacity 0.12s ease;
+  }
+
+  .slider-btn:hover:not(:disabled),
+  .slider-btn:focus-visible:not(:disabled) {
+    transform: translateY(-1px);
+    background: rgba(var(--accent-rgb), 0.16);
+    border-color: rgba(var(--accent-rgb), 0.46);
+    outline: none;
+  }
+
+  .slider-btn:active:not(:disabled) {
+    transform: translateY(0) scale(0.97);
+  }
+
+  .slider-btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+
+  .slider-window {
+    --slider-gap: 14px;
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 14px;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 14px;
+    scrollbar-width: none;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  .slider-window:focus-visible {
+    outline: 3px solid rgba(var(--accent-rgb), 0.28);
+    outline-offset: -3px;
+  }
+
+  .slider-window::-webkit-scrollbar {
+    display: none;
+  }
+
+  .slider-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .slider-track {
+    display: flex;
+    gap: var(--slider-gap);
+    align-items: stretch;
+  }
+
+  .slider-item {
+    flex: 0 0 100%;
+    min-width: 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .slider-item :global(*) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .category-empty {
+    margin: 14px;
+    padding: 18px;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.025);
+    border: 1px dashed rgba(0, 0, 0, 0.12);
+    color: rgba(0, 0, 0, 0.66);
+    font-weight: 800;
+  }
+
+  .skeleton-controls span {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.07);
+  }
+
+  @media (min-width: 576px) {
+    .slider-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .slider-item {
+      flex-basis: calc((100% - var(--slider-gap)) / 2);
+    }
+
+    .slider-count {
+      display: inline-flex;
+    }
+  }
+
   @media (min-width: 768px) {
     .products-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -467,8 +1023,13 @@
       align-items: stretch;
     }
 
-    .products-grid {
+    .products-grid,
+    .slider-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .slider-item {
+      flex-basis: calc((100% - (var(--slider-gap) * 3)) / 4);
     }
   }
 
@@ -778,6 +1339,17 @@
     height: 320px;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .slider-window {
+      scroll-behavior: auto;
+    }
+
+    .slider-btn,
+    .quick-card {
+      transition: none;
+    }
+  }
+
   @keyframes shimmer {
     0% {
       background-position: 200% 0;
@@ -841,6 +1413,41 @@
     .section-head {
       align-items: flex-start;
       flex-direction: column;
+    }
+
+    .product-slider-panel {
+      border-radius: 18px;
+    }
+
+    .slider-head {
+      align-items: stretch;
+      flex-direction: column;
+      padding: 14px 14px 10px;
+    }
+
+    .slider-controls {
+      width: 100%;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .slider-count {
+      display: inline-flex;
+      flex: 1 1 auto;
+      align-items: center;
+      min-height: 46px;
+    }
+
+    .slider-btn {
+      width: 46px;
+      height: 46px;
+      font-size: 1.05rem;
+    }
+
+    .slider-window {
+      --slider-gap: 12px;
+      padding: 12px;
+      scroll-padding-inline: 12px;
     }
 
     .strip-actions,

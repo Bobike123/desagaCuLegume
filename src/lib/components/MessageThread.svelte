@@ -10,6 +10,7 @@
   import {
     buildConversationItems,
     customerName,
+    formatMessageDate,
     mapConversationDetail,
     normalizeStatus,
     normalizeText,
@@ -20,6 +21,7 @@
     type OrderItem,
     type RawConversation,
   } from '$lib/message-thread';
+  import MessageBubbleList from '$lib/components/MessageBubbleList.svelte';
 
   type ConversationStatus = 'ALL' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
   type ConversationView = 'main' | 'archive';
@@ -77,17 +79,7 @@
   }));
 
   function formatDate(value: string | null | undefined) {
-    if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '—';
-
-    return date.toLocaleString('ro-RO', {
-      day: '2-digit',
-      month: 'short',
-      year: mode === 'user' ? 'numeric' : undefined,
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatMessageDate(value, mode);
   }
 
 
@@ -381,20 +373,6 @@
     }
 
     if (mode === 'user') await createConversation();
-  }
-
-  function senderLabel(senderType: string) {
-    const normalized = normalizeStatus(senderType);
-    if (normalized === 'SYSTEM') return 'Sistem';
-    if (mode === 'admin') return normalized === 'ADMIN' ? 'Admin' : 'Client';
-    return normalized === 'ADMIN' ? 'Admin' : 'Tu';
-  }
-
-  function messageClass(senderType: string) {
-    const normalized = normalizeStatus(senderType);
-    if (normalized === 'SYSTEM') return 'msg-system';
-    const isOwnMessage = mode === 'admin' ? normalized === 'ADMIN' : normalized === 'USER';
-    return isOwnMessage ? 'msg-own' : 'msg-other';
   }
 
   function isConversationArchived(item: ConversationListItem | ConversationDetail | null) {
@@ -691,15 +669,7 @@
                   <span>Scrie primul răspuns pentru client.</span>
                 </div>
               {:else}
-                {#each current.messages as msg (msg.id)}
-                  <div class={`msg ${messageClass(msg.senderType)}`}>
-                    <div class="msg-meta">
-                      <strong>{senderLabel(msg.senderType)}</strong>
-                      <span>{formatDate(msg.createdAt)}</span>
-                    </div>
-                    <div class="msg-body">{msg.body}</div>
-                  </div>
-                {/each}
+                <MessageBubbleList messages={current.messages} {mode} />
               {/if}
             </div>
 
@@ -889,15 +859,7 @@
                     <span>Scrie mai jos și adminul îți răspunde aici.</span>
                   </div>
                 {:else}
-                  {#each current.messages as msg (msg.id)}
-                    <div class={`msg ${messageClass(msg.senderType)}`}>
-                      <div class="msg-meta">
-                        <strong>{senderLabel(msg.senderType)}</strong>
-                        <span>{formatDate(msg.createdAt)}</span>
-                      </div>
-                      <div class="msg-body">{msg.body}</div>
-                    </div>
-                  {/each}
+                  <MessageBubbleList messages={current.messages} {mode} />
                 {/if}
               </div>
 
@@ -1464,53 +1426,6 @@
 
   .admin-messages {
     max-height: 52vh;
-  }
-
-  .msg {
-    max-width: min(760px, 92%);
-    padding: 0.85rem;
-    border-radius: var(--desaga-radius-md, 12px);
-    font-size: 0.9rem;
-    border: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.08));
-  }
-
-  .msg-other {
-    background: rgba(15, 23, 42, 0.04);
-    align-self: flex-start;
-  }
-
-  .msg-own {
-    background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.08);
-    border-color: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.16);
-    align-self: flex-end;
-  }
-
-  .msg-system {
-    max-width: min(640px, 94%);
-    align-self: center;
-    text-align: center;
-    background: rgba(100, 116, 139, 0.08);
-    color: rgba(20, 33, 43, 0.72);
-  }
-
-  .msg-system .msg-meta {
-    justify-content: center;
-  }
-
-  .msg-meta {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    font-size: 0.8rem;
-    color: var(--desaga-muted, rgba(0, 0, 0, 0.62));
-    margin-bottom: 6px;
-  }
-
-  .msg-body {
-    white-space: pre-wrap;
-    word-break: break-word;
-    color: rgba(20, 33, 43, 0.86);
-    line-height: 1.45;
   }
 
   .reply-box {

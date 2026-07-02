@@ -56,8 +56,10 @@ export function isAllowedSameOriginRequest(request: Request, requestUrl: URL) {
   const origin = request.headers.get('origin');
   if (origin) return origin === requestUrl.origin;
 
+  // Browsers send Origin on cross-site state-changing requests; a request
+  // with neither Origin nor Referer cannot be proven same-origin, so deny it.
   const referer = request.headers.get('referer');
-  if (!referer) return true;
+  if (!referer) return false;
 
   try {
     return new URL(referer).origin === requestUrl.origin;
@@ -76,7 +78,7 @@ function buildContentSecurityPolicy(supabaseUrl?: string | null) {
     "object-src 'none'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "script-src 'self' 'unsafe-inline'",
+    "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
@@ -86,7 +88,11 @@ function buildContentSecurityPolicy(supabaseUrl?: string | null) {
 }
 
 export function setSecurityHeaders(headers: Headers, event: RequestEvent, supabaseUrl?: string | null) {
-  headers.set('Content-Security-Policy', buildContentSecurityPolicy(supabaseUrl));
+  // SvelteKit emits a nonce-based CSP for page responses (kit.csp in
+  // svelte.config.js); this strict fallback covers API/decoy/error responses.
+  if (!headers.has('Content-Security-Policy')) {
+    headers.set('Content-Security-Policy', buildContentSecurityPolicy(supabaseUrl));
+  }
   headers.set('X-Frame-Options', 'DENY');
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');

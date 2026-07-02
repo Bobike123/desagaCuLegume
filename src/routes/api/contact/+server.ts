@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from '$lib/server/supabase';
 import { getPagination, getPaginationMeta } from '$lib/server/pagination';
 import {
@@ -103,8 +104,8 @@ export async function GET({ locals, url }) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Contact data load failed', error);
-    return json({ error: 'Nu am putut încărca datele de contact.' }, { status: 400 });
+    const requestId = logRouteError('Contact data load failed', error);
+    return json({ error: 'Nu am putut încărca datele de contact.', requestId }, { status: 400 });
   }
 }
 
@@ -188,7 +189,7 @@ export async function POST({ request, locals }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Contact message send failed', error);
-    return json({ error: 'Nu am putut trimite mesajul.' }, { status: 400 });
+    const requestId = logRouteError('Contact message send failed', error);
+    return json({ error: 'Nu am putut trimite mesajul.', requestId }, { status: 400 });
   }
 }

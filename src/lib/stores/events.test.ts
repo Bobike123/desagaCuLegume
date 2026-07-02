@@ -31,6 +31,7 @@ function fakeResponse(body: unknown, status = 200) {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  eventsStore.invalidate();
 });
 
 afterEach(() => {

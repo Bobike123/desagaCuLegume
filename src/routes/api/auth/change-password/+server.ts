@@ -1,9 +1,12 @@
-import { json } from '@sveltejs/kit';
-import { assertStrongPassword, hashPassword, verifyPassword } from '$lib/server/auth';
+import { json, type RequestEvent } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
+import { assertStrongPassword, getRequestMeta, hashPassword, insertAuthLog, verifyPassword } from '$lib/server/auth';
 import { createAdminClient } from '$lib/server/supabase';
 import { LIMITS, readJsonBody, stringField, validationErrorResponse } from '$lib/server/validation';
 
-export async function POST({ locals, request }) {
+export async function POST(event: RequestEvent) {
+  const { locals, request } = event;
+
   if (!locals.isAuthenticated || !locals.user) {
     return json({ error: 'Autentificarea este necesară.' }, { status: 401 });
   }
@@ -72,12 +75,19 @@ export async function POST({ locals, request }) {
     const { error: revokeError } = await revokeSessions;
     if (revokeError) throw revokeError;
 
+    await insertAuthLog({
+      userId: locals.user.id,
+      sessionId: locals.session?.sessionId ?? null,
+      eventType: 'PASSWORD_CHANGED',
+      meta: getRequestMeta(request, event.getClientAddress?.()),
+    }).catch(() => undefined);
+
     return json({ success: true }, { status: 200 });
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Password change failed', error);
-    return json({ error: 'Nu am putut schimba parola.' }, { status: 400 });
+    const requestId = logRouteError('Password change failed', error);
+    return json({ error: 'Nu am putut schimba parola.', requestId }, { status: 400 });
   }
 }

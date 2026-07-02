@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
+  type ProductStatus = 'ACTIVE' | 'OUT_OF_STOCK' | 'DISCONTINUED' | 'DRAFT';
+  type ProductPromotionLabel = 'NONE' | 'NOU' | 'PROMOTIE' | 'NOU_PROMOTIE';
+
   type ProductItem = {
     id: string;
     sku?: string;
@@ -8,14 +11,76 @@
     category: string;
     price: number;
     stock_quantity: number;
-    status?: string;
+    promotion_label?: ProductPromotionLabel | string;
+    status?: ProductStatus | string;
     in_stock: boolean;
+  };
+
+  const STATUS_LABELS: Record<ProductStatus, string> = {
+    ACTIVE: 'În stoc',
+    OUT_OF_STOCK: 'Stoc epuizat',
+    DISCONTINUED: 'Retras',
+    DRAFT: 'Draft',
+  };
+
+  const PROMOTION_LABELS: Record<ProductPromotionLabel, string> = {
+    NONE: 'Fără promoție',
+    NOU: 'NOU',
+    PROMOTIE: 'PROMOȚIE',
+    NOU_PROMOTIE: 'NOU + PROMOȚIE',
   };
 
   let items: ProductItem[] = [];
   let loading = true;
   let error = '';
+  let notice = '';
+  let noticeType: 'success' | 'danger' | 'info' = 'info';
   let searchQuery = '';
+  let selectedProductIds = new Set<string>();
+  let bulkStatus: ProductStatus = 'ACTIVE';
+  let bulkWorking = false;
+
+  function productPromotionLabel(value: string | undefined) {
+    const key = String(value ?? 'NONE').toUpperCase() as ProductPromotionLabel;
+    return PROMOTION_LABELS[key] ?? PROMOTION_LABELS.NONE;
+  }
+
+  function hasPromotion(value: string | undefined) {
+    return String(value ?? 'NONE').toUpperCase() !== 'NONE';
+  }
+
+  function productStatusLabel(status: string | undefined, inStock: boolean) {
+    const key = String(status ?? '').toUpperCase() as ProductStatus;
+    return STATUS_LABELS[key] ?? (inStock ? 'În stoc' : 'Stoc epuizat');
+  }
+
+  function isPositiveProductStatus(item: ProductItem) {
+    const key = String(item.status ?? '').toUpperCase();
+    return key ? key === 'ACTIVE' : item.in_stock;
+  }
+
+  function showNotice(message: string, type: typeof noticeType = 'info') {
+    notice = message;
+    noticeType = type;
+    setTimeout(() => {
+      if (notice === message) notice = '';
+    }, 2800);
+  }
+
+  function setSelection(id: string, checked: boolean) {
+    const next = new Set(selectedProductIds);
+    if (checked) next.add(id);
+    else next.delete(id);
+    selectedProductIds = next;
+  }
+
+  function selectVisibleProducts() {
+    selectedProductIds = new Set([...selectedProductIds, ...filtered.map((item) => item.id)]);
+  }
+
+  function clearSelection() {
+    selectedProductIds = new Set();
+  }
 
   async function loadItems() {
     loading = true;
@@ -25,11 +90,51 @@
       const res = await fetch('/api/products?limit=100');
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Eroare la încărcarea produselor');
-      items = Array.isArray(data?.items) ? data.items : [];
+      items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];
+      selectedProductIds = new Set([...selectedProductIds].filter((id) => items.some((item) => item.id === id)));
     } catch (err) {
       error = err instanceof Error ? err.message : 'Eroare la încărcare';
     } finally {
       loading = false;
+    }
+  }
+
+  async function applyBulkStatus() {
+    if (selectedIds.length === 0) {
+      showNotice('Selectează cel puțin un produs.', 'danger');
+      return;
+    }
+
+    const label = STATUS_LABELS[bulkStatus] ?? bulkStatus;
+    if (!confirm(`Schimbi ${selectedIds.length} produse în statusul „${label}”?`)) return;
+
+    bulkWorking = true;
+    error = '';
+
+    try {
+      const res = await fetch('/api/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds, status: bulkStatus }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        showNotice(data?.error ?? 'Nu s-au putut actualiza produsele.', 'danger');
+        return;
+      }
+
+      const updatedCount = Number(data?.count ?? selectedIds.length);
+
+      clearSelection();
+      await loadItems();
+
+      showNotice(`${updatedCount} produse actualizate.`, 'success');
+    } catch (err) {
+      console.error(err);
+      showNotice('Nu s-au putut actualiza produsele.', 'danger');
+    } finally {
+      bulkWorking = false;
     }
   }
 
@@ -44,6 +149,7 @@
     }
 
     items = items.filter((item) => item.id !== id);
+    setSelection(id, false);
   }
 
   onMount(loadItems);
@@ -53,6 +159,10 @@
     if (!q) return true;
     return `${item.name} ${item.sku ?? ''} ${item.category}`.toLowerCase().includes(q);
   });
+
+  $: selectedIds = [...selectedProductIds];
+  $: selectedCount = selectedIds.length;
+  $: allVisibleSelected = filtered.length > 0 && filtered.every((item) => selectedProductIds.has(item.id));
 </script>
 
 <svelte:head>
@@ -80,6 +190,34 @@
     <span class="count">{loading ? '…' : filtered.length} produse</span>
   </section>
 
+  <section class="bulkBar" aria-label="Acțiuni produse selectate">
+    <div class="bulkSummary">
+      <strong>{selectedCount}</strong>
+      <span>{selectedCount === 1 ? 'produs selectat' : 'produse selectate'}</span>
+    </div>
+    <div class="bulkActions">
+      <button class="pill" type="button" on:click={selectVisibleProducts} disabled={loading || filtered.length === 0 || allVisibleSelected}>
+        Selectează toate
+      </button>
+      <button class="pill" type="button" on:click={clearSelection} disabled={selectedCount === 0 || bulkWorking}>
+        Curăță selecția
+      </button>
+      <select bind:value={bulkStatus} aria-label="Status nou pentru produsele selectate" disabled={bulkWorking}>
+        <option value="ACTIVE">În stoc</option>
+        <option value="OUT_OF_STOCK">Stoc epuizat</option>
+        <option value="DRAFT">Draft</option>
+        <option value="DISCONTINUED">Retras</option>
+      </select>
+      <button class="pill primary" type="button" on:click={applyBulkStatus} disabled={selectedCount === 0 || bulkWorking}>
+        {bulkWorking ? 'Se aplică…' : 'Aplică modificare la cele selectate'}
+      </button>
+    </div>
+  </section>
+
+  {#if notice}
+    <div class={`notice ${noticeType}`} role="status"><i class="bi bi-info-circle"></i>{notice}</div>
+  {/if}
+
   {#if error}
     <div class="notice danger" role="alert"><i class="bi bi-exclamation-triangle"></i>{error}</div>
   {/if}
@@ -95,13 +233,27 @@
   {:else}
     <section class="productGrid" aria-label="Lista produselor">
       {#each filtered as item (item.id)}
-        <article class="productCard">
+        <article class:selected={selectedProductIds.has(item.id)} class:promoted={hasPromotion(item.promotion_label)} class="productCard">
+          <label class="selectControl cardSelect">
+            <input
+              type="checkbox"
+              checked={selectedProductIds.has(item.id)}
+              on:change={(event) => setSelection(item.id, event.currentTarget.checked)}
+            />
+            <span>Selectează produsul</span>
+          </label>
+
           <header>
             <div>
               <h2>{item.name}</h2>
               <p>{item.sku ?? 'Fără SKU'}</p>
             </div>
-            <span class:mutedBadge={!item.in_stock} class="stockBadge">{item.status ?? (item.in_stock ? 'ACTIVE' : 'OUT_OF_STOCK')}</span>
+            <div class="badgeStack">
+              {#if hasPromotion(item.promotion_label)}
+                <span class="promoBadge">{productPromotionLabel(item.promotion_label)}</span>
+              {/if}
+              <span class:mutedBadge={!isPositiveProductStatus(item)} class="stockBadge">{productStatusLabel(item.status, item.in_stock)}</span>
+            </div>
           </header>
 
           <div class="metaGrid">
@@ -151,8 +303,11 @@
     border-color: transparent;
   }
 
-  .pill:disabled {
+  .pill:disabled,
+  .cardBtn:disabled,
+  .bulkActions select:disabled {
     opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .toolbar {
@@ -173,6 +328,57 @@
     white-space: nowrap;
   }
 
+  .bulkBar {
+    margin: 0 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    background: rgba(255, 253, 247, 0.92);
+    box-shadow: 0 16px 40px rgba(35, 51, 30, 0.06);
+  }
+
+  .bulkSummary {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.54);
+    white-space: nowrap;
+  }
+
+  .bulkSummary strong {
+    font-size: 1.2rem;
+    font-weight: 950;
+  }
+
+  .bulkSummary span {
+    color: var(--muted);
+    font-weight: 900;
+  }
+
+  .bulkActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .bulkActions select {
+    min-height: 46px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0 14px;
+    background: rgba(255, 253, 247, 0.9);
+    color: var(--ink);
+    font-weight: 850;
+  }
+
   .productGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
@@ -187,6 +393,36 @@
     padding: 18px;
     display: grid;
     gap: 18px;
+  }
+
+  .productCard.promoted {
+    border-color: rgba(194, 37, 45, 0.32);
+    box-shadow: 0 20px 58px rgba(194, 37, 45, 0.14);
+  }
+
+  .productCard.selected {
+    border-color: rgba(139, 212, 80, 0.9);
+    box-shadow: 0 20px 58px rgba(93, 151, 48, 0.16);
+  }
+
+  .selectControl {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--muted);
+    font-weight: 950;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .selectControl input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+  }
+
+  .cardSelect {
+    width: fit-content;
   }
 
   .productCard header,
@@ -210,7 +446,16 @@
     color: var(--muted);
   }
 
-  .stockBadge {
+  .badgeStack {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .stockBadge,
+  .promoBadge {
     flex: 0 0 auto;
     border-radius: 999px;
     padding: 7px 10px;
@@ -218,6 +463,12 @@
     color: var(--accent);
     font-size: 0.72rem;
     font-weight: 950;
+  }
+
+  .promoBadge {
+    background: #c2252d;
+    color: #fffdf7;
+    border: 1px solid rgba(194, 37, 45, 0.26);
   }
 
   .stockBadge.mutedBadge {
@@ -259,6 +510,21 @@
     color: #842029;
     background: #fff4f4;
     border-color: #facaca;
+  }
+
+  @media (max-width: 900px) {
+    .bulkBar {
+      grid-template-columns: 1fr;
+    }
+
+    .bulkActions {
+      justify-content: stretch;
+    }
+
+    .bulkActions .pill,
+    .bulkActions select {
+      flex: 1 1 180px;
+    }
   }
 
   @media (max-width: 720px) {

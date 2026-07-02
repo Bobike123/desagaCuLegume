@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from '$lib/server/supabase';
 import { SUPPORT_TOPICS } from '$lib/support-messages';
 import { getPagination, getPaginationMeta } from '$lib/server/pagination';
 import {
   CONVERSATION_SELECT,
   CONVERSATION_STATUSES,
-  archiveEligibleConversations,
   getUserOrder,
   loadConversationSummaries,
   mapOrder,
@@ -60,7 +60,8 @@ export async function GET({ locals, url }) {
     });
 
     const admin = createAdminClient();
-    await archiveEligibleConversations(admin);
+    // Closed→archived promotion runs in pg_cron (run_archive_support,
+    // 20260710_07) instead of as a write inside every list read.
     const result = await loadConversationSummaries(admin, locals, pagination, {
       status,
       topic,
@@ -78,8 +79,8 @@ export async function GET({ locals, url }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Messages load failed', error);
-    return json({ error: 'Nu am putut încărca mesajele.' }, { status: 400 });
+    const requestId = logRouteError('Messages load failed', error);
+    return json({ error: 'Nu am putut încărca mesajele.', requestId }, { status: 400 });
   }
 }
 
@@ -155,7 +156,7 @@ export async function POST({ locals, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Conversation create failed', error);
-    return json({ error: 'Nu am putut crea conversația.' }, { status: 400 });
+    const requestId = logRouteError('Conversation create failed', error);
+    return json({ error: 'Nu am putut crea conversația.', requestId }, { status: 400 });
   }
 }

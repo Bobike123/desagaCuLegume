@@ -4,6 +4,16 @@ import { computeCartSummary, DELIVERY_FEE, FREE_DELIVERY_THRESHOLD } from './car
 const lines = (subtotal: number, itemCount = 1) => [{ price: subtotal, quantity: itemCount }];
 
 describe('computeCartSummary', () => {
+  it('pins the shipping rule to the values charged by the place_order RPC', () => {
+    // The authoritative rule lives in SQL (place_order,
+    // supabase/migrations/20260702_03_orders_delivery_and_transitions.sql):
+    // free delivery at subtotal >= 150 RON, otherwise a flat 20 RON fee.
+    // If this test fails you changed the display rule without changing what
+    // customers are actually charged — update both together.
+    expect(FREE_DELIVERY_THRESHOLD).toBe(150);
+    expect(DELIVERY_FEE).toBe(20);
+  });
+
   it('sums item count and subtotal across lines', () => {
     const s = computeCartSummary(
       [
@@ -41,5 +51,15 @@ describe('computeCartSummary', () => {
     expect(s.shippingFee).toBe(0);
     expect(s.total).toBe(0);
     expect(s.remainingForFreeDelivery).toBe(FREE_DELIVERY_THRESHOLD);
+  });
+
+  it('applies server-provided shipping rules over the compiled defaults', () => {
+    const rules = { freeDeliveryThreshold: 200, deliveryFee: 25 };
+    const below = computeCartSummary(lines(180), 'delivery', rules);
+    expect(below.shippingFee).toBe(25);
+    expect(below.remainingForFreeDelivery).toBe(20);
+
+    const above = computeCartSummary(lines(200), 'delivery', rules);
+    expect(above.shippingFee).toBe(0);
   });
 });

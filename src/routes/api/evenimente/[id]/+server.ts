@@ -1,4 +1,5 @@
 import { json } from "@sveltejs/kit";
+import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from "$lib/server/supabase";
 import { EVENT_TYPES } from "$lib/server/events";
 import {
@@ -26,8 +27,8 @@ export async function GET({ locals, params, url }) {
 
     const { data, error } = await q.single();
     if (error) {
-      console.error("Event load failed", error);
-      return json({ error: "Eroare la încărcarea evenimentului." }, { status: 400 });
+      const requestId = logRouteError('Event load failed', error);
+      return json({ error: 'Eroare la încărcarea evenimentului.', requestId }, { status: 400 });
     }
 
     return json({ item: data }, { status: 200 });
@@ -35,8 +36,8 @@ export async function GET({ locals, params, url }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error("Event load failed", error);
-    return json({ error: "Eroare la încărcarea evenimentului." }, { status: 400 });
+    const requestId = logRouteError('Event load failed', error);
+    return json({ error: 'Eroare la încărcarea evenimentului.', requestId }, { status: 400 });
   }
 }
 
@@ -78,16 +79,16 @@ export async function PATCH({ locals, params, request }) {
       .single();
 
     if (error) {
-      console.error("Event update failed", error);
-      return json({ error: "Eroare la actualizarea evenimentului." }, { status: 400 });
+      const requestId = logRouteError('Event update failed', error);
+      return json({ error: 'Eroare la actualizarea evenimentului.', requestId }, { status: 400 });
     }
     return json({ item: data }, { status: 200 });
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error("Event update failed", error);
-    return json({ error: "Eroare la actualizarea evenimentului." }, { status: 400 });
+    const requestId = logRouteError('Event update failed', error);
+    return json({ error: 'Eroare la actualizarea evenimentului.', requestId }, { status: 400 });
   }
 }
 
@@ -102,8 +103,8 @@ export async function DELETE({ locals, params }) {
       .eq("id", eventId);
 
     if (error) {
-      console.error("Event delete failed", error);
-      return json({ error: "Eroare la ștergerea evenimentului." }, { status: 400 });
+      const requestId = logRouteError('Event delete failed', error);
+      return json({ error: 'Eroare la ștergerea evenimentului.', requestId }, { status: 400 });
     }
 
     return json({ success: true }, { status: 200 });
@@ -111,7 +112,7 @@ export async function DELETE({ locals, params }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error("Event delete failed", error);
-    return json({ error: "Eroare la ștergerea evenimentului." }, { status: 400 });
+    const requestId = logRouteError('Event delete failed', error);
+    return json({ error: 'Eroare la ștergerea evenimentului.', requestId }, { status: 400 });
   }
 }

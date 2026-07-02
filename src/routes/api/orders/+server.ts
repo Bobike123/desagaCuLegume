@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from '$lib/server/supabase';
 import { getPagination, getPaginationMeta, noStoreHeaders } from '$lib/server/pagination';
 import { mapOrder } from '$lib/server/support';
@@ -58,7 +59,7 @@ export async function GET({ locals, url, setHeaders }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('Orders load failed', error);
-    return json({ error: 'Nu am putut încărca comenzile.' }, { status: 400 });
+    const requestId = logRouteError('Orders load failed', error);
+    return json({ error: 'Nu am putut încărca comenzile.', requestId }, { status: 400 });
   }
 }

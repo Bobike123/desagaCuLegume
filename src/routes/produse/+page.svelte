@@ -2,7 +2,7 @@
   import Hero from '$lib/components/Hero.svelte';
   import ProductCard from '$lib/components/ProductCard.svelte';
   import { onMount } from 'svelte';
-  import { getAllProducts, type Product } from '$lib/stores/products';
+  import { getAllProducts, sortProductPriority, type Product } from '$lib/stores/products';
 
   let products: Product[] = [];
   let filteredProducts: Product[] = [];
@@ -34,7 +34,7 @@
     q = '';
   }
 
-  $: availableProducts = products.filter((p) => p.in_stock === true);
+  $: availableProducts = products.filter((p) => p.in_stock === true).sort(sortProductPriority);
   $: totalProducts = products.length;
   $: totalAvailable = availableProducts.length;
   $: filteredProducts = availableProducts.filter((p) => {

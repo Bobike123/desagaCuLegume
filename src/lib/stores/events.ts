@@ -1,4 +1,5 @@
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
+import { apiFetch } from '$lib/api-client';
 
 export interface EventItem {
   id: string;
@@ -44,20 +45,32 @@ function normalizeEvent(raw: any): EventItem {
   };
 }
 
+// Skip refetching on every page mount: data younger than this is served from
+// the store (the API layer also caches publicly for 60s via s-maxage).
+const STALE_AFTER_MS = 60 * 1000;
+let lastLoad: { key: string; at: number } | null = null;
+
 export const eventsStore = {
   subscribe: store.subscribe,
 
-  async loadAll(admin = false) {
+  invalidate() {
+    lastLoad = null;
+  },
+
+  async loadAll(admin = false, options: { force?: boolean } = {}) {
+    const key = admin ? 'admin' : 'public';
+    if (!options.force && lastLoad?.key === key && Date.now() - lastLoad.at < STALE_AFTER_MS) {
+      return get(store).items;
+    }
+
     store.update((s) => ({ ...s, loading: true, error: null }));
 
     try {
       const params = new URLSearchParams({ limit: '100' });
       if (admin) params.set('admin', 'true');
-      const qs = `?${params.toString()}`;
-      const res = await fetch(`/api/evenimente${qs}`);
-      const data = await res.json().catch(() => ([]));
-
-      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca evenimentele.');
+      const data = await apiFetch<any>(`/api/evenimente?${params.toString()}`, {
+        fallbackError: 'Nu am putut încărca evenimentele.',
+      });
 
       const rawItems = Array.isArray(data?.items)
         ? data.items
@@ -67,47 +80,44 @@ export const eventsStore = {
 
       const items = rawItems.map(normalizeEvent);
       store.set({ items, loading: false, error: null });
+      lastLoad = { key, at: Date.now() };
       return items;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Eroare necunoscută.';
       store.set({ items: [], loading: false, error: msg });
+      lastLoad = null;
       return [];
     }
   },
 
   async getById(id: string) {
-    const res = await fetch(`/api/evenimente/${encodeURIComponent(id)}`);
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) throw new Error(data?.error ?? 'Nu am putut încărca evenimentul.');
-
+    const data = await apiFetch<any>(`/api/evenimente/${encodeURIComponent(id)}`, {
+      fallbackError: 'Nu am putut încărca evenimentul.',
+    });
     const raw = data && typeof data === 'object' && 'item' in data ? data.item : data;
     return normalizeEvent(raw);
   },
 
   async update(id: string, patch: Partial<EventItem>) {
-    const res = await fetch(`/api/evenimente/${encodeURIComponent(id)}`, {
+    const data = await apiFetch<any>(`/api/evenimente/${encodeURIComponent(id)}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch)
+      body: JSON.stringify(patch),
+      fallbackError: 'Nu am putut actualiza evenimentul.',
     });
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error ?? 'Nu am putut actualiza evenimentul.');
+    this.invalidate();
 
     const raw = data && typeof data === 'object' && 'item' in data ? data.item : data;
     return normalizeEvent(raw);
   },
 
   async remove(id: string) {
-    const res = await fetch(`/api/evenimente/${encodeURIComponent(id)}`, {
-      method: 'DELETE'
+    const data = await apiFetch<{ success: true }>(`/api/evenimente/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      fallbackError: 'Nu am putut șterge evenimentul.',
     });
+    this.invalidate();
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error ?? 'Nu am putut șterge evenimentul.');
-
-    return data as { success: true };
+    return data;
   }
 };
 

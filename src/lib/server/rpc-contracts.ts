@@ -11,10 +11,71 @@
  */
 
 // --- replace_cart_items (no runtime fallback) ------------------------------
-// src/routes/api/cart/+server.ts
+// src/routes/api/cart/+server.ts — returns CartRpcPayload with dropped/clamped
+// product-id arrays since 20260702_01.
 export interface ReplaceCartItemsArgs {
   p_user_id: number;
   p_items: Array<{ product_id: number; quantity: number }>;
+}
+
+// --- get_cart / add_cart_item (no runtime fallback) -------------------------
+// src/routes/api/cart/+server.ts — defined in 20260702_01_cart_upsert.sql.
+export interface GetCartArgs {
+  p_user_id: number;
+}
+
+export interface AddCartItemArgs {
+  p_user_id: number;
+  p_product_id: number;
+  p_delta: number;
+}
+
+export interface CartRpcItemRow {
+  cart_item_id: number | string;
+  product_id: number | string;
+  name?: string | null;
+  image_url?: string | null;
+  measure_unit?: string | null;
+  promotion_label?: string | null;
+  images?: unknown[] | null;
+  quantity?: number | string | null;
+  unit_price?: number | string | null;
+  currency_code?: string | null;
+  category_slug?: string | null;
+  status?: string | null;
+  stock_quantity?: number | string | null;
+}
+
+export interface CartRpcPayload {
+  cart_id: number | null;
+  items: CartRpcItemRow[];
+  // add_cart_item: boolean; replace_cart_items: array of clamped product ids.
+  clamped?: boolean | Array<number | string>;
+  dropped?: Array<number | string>;
+}
+
+// --- admin_dashboard_stats (no runtime fallback) -----------------------------
+// src/routes/api/admin/stats/+server.ts — defined in 20260711_08_admin_stats_rpc.sql.
+export interface AdminDashboardStatsRow {
+  products: number | string;
+  orders: number | string;
+  conversations: number | string;
+  unread_messages: number | string;
+  horeca_requests: number | string;
+  new_horeca_requests: number | string;
+  security_unread: number | string;
+  security_decoy_hits_24h: number | string;
+  security_rate_limits_24h: number | string;
+  failed_logins_24h: number | string;
+}
+
+// --- admin_set_product_stock (no runtime fallback) --------------------------
+// src/routes/api/products/*+server.ts — defined in 20260702_02_stock_ledger.sql.
+export interface AdminSetProductStockArgs {
+  p_product_id: number;
+  p_new_quantity: number;
+  p_admin_user_id: number;
+  p_note: string | null;
 }
 
 // --- support_conversation_summaries (no runtime fallback) ------------------
@@ -81,4 +142,33 @@ export interface ConsumeRateLimitRow {
   allowed: boolean;
   remaining: number;
   retry_after_seconds: number;
+}
+
+// --- consume_rate_limits (batch; fallback: in-memory buckets) ---------------
+// src/lib/server/rate-limit.ts — defined in 20260710_06_rate_limit_batch.sql.
+export interface ConsumeRateLimitsArgs {
+  p_checks: Array<{ key: string; limit: number; window_seconds: number }>;
+}
+
+export interface ConsumeRateLimitsRow {
+  key: string;
+  allowed: boolean;
+  remaining: number;
+  retry_after_seconds: number;
+}
+
+// --- peek_rate_limit / reset_rate_limit (fallback: in-memory buckets) ------
+// src/lib/server/rate-limit.ts — login lockout counters.
+export interface PeekRateLimitArgs {
+  p_key: string;
+  p_limit: number;
+}
+
+export interface PeekRateLimitRow {
+  allowed: boolean;
+  retry_after_seconds: number;
+}
+
+export interface ResetRateLimitArgs {
+  p_key: string;
 }

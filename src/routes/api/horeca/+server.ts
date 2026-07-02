@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from '$lib/server/supabase';
 import { getPagination, getPaginationMeta, noStoreHeaders } from '$lib/server/pagination';
 import {
@@ -71,8 +72,8 @@ export async function GET({ locals, url, setHeaders }) {
     setHeaders(noStoreHeaders);
     return json({ items: (data ?? []).map(mapRequest), page: getPaginationMeta(pagination, count ?? 0) }, { status: 200 });
   } catch (error) {
-    console.error('HORECA requests load failed', error);
-    return json({ error: 'Nu am putut încărca cererile HORECA.' }, { status: 400 });
+    const requestId = logRouteError('HORECA requests load failed', error);
+    return json({ error: 'Nu am putut încărca cererile HORECA.', requestId }, { status: 400 });
   }
 }
 
@@ -131,8 +132,8 @@ export async function POST({ request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('HORECA request create failed', error);
-    return json({ error: 'Nu am putut trimite cererea HORECA.' }, { status: 400 });
+    const requestId = logRouteError('HORECA request create failed', error);
+    return json({ error: 'Nu am putut trimite cererea HORECA.', requestId }, { status: 400 });
   }
 }
 
@@ -171,7 +172,7 @@ export async function PATCH({ locals, request }) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
 
-    console.error('HORECA request update failed', error);
-    return json({ error: 'Nu am putut actualiza cererea HORECA.' }, { status: 400 });
+    const requestId = logRouteError('HORECA request update failed', error);
+    return json({ error: 'Nu am putut actualiza cererea HORECA.', requestId }, { status: 400 });
   }
 }

@@ -1,204 +1,249 @@
-<!-- src/routes/admin/evenimente/+page.svelte -->
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount } from 'svelte';
 
-  type EventItem = {
+  type ProductStatus = 'ACTIVE' | 'OUT_OF_STOCK' | 'DISCONTINUED' | 'DRAFT';
+
+  type ProductItem = {
     id: string;
-    title: string | null;
-    event_type: string | null;
-    date: string | null;
-    location: string | null;
-    published: boolean | null;
-    created_at?: string | null;
+    sku?: string;
+    name: string;
+    category: string;
+    price: number;
+    stock_quantity: number;
+    status?: ProductStatus | string;
+    in_stock: boolean;
   };
 
-  let events: EventItem[] = [];
+  const STATUS_LABELS: Record<ProductStatus, string> = {
+    ACTIVE: 'În stoc',
+    OUT_OF_STOCK: 'Stoc epuizat',
+    DISCONTINUED: 'Retras',
+    DRAFT: 'Draft',
+  };
+
+  let items: ProductItem[] = [];
   let loading = true;
-  let errorMsg = "";
-  let searchQuery = "";
-  let statusFilter = "";
-  let sortMode = "date-asc";
-  let toast = "";
-  let toastType: "success" | "danger" | "info" = "info";
+  let error = '';
+  let notice = '';
+  let noticeType: 'success' | 'danger' | 'info' = 'info';
+  let searchQuery = '';
+  let selectedProductIds = new Set<string>();
+  let bulkStatus: ProductStatus = 'ACTIVE';
+  let bulkWorking = false;
 
-  function showToast(msg: string, type: typeof toastType = "info") {
-    toast = msg;
-    toastType = type;
-    setTimeout(() => (toast = ""), 2500);
+  function productStatusLabel(status: string | undefined, inStock: boolean) {
+    const key = String(status ?? '').toUpperCase() as ProductStatus;
+    return STATUS_LABELS[key] ?? (inStock ? 'În stoc' : 'Stoc epuizat');
   }
 
-  function roDateTime(value: string | null) {
-    if (!value) return "-";
-    try {
-      return new Date(value).toLocaleString("ro-RO", {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return "-";
-    }
+  function isPositiveProductStatus(item: ProductItem) {
+    const key = String(item.status ?? '').toUpperCase();
+    return key ? key === 'ACTIVE' : item.in_stock;
   }
 
-  async function loadEvents() {
+  function showNotice(message: string, type: typeof noticeType = 'info') {
+    notice = message;
+    noticeType = type;
+    setTimeout(() => {
+      if (notice === message) notice = '';
+    }, 2800);
+  }
+
+  function setSelection(id: string, checked: boolean) {
+    const next = new Set(selectedProductIds);
+    if (checked) next.add(id);
+    else next.delete(id);
+    selectedProductIds = next;
+  }
+
+  function selectVisibleProducts() {
+    selectedProductIds = new Set([...selectedProductIds, ...filtered.map((item) => item.id)]);
+  }
+
+  function clearSelection() {
+    selectedProductIds = new Set();
+  }
+
+  async function loadItems() {
     loading = true;
-    errorMsg = "";
+    error = '';
+
     try {
-      const res = await fetch("/api/evenimente?admin=true&limit=100");
+      const res = await fetch('/api/products?limit=100');
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        errorMsg = data?.error ?? "Eroare la încărcarea evenimentelor";
-        return;
-      }
-      events = Array.isArray(data) ? data : (data.items ?? data.events ?? []);
+      if (!res.ok) throw new Error(data?.error ?? 'Eroare la încărcarea produselor');
+items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      selectedProductIds = new Set([...selectedProductIds].filter((id) => items.some((item) => item.id === id)));
     } catch (err) {
-      errorMsg = "Eroare la încărcarea evenimentelor";
-      console.error(err);
+      error = err instanceof Error ? err.message : 'Eroare la încărcare';
     } finally {
       loading = false;
     }
   }
 
-  onMount(loadEvents);
-
-  $: filteredEvents = (events ?? [])
-    .filter((event) => {
-      const q = searchQuery.trim().toLowerCase();
-      const matchesStatus =
-        !statusFilter ||
-        (statusFilter === "published" ? Boolean(event.published) : !Boolean(event.published));
-      if (!q) return matchesStatus;
-      const haystack = `${event.title ?? ""} ${event.location ?? ""} ${event.event_type ?? ""} ${event.date ?? ""}`.toLowerCase();
-      return matchesStatus && haystack.includes(q);
-    })
-    .slice()
-    .sort((a, b) => {
-      const left = new Date(a.date ?? a.created_at ?? 0).getTime();
-      const right = new Date(b.date ?? b.created_at ?? 0).getTime();
-      if (sortMode === "date-desc") return right - left;
-      if (sortMode === "title") return String(a.title ?? "").localeCompare(String(b.title ?? ""), "ro");
-      return left - right;
-    });
-
-  async function deleteEvent(id: string) {
-    if (!confirm("Ești sigur că vrei să ștergi evenimentul?")) return;
-
-    try {
-      const res = await fetch(`/api/evenimente/${id}`, { method: "DELETE" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        showToast(data?.error ?? "Eroare la ștergere", "danger");
-        return;
-      }
-      events = events.filter((e) => e.id !== id);
-      showToast("Eveniment șters", "success");
-    } catch (err) {
-      console.error(err);
-      showToast("Eroare la ștergere", "danger");
+  async function applyBulkStatus() {
+    if (selectedIds.length === 0) {
+      showNotice('Selectează cel puțin un produs.', 'danger');
+      return;
     }
-  }
 
-  async function togglePublished(id: string, current: boolean | null) {
-    const next = !Boolean(current);
+    const label = STATUS_LABELS[bulkStatus] ?? bulkStatus;
+    if (!confirm(`Schimbi ${selectedIds.length} produse în statusul „${label}”?`)) return;
+
+    bulkWorking = true;
+    error = '';
+
     try {
-      const res = await fetch(`/api/evenimente/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ published: next }),
+      const res = await fetch('/api/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds, status: bulkStatus }),
       });
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        showToast(data?.error ?? "Eroare la actualizare", "danger");
+        showNotice(data?.error ?? 'Nu s-au putut actualiza produsele.', 'danger');
         return;
       }
-      events = events.map((e) => (e.id === id ? { ...e, published: next } : e));
-      showToast(next ? "Marcat public" : "Marcat draft", "success");
+
+      const updatedCount = Number(data?.count ?? selectedIds.length);
+
+      clearSelection();
+      await loadItems();
+
+      showNotice(`${updatedCount} produse actualizate.`, 'success');
     } catch (err) {
       console.error(err);
-      showToast("Eroare la actualizare", "danger");
+      showNotice('Nu s-au putut actualiza produsele.', 'danger');
+    } finally {
+      bulkWorking = false;
     }
   }
+
+  async function remove(id: string) {
+    if (!confirm('Ștergi produsul?')) return;
+
+    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      error = data?.error ?? 'Nu s-a putut șterge produsul.';
+      return;
+    }
+
+    items = items.filter((item) => item.id !== id);
+    setSelection(id, false);
+  }
+
+  onMount(loadItems);
+
+  $: filtered = items.filter((item) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return `${item.name} ${item.sku ?? ''} ${item.category}`.toLowerCase().includes(q);
+  });
+
+  $: selectedIds = [...selectedProductIds];
+  $: selectedCount = selectedIds.length;
+  $: allVisibleSelected = filtered.length > 0 && filtered.every((item) => selectedProductIds.has(item.id));
 </script>
 
 <svelte:head>
-  <title>Gestionare Evenimente - Admin DeSaga</title>
+  <title>Produse - Admin DeSaga</title>
 </svelte:head>
 
 <div class="admin-page">
   <header class="topbar">
     <div>
-      <p class="eyebrow">Calendar public</p>
-      <h1>Evenimente</h1>
-      <p>Administrează evenimentele publice: publicare, editare, căutare și ștergere.</p>
+      <p class="eyebrow">Catalog</p>
+      <h1>Produse</h1>
+      <p>Gestionează produsele, prețurile, categoriile, stocurile și vizibilitatea publică.</p>
     </div>
     <div class="actions">
-      <button class="pill" on:click={loadEvents} disabled={loading}><i class="bi bi-arrow-clockwise"></i> Reîncarcă</button>
-      <a href="/admin/evenimente/new" class="pill primary"><i class="bi bi-plus-circle"></i> Eveniment nou</a>
+      <button class="pill" on:click={loadItems} disabled={loading}><i class="bi bi-arrow-clockwise"></i> Reîncarcă</button>
+      <a href="/admin/produse/new" class="pill primary"><i class="bi bi-plus-circle"></i> Produs nou</a>
     </div>
   </header>
 
-  {#if toast}
-    <div class={`notice ${toastType}`} role="status"><i class="bi bi-info-circle"></i>{toast}</div>
-  {/if}
-
-  {#if errorMsg}
-    <div class="notice danger" role="alert"><i class="bi bi-exclamation-triangle"></i>{errorMsg}</div>
-  {/if}
-
   <section class="toolbar">
-    <label class="searchBox" aria-label="Caută evenimente">
+    <label class="searchBox" aria-label="Caută produse">
       <i class="bi bi-search" aria-hidden="true"></i>
-      <input type="search" placeholder="Caută după titlu, locație, tip sau dată..." bind:value={searchQuery} />
+      <input type="search" placeholder="Caută după nume, SKU sau categorie..." bind:value={searchQuery} />
     </label>
-    <select bind:value={statusFilter} aria-label="Filtrează evenimente">
-      <option value="">Toate</option>
-      <option value="published">Publice</option>
-      <option value="draft">Draft</option>
-    </select>
-    <select bind:value={sortMode} aria-label="Sortează evenimente">
-      <option value="date-asc">Dată crescător</option>
-      <option value="date-desc">Dată descrescător</option>
-      <option value="title">Titlu A-Z</option>
-    </select>
-    <span class="count">{loading ? '…' : filteredEvents.length} rezultate</span>
+    <span class="count">{loading ? '…' : filtered.length} produse</span>
   </section>
 
+  <section class="bulkBar" aria-label="Acțiuni produse selectate">
+    <div class="bulkSummary">
+      <strong>{selectedCount}</strong>
+      <span>{selectedCount === 1 ? 'produs selectat' : 'produse selectate'}</span>
+    </div>
+    <div class="bulkActions">
+      <button class="pill" type="button" on:click={selectVisibleProducts} disabled={loading || filtered.length === 0 || allVisibleSelected}>
+        Selectează toate
+      </button>
+      <button class="pill" type="button" on:click={clearSelection} disabled={selectedCount === 0 || bulkWorking}>
+        Curăță selecția
+      </button>
+      <select bind:value={bulkStatus} aria-label="Status nou pentru produsele selectate" disabled={bulkWorking}>
+        <option value="ACTIVE">În stoc</option>
+        <option value="OUT_OF_STOCK">Stoc epuizat</option>
+        <option value="DRAFT">Draft</option>
+        <option value="DISCONTINUED">Retras</option>
+      </select>
+      <button class="pill primary" type="button" on:click={applyBulkStatus} disabled={selectedCount === 0 || bulkWorking}>
+        {bulkWorking ? 'Se aplică…' : 'Aplică în masă'}
+      </button>
+    </div>
+  </section>
+
+  {#if notice}
+    <div class={`notice ${noticeType}`} role="status"><i class="bi bi-info-circle"></i>{notice}</div>
+  {/if}
+
+  {#if error}
+    <div class="notice danger" role="alert"><i class="bi bi-exclamation-triangle"></i>{error}</div>
+  {/if}
+
   {#if loading}
-    <section class="stateCard"><span class="spinner" aria-hidden="true"></span><strong>Se încarcă evenimentele…</strong></section>
-  {:else if filteredEvents.length > 0}
-    <section class="eventGrid">
-      {#each filteredEvents as event (event.id)}
-        <article class:unpublished={!event.published} class="eventCard">
+    <section class="stateCard"><span class="spinner" aria-hidden="true"></span><strong>Se încarcă produsele…</strong></section>
+  {:else if filtered.length === 0}
+    <section class="emptyCard">
+      <i class="bi bi-box-seam"></i>
+      <h2>Nu există produse pentru filtrul curent</h2>
+      <p>Schimbă căutarea sau adaugă un produs nou.</p>
+    </section>
+  {:else}
+    <section class="productGrid" aria-label="Lista produselor">
+      {#each filtered as item (item.id)}
+        <article class:selected={selectedProductIds.has(item.id)} class="productCard">
+          <label class="selectControl cardSelect">
+            <input
+              type="checkbox"
+              checked={selectedProductIds.has(item.id)}
+              on:change={(event) => setSelection(item.id, event.currentTarget.checked)}
+            />
+            <span>Selectează produsul</span>
+          </label>
+
           <header>
             <div>
-              <span class="typeTag">{event.event_type ?? '-'}</span>
-              <h2>{event.title ?? '-'}</h2>
+              <h2>{item.name}</h2>
+              <p>{item.sku ?? 'Fără SKU'}</p>
             </div>
-            <span class:published={event.published} class="statusTag">{event.published ? 'Public' : 'Draft'}</span>
+            <span class:mutedBadge={!isPositiveProductStatus(item)} class="stockBadge">{productStatusLabel(item.status, item.in_stock)}</span>
           </header>
 
-          <div class="details">
-            <div><i class="bi bi-calendar-event"></i><span>{roDateTime(event.date)}</span></div>
-            <div><i class="bi bi-geo-alt"></i><span>{event.location ?? '-'}</span></div>
+          <div class="metaGrid">
+            <div><span>Categorie</span><strong>{item.category}</strong></div>
+            <div><span>Preț</span><strong>{item.price.toFixed(2)} RON</strong></div>
+            <div><span>Stoc</span><strong>{item.stock_quantity}</strong></div>
           </div>
 
           <footer>
-            <button class="cardBtn" on:click={() => togglePublished(event.id, event.published ?? false)}>
-              {event.published ? 'Retrage' : 'Publică'}
-            </button>
-            <a class="cardBtn primary" href={`/admin/evenimente/${event.id}`}>Editează</a>
-            <button class="cardBtn danger" on:click={() => deleteEvent(event.id)}>Șterge</button>
+            <a class="cardBtn" href={`/admin/produse/${item.id}`}>Editează</a>
+            <button class="cardBtn danger" on:click={() => remove(item.id)}>Șterge</button>
           </footer>
         </article>
       {/each}
-    </section>
-  {:else}
-    <section class="emptyCard">
-      <i class="bi bi-calendar-event"></i>
-      <h2>Nu sunt evenimente disponibile</h2>
-      <p>Creează primul eveniment din butonul „Eveniment nou".</p>
     </section>
   {/if}
 </div>
@@ -213,10 +258,10 @@
 
   .pill,
   .cardBtn {
-    min-height: 44px;
+    min-height: 46px;
     border: 1px solid var(--line);
     border-radius: 999px;
-    padding: 0 15px;
+    padding: 0 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -228,33 +273,25 @@
     cursor: pointer;
   }
 
-  .pill.primary,
-  .cardBtn.primary {
+  .pill.primary {
     background: var(--accent);
     color: #fffdf7;
     border-color: transparent;
   }
 
-  .pill:disabled {
+  .pill:disabled,
+  .cardBtn:disabled,
+  .bulkActions select:disabled {
     opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .toolbar {
     margin-bottom: 16px;
     display: grid;
-    grid-template-columns: minmax(240px, 1fr) minmax(140px, 180px) minmax(150px, 200px) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
     align-items: center;
-  }
-
-  .toolbar select {
-    min-height: 44px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 0 14px;
-    background: rgba(255, 253, 247, 0.9);
-    color: var(--ink);
-    font-weight: 850;
   }
 
   .count {
@@ -267,17 +304,64 @@
     white-space: nowrap;
   }
 
-  .searchBox input {
-    width: 100%;
+  .bulkBar {
+    margin: 0 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    background: rgba(255, 253, 247, 0.92);
+    box-shadow: 0 16px 40px rgba(35, 51, 30, 0.06);
   }
 
-  .eventGrid {
+  .bulkSummary {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.54);
+    white-space: nowrap;
+  }
+
+  .bulkSummary strong {
+    font-size: 1.2rem;
+    font-weight: 950;
+  }
+
+  .bulkSummary span {
+    color: var(--muted);
+    font-weight: 900;
+  }
+
+  .bulkActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .bulkActions select {
+    min-height: 46px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0 14px;
+    background: rgba(255, 253, 247, 0.9);
+    color: var(--ink);
+    font-weight: 850;
+  }
+
+  .productGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
     gap: 14px;
   }
 
-  .eventCard {
+  .productCard {
     border: 1px solid var(--line);
     border-radius: 28px;
     background: rgba(255, 253, 247, 0.92);
@@ -287,85 +371,95 @@
     gap: 18px;
   }
 
-  @media (max-width: 820px) {
-    .toolbar {
-      grid-template-columns: 1fr;
-    }
-
-    .count {
-      justify-content: center;
-    }
+  .productCard.selected {
+    border-color: rgba(139, 212, 80, 0.9);
+    box-shadow: 0 20px 58px rgba(93, 151, 48, 0.16);
   }
 
-  .eventCard.unpublished {
-    background: rgba(255, 249, 232, 0.94);
+  .selectControl {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--muted);
+    font-weight: 950;
+    cursor: pointer;
+    user-select: none;
   }
 
-  .eventCard header {
+  .selectControl input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+  }
+
+  .cardSelect {
+    width: fit-content;
+  }
+
+  .productCard header,
+  .productCard footer {
     display: flex;
     justify-content: space-between;
     gap: 12px;
     align-items: start;
   }
 
-  .typeTag,
-  .statusTag {
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 0 10px;
-    font-size: 0.74rem;
-    font-weight: 950;
-  }
-
-  .typeTag {
-    background: rgba(139, 212, 80, 0.18);
-    color: var(--accent);
-    margin-bottom: 10px;
-  }
-
-  .statusTag {
-    background: #ece8dd;
-    color: #65685d;
-    flex: 0 0 auto;
-  }
-
-  .statusTag.published {
-    background: rgba(139, 212, 80, 0.22);
-    color: var(--accent);
-  }
-
-  .eventCard h2 {
+  .productCard h2 {
     margin: 0;
-    font-size: 1.25rem;
-    line-height: 1.08;
+    font-size: 1.18rem;
     font-weight: 950;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.03em;
     overflow-wrap: anywhere;
   }
 
-  .details {
-    display: grid;
-    gap: 8px;
-  }
-
-  .details div {
-    display: flex;
-    gap: 10px;
-    align-items: start;
+  .productCard p {
+    margin: 4px 0 0;
     color: var(--muted);
-    font-weight: 800;
   }
 
-  .details i {
+  .stockBadge {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 7px 10px;
+    background: rgba(139, 212, 80, 0.22);
     color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 950;
   }
 
-  .eventCard footer {
+  .stockBadge.mutedBadge {
+    background: #eee9dd;
+    color: #65685d;
+  }
+
+  .metaGrid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  .metaGrid div {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.48);
+  }
+
+  .metaGrid span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 900;
+  }
+
+  .metaGrid strong {
+    display: block;
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .cardBtn {
+    width: 100%;
   }
 
   .cardBtn.danger {
@@ -374,14 +468,30 @@
     border-color: #facaca;
   }
 
-  @media (max-width: 680px) {
+  @media (max-width: 900px) {
+    .bulkBar {
+      grid-template-columns: 1fr;
+    }
+
+    .bulkActions {
+      justify-content: stretch;
+    }
+
+    .bulkActions .pill,
+    .bulkActions select {
+      flex: 1 1 180px;
+    }
+  }
+
+  @media (max-width: 720px) {
     .toolbar {
       grid-template-columns: 1fr;
     }
 
-    .eventCard header {
-      display: grid;
+    .productCard header,
+    .productCard footer {
       grid-template-columns: 1fr;
+      display: grid;
       align-items: stretch;
     }
 
@@ -390,7 +500,7 @@
       width: 100%;
     }
 
-    .eventCard footer {
+    .metaGrid {
       grid-template-columns: 1fr;
     }
   }
