@@ -446,4 +446,93 @@
     60% { transform: scale(1.12); opacity: 1; }
     100% { transform: scale(1); opacity: 1; }
   }
+
+  /* Compact app-style card: two per row on phones. */
+  @media (max-width: 767.98px) {
+    .card {
+      min-height: 0;
+      border-radius: 14px;
+    }
+
+    .media-link {
+      height: 110px;
+    }
+
+    .promo-stack {
+      top: 6px;
+      right: 6px;
+      gap: 4px;
+    }
+
+    .promo-badge {
+      min-height: 22px;
+      padding: 0.22rem 0.5rem;
+      font-size: 0.6rem;
+    }
+
+    .badges {
+      left: 6px;
+      right: 6px;
+      bottom: 6px;
+      gap: 4px;
+    }
+
+    .pill {
+      padding: 0.2rem 0.45rem;
+      font-size: 0.62rem;
+      gap: 4px;
+    }
+
+    .body {
+      padding: 9px 9px 10px;
+    }
+
+    .title {
+      font-size: 0.86rem;
+    }
+
+    .desc {
+      display: none;
+    }
+
+    .footer {
+      margin-top: 8px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 7px;
+    }
+
+    .price {
+      font-size: 0.95rem;
+    }
+
+    .currency,
+    .unit {
+      font-size: 0.7rem;
+    }
+
+    .btn-add,
+    .details-link {
+      justify-content: center;
+      min-height: 38px;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.85rem;
+    }
+
+    .stepper {
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .step-btn {
+      width: 38px;
+      height: 36px;
+    }
+
+    .qty-wrap {
+      flex: 1;
+      width: auto;
+      height: 36px;
+    }
+  }
 </style>

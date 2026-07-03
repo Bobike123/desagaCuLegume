@@ -26,9 +26,11 @@
 
     const width = Math.max(0, Math.min(960, viewport.width - BANNER_GUTTER * 2));
     const left = viewport.offsetLeft + Math.max(BANNER_GUTTER, (viewport.width - width) / 2);
+    // Below the lg breakpoint the fixed mobile tab bar occupies the bottom edge.
+    const tabBarOffset = window.innerWidth < 992 ? 62 : 0;
     const bottom = Math.max(
-      BANNER_GUTTER,
-      window.innerHeight - viewport.offsetTop - viewport.height + BANNER_GUTTER,
+      BANNER_GUTTER + tabBarOffset,
+      window.innerHeight - viewport.offsetTop - viewport.height + BANNER_GUTTER + tabBarOffset,
     );
 
     bannerStyle = `left: ${left}px; right: auto; bottom: ${bottom}px; width: ${width}px;`;
@@ -167,6 +169,13 @@
     border: 1px solid rgba(15, 23, 42, 0.12);
     border-radius: 18px;
     box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);
+  }
+
+  /* CSS fallback when visualViewport is unavailable: clear the mobile tab bar. */
+  @media (max-width: 991.98px) {
+    .cookie-banner {
+      bottom: calc(1rem + 62px + env(safe-area-inset-bottom, 0px));
+    }
   }
 
   @media (min-width: 768px) {

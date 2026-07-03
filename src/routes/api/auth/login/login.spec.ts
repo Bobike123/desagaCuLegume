@@ -27,6 +27,13 @@ vi.mock('$lib/server/auth', () => ({
   getRequestMeta: () => ({ ipAddress: '203.0.113.1', userAgent: 'test' }),
   getSessionTimeoutMinutes: () => 30,
   setSessionCookie: vi.fn(),
+  safeClientAddress: (getAddress: () => string) => {
+    try {
+      return getAddress();
+    } catch {
+      return null;
+    }
+  },
 }));
 
 vi.mock('$lib/server/supabase', () => ({

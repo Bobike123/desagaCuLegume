@@ -209,8 +209,11 @@
     gap: 18px;
   }
 
+  @media (max-width: 767.98px) {
+    .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  }
+
   @media (max-width: 576px) {
-    .products-grid { grid-template-columns: 1fr; }
     .intro-card { grid-template-columns: 1fr; }
     .intro-actions .btn,
     .empty-actions .btn { width: 100%; }

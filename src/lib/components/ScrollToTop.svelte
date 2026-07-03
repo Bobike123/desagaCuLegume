@@ -119,6 +119,13 @@ function animateScrollToTop(duration = SCROLL_DURATION): void {
             visibility 0.2s ease;
     }
 
+    /* Sit above the mobile tab bar while the burger nav is active. */
+    @media (max-width: 991.98px) {
+        .scrolltop {
+            bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+        }
+    }
+
     .scrolltop.visible {
         opacity: 1;
         visibility: visible;

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import Navigation from '$lib/components/Navigation.svelte';
+  import MobileTabBar from '$lib/components/MobileTabBar.svelte';
   import Footer from '$lib/components/Footer.svelte';
   import ScrollToTop from '$lib/components/ScrollToTop.svelte';
   import CookieConsentBanner from '$lib/components/CookieConsentBanner.svelte';
@@ -44,6 +45,7 @@
 
 {#if !isAdminRoute}
   <Footer />
+  <MobileTabBar />
 {/if}
 
 <style>

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { clearSessionCookie, getRequestMeta, logoutSession } from '$lib/server/auth';
+import { clearSessionCookie, getRequestMeta, logoutSession, safeClientAddress } from '$lib/server/auth';
 import { SESSION_COOKIE_NAME } from '$lib/server/supabase';
 
 async function destroySession(
@@ -22,13 +22,13 @@ async function destroySession(
 }
 
 export const load: PageServerLoad = async ({ request, cookies, getClientAddress }) => {
-  await destroySession(request, cookies, getClientAddress());
+  await destroySession(request, cookies, safeClientAddress(getClientAddress));
   throw redirect(302, '/');
 };
 
 export const actions: Actions = {
   default: async ({ request, cookies, getClientAddress }) => {
-    await destroySession(request, cookies, getClientAddress());
+    await destroySession(request, cookies, safeClientAddress(getClientAddress));
     throw redirect(302, '/');
   },
 };

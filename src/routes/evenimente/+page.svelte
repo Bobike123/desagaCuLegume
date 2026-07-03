@@ -387,6 +387,13 @@
     gap: 18px;
   }
 
+  @media (max-width: 767.98px) {
+    .events-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+  }
+
   .empty-state {
     display: flex;
     align-items: flex-start;

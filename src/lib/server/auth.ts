@@ -383,6 +383,16 @@ function safeHeader(value: string | null, maxLength = 240) {
   return value?.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, maxLength) || null;
 }
 
+// SvelteKit's getClientAddress() throws when the socket address cannot be
+// resolved (dev server, some proxies); audit metadata must survive that.
+export function safeClientAddress(getAddress: () => string) {
+  try {
+    return getAddress();
+  } catch {
+    return null;
+  }
+}
+
 export function getRequestMeta(request: Request, clientIp?: string | null) {
   return {
     ipAddress: trustedIpFromHeaders(request.headers) ?? safeHeader(clientIp ?? null, 64),

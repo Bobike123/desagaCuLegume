@@ -43,33 +43,6 @@
     { href: contact.phoneHref, icon: 'bi-telephone-fill', label: contact.phone },
   ];
 
-  const quickLinks = [
-    {
-      href: '/produse',
-      icon: 'bi-basket',
-      label: 'Vezi stocul de azi',
-      text: 'Produse disponibile și prețuri actuale',
-    },
-    {
-      href: contact.phoneHref,
-      icon: 'bi-telephone',
-      label: 'Sună pentru comandă',
-      text: contact.phone,
-    },
-    {
-      href: '/contact',
-      icon: 'bi-geo-alt',
-      label: 'Ridicare de la rulotă',
-      text: contact.shortAddress,
-    },
-    {
-      href: '/produse/de-sezon',
-      icon: 'bi-flower1',
-      label: 'Produse de sezon',
-      text: 'Alegi ce este disponibil acum',
-    },
-  ];
-
   const orderSteps = [
     {
       title: 'Alegi produsele',
@@ -162,10 +135,8 @@
 
     if (window.innerWidth >= 992) {
       visibleSliderItems = 4;
-    } else if (window.innerWidth >= 576) {
-      visibleSliderItems = 2;
     } else {
-      visibleSliderItems = 1;
+      visibleSliderItems = 2;
     }
 
     void syncSliderPositions(false);
@@ -382,61 +353,21 @@
   facts={heroFacts}
 />
 
-<section class="section section-compact">
-  <div class="container">
-    <div class="order-strip">
-      <div class="order-copy">
-        <span class="eyebrow">Stoc de azi</span>
-        <h2>
-          {#if loadingProducts}
-            Se încarcă produsele
-          {:else if availableCount > 0}
-            {availableCount} produse disponibile
-          {:else}
-            Stocul se confirmă telefonic
-          {/if}
-        </h2>
-        <p>
-          Lista de produse este încărcată din catalogul aplicației. Disponibilitatea poate varia în funcție de recoltă și vânzări.
-        </p>
-      </div>
-
-      <div class="strip-actions">
-        <a href="/produse" class="btn btn-accent btn-lg">
-          <i class="bi bi-basket"></i> Cumpără din stoc
-        </a>
-        <a href={contact.phoneHref} class="phone-pill">
-          <i class="bi bi-telephone-fill"></i>
-          <span>{contact.phone}</span>
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section section-compact pt-0">
-  <div class="container">
-    <div class="quick-grid" aria-label="Acțiuni rapide">
-      {#each quickLinks as item (item.href)}
-        <a class="quick-card" href={item.href}>
-          <span class="quick-icon"><i class={'bi ' + item.icon}></i></span>
-          <span class="quick-body">
-            <span class="quick-label">{item.label}</span>
-            <span class="quick-text">{item.text}</span>
-          </span>
-          <i class="bi bi-arrow-right short-arrow" aria-hidden="true"></i>
-        </a>
-      {/each}
-    </div>
-  </div>
-</section>
-
 <section class="section">
   <div class="container">
     <div class="section-head">
       <div>
-        <span class="section-kicker">Catalog</span>
+        <span class="section-kicker">Stoc de azi</span>
         <h2 class="h4 fw-bold m-0">Stocul disponibil</h2>
+        <p class="stock-note">
+          {#if loadingProducts}
+            Se încarcă produsele…
+          {:else if availableCount > 0}
+            {availableCount} produse disponibile azi - disponibilitatea variază după recoltă.
+          {:else}
+            Stocul se confirmă telefonic la <a href={contact.phoneHref}>{contact.phone}</a>.
+          {/if}
+        </p>
       </div>
       <a href="/produse" class="btn btn-outline-accent btn-sm">
         Vezi toate <i class="bi bi-arrow-right"></i>
@@ -483,6 +414,7 @@
       </div>
     {:else}
       <div class="catalog-sliders">
+        {#if borcaneProducts.length > 0}
         <section class="product-slider-panel" aria-labelledby="borcane-slider-title">
           <div class="slider-head">
             <div>
@@ -519,11 +451,6 @@
             </div>
           </div>
 
-          {#if borcaneProducts.length === 0}
-            <div class="category-empty">
-              Nu avem produse la borcan afișate momentan.
-            </div>
-          {:else}
             <div
               class="slider-window"
               bind:this={borcaneSliderViewport}
@@ -542,9 +469,10 @@
                 {/each}
               </div>
             </div>
-          {/if}
         </section>
+        {/if}
 
+        {#if sezonProducts.length > 0}
         <section class="product-slider-panel" aria-labelledby="sezon-slider-title">
           <div class="slider-head">
             <div>
@@ -581,11 +509,6 @@
             </div>
           </div>
 
-          {#if sezonProducts.length === 0}
-            <div class="category-empty">
-              Nu avem produse de sezon afișate momentan.
-            </div>
-          {:else}
             <div
               class="slider-window"
               bind:this={sezonSliderViewport}
@@ -604,8 +527,8 @@
                 {/each}
               </div>
             </div>
-          {/if}
         </section>
+        {/if}
       </div>
     {/if}
 
@@ -669,7 +592,7 @@
           <div class="list-row">
             <span class="list-icon"><i class="bi bi-truck"></i></span>
             <div class="list-text">
-              <div class="list-title">Livrare în Cluj\u2011Napoca</div>
+              <div class="list-title">Livrare în Cluj&#8209;Napoca</div>
               <div class="list-sub">Costul și intervalul se confirmă telefonic în funcție de comandă.</div>
             </div>
           </div>
@@ -712,25 +635,6 @@
             <i class="bi bi-info-circle"></i> Despre noi
           </a>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section">
-  <div class="container">
-    <div class="panel seasonal-panel">
-      <div>
-        <span class="section-kicker">Sezon</span>
-        <h2 class="h4 fw-bold mb-2">Produse locale, în ritmul sezonului</h2>
-        <p class="m-0 text-muted">
-          Disponibilitatea se schimbă în funcție de recoltă. Verifică produsele de sezon înainte să comanzi.
-        </p>
-      </div>
-
-      <div class="category-pills">
-        <a href="/produse/de-sezon" class="category-pill"><i class="bi bi-flower1"></i> De sezon</a>
-        <a href="/produse/la-borcan" class="category-pill"><i class="bi bi-jar"></i> La borcan</a>
       </div>
     </div>
   </div>
@@ -965,24 +869,22 @@
   }
 
   .slider-item {
-    flex: 0 0 100%;
+    flex: 0 0 calc((100% - var(--slider-gap)) / 2);
     min-width: 0;
     scroll-snap-align: start;
     scroll-snap-stop: always;
   }
 
-  .slider-item :global(*) {
-    -webkit-tap-highlight-color: transparent;
+  @media (max-width: 575.98px) {
+    .slider-window {
+      --slider-gap: 10px;
+      padding: 10px;
+      scroll-padding-inline: 10px;
+    }
   }
 
-  .category-empty {
-    margin: 14px;
-    padding: 18px;
-    border-radius: 16px;
-    background: rgba(0, 0, 0, 0.025);
-    border: 1px dashed rgba(0, 0, 0, 0.12);
-    color: rgba(0, 0, 0, 0.66);
-    font-weight: 800;
+  .slider-item :global(*) {
+    -webkit-tap-highlight-color: transparent;
   }
 
   .skeleton-controls span {
@@ -1033,139 +935,21 @@
     }
   }
 
-  .order-strip {
-    margin-top: -3.25rem;
-    position: relative;
-    z-index: 5;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 22px;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.12);
-  }
-
-  @media (min-width: 768px) {
-    .order-strip {
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      padding: 1.25rem;
-    }
-  }
-
-  .order-copy h2 {
-    margin: 0;
-    font-weight: 950;
-    letter-spacing: -0.02em;
-  }
-
-  .order-copy p {
-    margin: 0.35rem 0 0;
-    color: rgba(0, 0, 0, 0.68);
-  }
-
-  .strip-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-
-  .phone-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    min-height: 48px;
-    padding: 0.65rem 1rem;
-    border-radius: 999px;
-    text-decoration: none;
-    color: var(--accent);
-    background: rgba(var(--accent-rgb), 0.1);
-    border: 1px solid rgba(var(--accent-rgb), 0.24);
-    font-weight: 950;
-  }
-
-  .phone-pill:hover {
-    color: var(--accent);
-    background: rgba(var(--accent-rgb), 0.16);
-  }
-
-  .quick-grid {
-    display: grid;
-    gap: 10px;
-    grid-template-columns: 1fr;
-  }
-
-  @media (min-width: 768px) {
-    .quick-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-
-  .quick-card {
-    min-height: 108px;
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px;
-    border-radius: 18px;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.07);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.05);
-    transition:
-      transform 0.12s ease,
-      box-shadow 0.12s ease,
-      border-color 0.12s ease;
-  }
-
-  .quick-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.09);
-    border-color: rgba(var(--accent-rgb), 0.3);
-  }
-
-  .quick-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: rgba(var(--accent-rgb), 0.14);
-    color: var(--accent);
-    flex: 0 0 auto;
-  }
-
-  .quick-body {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .quick-label {
-    display: block;
-    font-weight: 950;
-    line-height: 1.1;
-  }
-
-  .quick-text {
-    display: block;
-    margin-top: 0.25rem;
+  .stock-note {
+    margin: 0.4rem 0 0;
     color: rgba(0, 0, 0, 0.62);
-    font-size: 0.88rem;
-    line-height: 1.25;
+    font-size: 0.9rem;
   }
 
-  .short-arrow {
-    opacity: 0.55;
+  .stock-note a {
+    color: var(--accent);
+    font-weight: 900;
+    text-decoration: none;
   }
 
   .panel,
   .step-card,
-  .empty-state,
-  .seasonal-panel {
+  .empty-state {
     background: #fff;
     border-radius: 18px;
     border: 1px solid rgba(0, 0, 0, 0.06);
@@ -1280,43 +1064,6 @@
     line-height: 1.45;
   }
 
-  .seasonal-panel {
-    display: grid;
-    gap: 1rem;
-    padding: 1.25rem;
-  }
-
-  @media (min-width: 768px) {
-    .seasonal-panel {
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-    }
-  }
-
-  .category-pills {
-    display: flex;
-    gap: 0.65rem;
-    flex-wrap: wrap;
-  }
-
-  .category-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.65rem 0.85rem;
-    border-radius: 999px;
-    color: var(--accent);
-    background: rgba(var(--accent-rgb), 0.1);
-    border: 1px solid rgba(var(--accent-rgb), 0.22);
-    text-decoration: none;
-    font-weight: 900;
-  }
-
-  .category-pill:hover {
-    color: var(--accent);
-    background: rgba(var(--accent-rgb), 0.16);
-  }
-
   .skeleton-card {
     width: 100%;
     border-radius: 16px;
@@ -1344,8 +1091,7 @@
       scroll-behavior: auto;
     }
 
-    .slider-btn,
-    .quick-card {
+    .slider-btn {
       transition: none;
     }
   }
@@ -1450,14 +1196,11 @@
       scroll-padding-inline: 12px;
     }
 
-    .strip-actions,
-    .strip-actions a,
     .actions,
     .actions a {
       width: 100%;
     }
 
-    .strip-actions a,
     .actions a {
       justify-content: center;
     }

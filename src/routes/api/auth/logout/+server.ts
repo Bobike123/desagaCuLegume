@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { clearSessionCookie, getRequestMeta, logoutSession } from '$lib/server/auth';
+import { clearSessionCookie, getRequestMeta, logoutSession, safeClientAddress } from '$lib/server/auth';
 import { SESSION_COOKIE_NAME } from '$lib/server/supabase';
 
 export async function POST({ request, cookies, getClientAddress }) {
@@ -7,7 +7,7 @@ export async function POST({ request, cookies, getClientAddress }) {
 
   if (token) {
     try {
-      await logoutSession(token, getRequestMeta(request, getClientAddress()));
+      await logoutSession(token, getRequestMeta(request, safeClientAddress(getClientAddress)));
     } catch (error) {
       console.error('Logout failed', error);
     }

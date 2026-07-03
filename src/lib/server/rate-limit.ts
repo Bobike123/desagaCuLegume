@@ -125,7 +125,16 @@ export function trustedIpFromHeaders(headers: Headers) {
 }
 
 export function getClientIp(event: RequestEvent) {
-  return trustedIpFromHeaders(event.request.headers) ?? event.getClientAddress();
+  const trusted = trustedIpFromHeaders(event.request.headers);
+  if (trusted) return trusted;
+
+  // The dev server (and some proxy setups) cannot always resolve the socket
+  // address; SvelteKit then throws. A shared fallback bucket beats a 500.
+  try {
+    return event.getClientAddress();
+  } catch {
+    return 'unknown';
+  }
 }
 
 export async function checkRateLimit(

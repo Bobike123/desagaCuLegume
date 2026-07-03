@@ -10,6 +10,7 @@ import {
   normalizeEmail,
   normalizeUsername,
   verifyPassword,
+  safeClientAddress,
 } from '$lib/server/auth';
 import {
   LIMITS,
@@ -229,7 +230,7 @@ export async function DELETE({ locals, request, cookies, getClientAddress }) {
         userId,
         sessionId: locals.session?.sessionId ?? null,
         eventType: 'USER_DELETED',
-        meta: getRequestMeta(request, getClientAddress()),
+        meta: getRequestMeta(request, safeClientAddress(getClientAddress)),
         details: { deletedAt },
       });
     } catch (logError) {

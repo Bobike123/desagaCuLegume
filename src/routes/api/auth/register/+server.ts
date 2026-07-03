@@ -12,6 +12,7 @@ import {
   normalizeUsername,
   safeUsernameFromEmail,
   setSessionCookie,
+  safeClientAddress,
 } from '$lib/server/auth';
 import {
   LIMITS,
@@ -97,7 +98,7 @@ export async function POST(event: RequestEvent) {
 
     if (userRoleError) throw userRoleError;
 
-    const meta = getRequestMeta(request, event.getClientAddress());
+    const meta = getRequestMeta(request, safeClientAddress(() => event.getClientAddress()));
     const timeoutMinutes = getSessionTimeoutMinutes(false);
     const { token } = await createSession(inserted.user_id, meta, timeoutMinutes);
     setSessionCookie(cookies, token, timeoutMinutes);

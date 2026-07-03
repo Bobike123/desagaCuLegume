@@ -199,15 +199,49 @@
     background: rgba(255, 255, 255, 0.2);
   }
 
+  /* Compact hero on phones so the page content starts sooner. */
   @media (max-width: 575.98px) {
+    .hero {
+      min-height: 0;
+    }
+
+    .hero-inner {
+      padding-top: 1.6rem;
+      padding-bottom: 1.6rem;
+    }
+
+    h1 {
+      font-size: clamp(1.9rem, 8vw, 2.2rem);
+    }
+
+    p {
+      margin-top: 0.75rem;
+      font-size: 1rem;
+    }
+
+    .hero-eyebrow {
+      margin-bottom: 0.65rem;
+      font-size: 0.8rem;
+    }
+
+    .hero-actions {
+      margin-top: 1rem;
+      gap: 0.5rem;
+    }
+
     .hero-actions a {
       width: 100%;
       justify-content: center;
     }
 
+    .hero-facts {
+      margin-top: 0.9rem;
+      gap: 0.4rem;
+    }
+
     .hero-fact {
-      width: 100%;
-      border-radius: 14px;
+      padding: 0.34rem 0.55rem;
+      font-size: 0.78rem;
     }
   }
 </style>

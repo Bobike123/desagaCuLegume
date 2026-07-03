@@ -1,11 +1,10 @@
-
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Hero from '$lib/components/Hero.svelte';
 
   const phoneHref = 'tel:+40729969822';
 
   type QuickInfoItem = { icon: string; label: string; href?: string };
-  type ProductGroup = { title: string; icon: string; href: string };
 
   const stats = [
     { value: '2.500 m²', label: 'solarii lucrate', icon: 'bi-house-heart' },
@@ -78,11 +77,6 @@
     { icon: 'bi-telephone-fill', label: '+40 729 969 822', href: phoneHref },
   ];
 
-  const productGroups: ProductGroup[] = [
-    { title: 'Legume și fructe de sezon', icon: '', href: '/produse/de-sezon' },
-    { title: 'Produse la borcan', icon: '', href: '/produse/la-borcan' },
-  ];
-
   const storyPhotos = [
     {
       src: '/images/despre-noi/zacusca-cu-fasole.jpg',
@@ -101,17 +95,65 @@
     },
   ] as const;
 
-  const pantryPhotos = [
-    {
-      src: '/images/despre-noi/zacusca-ardei-iute.jpg',
-      alt: 'Zacuscă DeSaga cu ardei iute',
-    },
-    {
-      src: '/images/despre-noi/ceapa-rosie-la-borcan.jpg',
-      alt: 'Ceapă roșie DeSaga la borcan',
-    },
-  ] as const;
+  // --- Scroll-activated timeline (recipe-steps style) ---------------------
+  // A virtual "activation line" sits at ~38% of the viewport height. While
+  // scrolling down, each year whose badge passes above that line becomes
+  // active; scrolling back up deactivates it again. A continuous fill bar
+  // tracks the line's position through the timeline.
+  let timelineEl: HTMLElement | undefined = $state();
+  let enhanced = $state(false);
+  let activeCount = $state(0);
+  let fillPx = $state(0);
+
+  let itemEls: HTMLElement[] = [];
+  let ticking = false;
+
+  function activationLineY() {
+    return Math.min(window.innerHeight * 0.38, 420);
+  }
+
+  function update() {
+    ticking = false;
+    if (!timelineEl) return;
+    const lineY = activationLineY();
+    let n = 0;
+    for (const el of itemEls) {
+      if (el.getBoundingClientRect().top < lineY) n++;
+    }
+    activeCount = n;
+    const rect = timelineEl.getBoundingClientRect();
+    fillPx = Math.max(0, Math.min(lineY - rect.top, rect.height));
+  }
+
+  function requestUpdate() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }
+
+  onMount(() => {
+    if (!timelineEl) return;
+    itemEls = Array.from(timelineEl.querySelectorAll<HTMLElement>('.tl-item'));
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
+      activeCount = itemEls.length;
+      fillPx = timelineEl.scrollHeight;
+      return;
+    }
+
+    enhanced = true;
+    update();
+
+    // Image loads shift layout, so re-measure whenever the timeline resizes.
+    const resizeObserver = new ResizeObserver(requestUpdate);
+    resizeObserver.observe(timelineEl);
+
+    return () => resizeObserver.disconnect();
+  });
 </script>
+
+<svelte:window onscroll={requestUpdate} onresize={requestUpdate} />
 
 <svelte:head>
   <title>Despre noi - DeSaga cu Legume</title>
@@ -136,78 +178,78 @@
 
 <section class="section section-intro">
   <div class="container">
-    <div class="intro-grid">
-      <article class="panel story-panel">
-        <div class="section-kicker">
-          <i class="bi "></i>
-          Povestea noastră
-        </div>
+    <div class="intro-head">
+      <div class="section-kicker">
+        <i class="bi bi-flower1"></i>
+        Povestea noastră
+      </div>
+      <h2>Doi orășeni care au ales ferma, nu vitrina perfectă.</h2>
+      <p class="lead-text">
+        DeSaga cu Legume a pornit din dorința de a lucra cu mâinile, de a vedea rezultatul în sol
+        și de a pune pe masă produse care au gust. Ferma, rulota și partenerii locali formează
+        același traseu simplu: produse crescute sau alese cu grijă, aduse aproape de oamenii din
+        Cluj-Napoca.
+      </p>
+    </div>
 
-        <h2>Doi orășeni care au ales ferma, nu vitrina perfectă.</h2>
-
-        <p class="lead-text">
-          DeSaga cu Legume a pornit din dorința de a lucra cu mâinile, de a vedea
-          rezultatul în sol și de a pune pe masă produse care au gust.
-        </p>
-
-        <p>
-          Ferma, rulota și partenerii locali formează același traseu simplu:
-          produse crescute sau alese cu grijă, aduse aproape de oamenii din
-          Cluj-Napoca. Stocul se schimbă des, iar asta este normal pentru un loc
-          care lucrează cu sezonul, nu împotriva lui.
-        </p>
-
-        <div class="story-photo-grid" aria-label="Produse DeSaga fotografiate">
-          {#each storyPhotos as photo (photo.src)}
-            <figure class="story-photo">
-              <img src={photo.src} alt={photo.alt} loading="lazy" decoding="async" />
-              <figcaption>{photo.caption}</figcaption>
-            </figure>
-          {/each}
-        </div>
-
-        <div class="story-actions">
-          <a class="btn btn-accent" href="/produse">
-            <i class="bi bi-basket"></i>
-            Cumpără local
-          </a>
-          <a class="btn btn-outline-accent" href="/contact">
-            <i class="bi bi-geo-alt"></i>
-            Unde ne găsești
-          </a>
-        </div>
-      </article>
-
-      <aside class="panel panel-soft trust-panel" aria-label="Informații rapide">
-        <figure class="farm-photo-card">
-          <img
-            src="/images/despre-noi/muraturi-asortate.jpg"
-            alt="Borcan cu murături asortate DeSaga"
-            loading="lazy"
-            decoding="async"
-          />
-          <figcaption>
-            <i class="bi bi-shop-window"></i>
-            Rulota DeSaga
-          </figcaption>
+    <div class="story-photo-grid" aria-label="Produse DeSaga fotografiate">
+      {#each storyPhotos as photo (photo.src)}
+        <figure class="story-photo">
+          <img src={photo.src} alt={photo.alt} loading="lazy" decoding="async" />
+          <figcaption>{photo.caption}</figcaption>
         </figure>
+      {/each}
+    </div>
+  </div>
+</section>
 
-        <div class="quick-list">
-          {#each quickInfo as item (item.label)}
-            {#if item.href}
-              <a class="quick-row" href={item.href}>
-                <i class={'bi ' + item.icon}></i>
-                <span>{item.label}</span>
-              </a>
-            {:else}
-              <div class="quick-row">
-                <i class={'bi ' + item.icon}></i>
-                <span>{item.label}</span>
-              </div>
-            {/if}
-          {/each}
+<section class="section timeline-section">
+  <div class="container">
+    <header class="tl-head">
+      <div class="section-kicker">
+        <i class="bi bi-signpost-2"></i>
+        An cu an
+      </div>
+      <h2>Cum a crescut DeSaga</h2>
+      <p>Derulează povestea — fiecare an se aprinde pe măsură ce ajungi la el.</p>
+    </header>
+
+    <div class="tl" class:enhanced bind:this={timelineEl}>
+      <div class="tl-track" aria-hidden="true">
+        <div class="tl-fill" style:height="{fillPx}px"></div>
+      </div>
+
+      {#each timeline as step, i (step.year)}
+        <article class="tl-item" class:active={i < activeCount}>
+          <div class="tl-rail" aria-hidden="true">
+            <span class="tl-badge">{step.year}</span>
+          </div>
+          <div class="tl-card">
+            <img
+              class="tl-image"
+              src={step.image}
+              alt={step.imageAlt}
+              loading="lazy"
+              decoding="async"
+            />
+            <div class="tl-body">
+              <span class="tl-year-sr">{step.year}</span>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </div>
+          </div>
+        </article>
+      {/each}
+    </div>
+
+    <div class="stats-strip" aria-label="DeSaga pe scurt">
+      {#each stats as stat (stat.label)}
+        <div class="stat-card">
+          <span class="stat-icon"><i class={'bi ' + stat.icon}></i></span>
+          <strong>{stat.value}</strong>
+          <span>{stat.label}</span>
         </div>
-      </aside>
+      {/each}
     </div>
   </div>
 </section>
@@ -237,81 +279,6 @@
   </div>
 </section>
 
-<section class="section">
-  <div class="container">
-    <div class="split-grid">
-      <article class="panel timeline-panel">
-        <div class="section-title section-title--compact">
-          <div>
-            <div class="section-kicker">
-              <i class="bi bi-signpost-2"></i>
-              Timeline
-            </div>
-            <h2>Cum a crescut DeSaga</h2>
-          </div>
-        </div>
-
-        <div class="timeline">
-          {#each timeline as step (step.year)}
-            <div class="timeline-item">
-              <div class="timeline-dot" aria-hidden="true"></div>
-              <div class="timeline-card">
-                <img class="timeline-image" src={step.image} alt={step.imageAlt} loading="lazy" decoding="async" />
-                <div class="timeline-top">
-                  <span class="timeline-year">{step.year}</span>
-                  <h3>{step.title}</h3>
-                </div>
-                <p>{step.text}</p>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </article>
-
-      <aside class="side-stack">
-        <div class="panel stats-panel">
-          <div class="section-kicker">
-            <i class="bi bi-info-circle"></i>
-            Pe scurt
-          </div>
-
-          <div class="stats-grid">
-            {#each stats as stat (stat.label)}
-              <div class="stat-card">
-                <span class="stat-icon"><i class={'bi ' + stat.icon}></i></span>
-                <strong>{stat.value}</strong>
-                <span>{stat.label}</span>
-              </div>
-            {/each}
-          </div>
-        </div>
-
-        <div class="panel product-panel">
-          <div class="section-kicker">
-            <i class="bi bi-basket"></i>
-            Ce găsești la noi
-          </div>
-
-          <div class="pantry-photos" aria-label="Produse la borcan DeSaga">
-            {#each pantryPhotos as photo (photo.src)}
-              <img src={photo.src} alt={photo.alt} loading="lazy" decoding="async" />
-            {/each}
-          </div>
-
-          <div class="product-links">
-            {#each productGroups as group (group.href)}
-              <a href={group.href}>
-                <span><i class={'bi ' + group.icon}></i> {group.title}</span>
-                <i class="bi bi-chevron-right"></i>
-              </a>
-            {/each}
-          </div>
-        </div>
-      </aside>
-    </div>
-  </div>
-</section>
-
 <section class="section final-cta">
   <div class="container">
     <div class="cta-card">
@@ -331,79 +298,12 @@
 </section>
 
 <style>
-  :global(:root) {
-    --accent: var(--desaga-blue, #2492cc);
-    --accent-rgb: 36, 146, 204;
-  }
-
   .section {
     padding: 3rem 0;
   }
 
-  .section-intro {
-    padding-bottom: 2.25rem;
-  }
-
   .bg-soft {
-    background: rgba(var(--accent-rgb), 0.06);
-  }
-
-  .intro-grid,
-  .split-grid {
-    display: grid;
-    gap: 1rem;
-  }
-
-  @media (min-width: 992px) {
-    .intro-grid {
-      grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.75fr);
-      align-items: stretch;
-    }
-
-    .split-grid {
-      grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
-      align-items: start;
-    }
-  }
-
-  .panel {
-    height: 100%;
-    padding: 1.2rem;
-    border-radius: 22px;
-    background: #fff;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
-  }
-
-  .panel-soft {
-    background: rgba(var(--accent-rgb), 0.07);
-    border-color: rgba(var(--accent-rgb), 0.18);
-  }
-
-  .story-panel h2,
-  .section-title h2,
-  .cta-card h2 {
-    margin: 0;
-    font-weight: 950;
-    letter-spacing: -0.035em;
-    color: #17212b;
-  }
-
-  .story-panel h2 {
-    max-width: 780px;
-    font-size: clamp(1.75rem, 4vw, 3rem);
-    line-height: 1.03;
-  }
-
-  .story-panel p {
-    color: rgba(0, 0, 0, 0.68);
-    line-height: 1.65;
-  }
-
-  .lead-text {
-    margin-top: 1rem;
-    font-size: 1.15rem;
-    color: rgba(0, 0, 0, 0.78) !important;
+    background: var(--desaga-surface-soft);
   }
 
   .section-kicker {
@@ -422,18 +322,34 @@
     color: rgba(255, 255, 255, 0.88);
   }
 
-  .story-actions,
-  .cta-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 1.25rem;
+  h2 {
+    margin: 0;
+    font-weight: 950;
+    letter-spacing: -0.035em;
+    color: var(--desaga-heading);
+  }
+
+  /* --- Intro ------------------------------------------------------------ */
+  .intro-head {
+    max-width: 820px;
+  }
+
+  .intro-head h2 {
+    font-size: clamp(1.75rem, 4vw, 3rem);
+    line-height: 1.03;
+  }
+
+  .lead-text {
+    margin: 1rem 0 0;
+    font-size: 1.15rem;
+    color: rgba(0, 0, 0, 0.72);
+    line-height: 1.65;
   }
 
   .story-photo-grid {
     display: grid;
     gap: 0.75rem;
-    margin-top: 1.15rem;
+    margin-top: 1.5rem;
   }
 
   @media (min-width: 768px) {
@@ -447,9 +363,9 @@
     margin: 0;
     overflow: hidden;
     border-radius: 18px;
-    background: #fff;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+    background: var(--desaga-surface);
+    border: 1px solid var(--desaga-border);
+    box-shadow: var(--desaga-shadow-sm);
   }
 
   .story-photo img {
@@ -467,83 +383,222 @@
     line-height: 1.35;
   }
 
-  .trust-panel {
-    display: grid;
-    gap: 1rem;
+  /* --- Scroll timeline ---------------------------------------------------- */
+  .timeline-section {
+    background: var(--desaga-cream);
   }
 
-  .farm-photo-card {
+  .tl-head {
+    max-width: 720px;
+    margin: 0 auto 2.25rem;
+    text-align: center;
+  }
+
+  .tl-head h2 {
+    font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+  }
+
+  .tl-head p {
+    margin: 0.6rem 0 0;
+    color: var(--desaga-muted);
+    font-weight: 700;
+  }
+
+  .tl {
+    --rail: 108px;
     position: relative;
-    margin: 0;
-    overflow: hidden;
-    border-radius: 18px;
-    border: 1px solid rgba(var(--accent-rgb), 0.16);
-    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+    max-width: 820px;
+    margin: 0 auto;
+    display: grid;
+    gap: 2.5rem;
   }
 
-  .farm-photo-card img {
+  .tl-track {
+    position: absolute;
+    top: 14px;
+    bottom: 40px;
+    left: calc(var(--rail) / 2 - 2px);
+    width: 4px;
+    border-radius: 999px;
+    background: rgba(var(--accent-rgb), 0.16);
+    overflow: hidden;
+  }
+
+  .tl-fill {
+    width: 100%;
+    height: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, var(--desaga-blue), var(--desaga-dark-blue));
+  }
+
+  .tl-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--rail) 1fr;
+    align-items: start;
+  }
+
+  .tl-rail {
+    position: sticky;
+    top: 96px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .tl-badge {
+    display: inline-block;
+    padding: 0.42rem 0.85rem;
+    border-radius: 999px;
+    background: var(--desaga-surface);
+    border: 2px solid rgba(var(--accent-rgb), 0.35);
+    color: var(--desaga-heading);
+    font-weight: 950;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    box-shadow: var(--desaga-shadow-sm);
+    transition:
+      background 0.45s ease,
+      color 0.45s ease,
+      border-color 0.45s ease,
+      box-shadow 0.45s ease,
+      transform 0.45s ease;
+  }
+
+  .tl-card {
+    overflow: hidden;
+    border-radius: 22px;
+    background: var(--desaga-surface);
+    border: 2px solid var(--desaga-border);
+    box-shadow: var(--desaga-shadow-sm);
+    transition:
+      border-color 0.45s ease,
+      box-shadow 0.45s ease,
+      opacity 0.45s ease,
+      transform 0.45s ease;
+  }
+
+  .tl-image {
     display: block;
     width: 100%;
-    min-height: 260px;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 8;
     object-fit: cover;
+    background: rgba(15, 23, 42, 0.05);
+    transition: filter 0.45s ease;
   }
 
-  .farm-photo-card figcaption {
+  .tl-body {
+    padding: 1.1rem 1.25rem 1.25rem;
+  }
+
+  .tl-year-sr {
     position: absolute;
-    left: 16px;
-    bottom: 16px;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.55rem 0.75rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.9);
-    color: #17212b;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tl-body h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1.15rem;
     font-weight: 950;
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+    color: var(--desaga-heading);
   }
 
-  .quick-list {
+  .tl-body p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.68);
+    line-height: 1.6;
+  }
+
+  /* Dormant state — only once JS is driving the activation. */
+  .tl.enhanced .tl-item:not(.active) .tl-card {
+    opacity: 0.55;
+    transform: translateY(14px);
+  }
+
+  .tl.enhanced .tl-item:not(.active) .tl-image {
+    filter: grayscale(0.45) saturate(0.75);
+  }
+
+  .tl-item.active .tl-badge {
+    background: var(--desaga-blue);
+    border-color: var(--desaga-blue);
+    color: #fff;
+    transform: scale(1.06);
+    box-shadow: 0 0 0 7px rgba(var(--accent-rgb), 0.16);
+  }
+
+  .tl-item.active .tl-card {
+    border-color: rgba(var(--accent-rgb), 0.55);
+    box-shadow: var(--desaga-shadow-md);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tl-badge,
+    .tl-card,
+    .tl-image {
+      transition: none;
+    }
+  }
+
+  /* --- Stats strip -------------------------------------------------------- */
+  .stats-strip {
     display: grid;
-    gap: 0.7rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    max-width: 820px;
+    margin: 2.5rem auto 0;
   }
 
-  .quick-row {
-    display: flex;
-    gap: 0.65rem;
-    align-items: flex-start;
-    padding: 0.85rem;
-    border-radius: 16px;
-    color: rgba(20, 33, 43, 0.82);
-    background: rgba(255, 255, 255, 0.68);
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    text-decoration: none;
+  @media (min-width: 768px) {
+    .stats-strip {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .stat-card {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.9rem;
+    border-radius: 18px;
+    background: var(--desaga-surface);
+    border: 1px solid rgba(var(--accent-rgb), 0.14);
+    box-shadow: var(--desaga-shadow-sm);
+  }
+
+  .stat-card strong {
+    font-size: 1.25rem;
+    font-weight: 1000;
+    line-height: 1;
+    color: var(--desaga-heading);
+  }
+
+  .stat-card span:last-child {
+    color: rgba(0, 0, 0, 0.62);
     font-weight: 850;
+    line-height: 1.2;
+    font-size: 0.9rem;
   }
 
-  .quick-row i {
+  .card-icon,
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
     color: var(--accent);
-    margin-top: 2px;
+    background: rgba(var(--accent-rgb), 0.13);
   }
 
-  a.quick-row:hover,
-  a.quick-row:focus {
-    color: var(--accent);
-    background: #fff;
-  }
-
+  /* --- Principles ----------------------------------------------------------- */
   .section-title {
     display: flex;
     align-items: end;
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1.25rem;
-  }
-
-  .section-title--compact {
-    margin-bottom: 1rem;
   }
 
   .section-link {
@@ -574,20 +629,9 @@
     min-height: 100%;
     padding: 1rem;
     border-radius: 20px;
-    background: #fff;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-  }
-
-  .card-icon,
-  .stat-icon {
-    width: 44px;
-    height: 44px;
-    display: grid;
-    place-items: center;
-    border-radius: 16px;
-    color: var(--accent);
-    background: rgba(var(--accent-rgb), 0.13);
+    background: var(--desaga-surface);
+    border: 1px solid var(--desaga-border);
+    box-shadow: var(--desaga-shadow-sm);
   }
 
   .principle-card h3 {
@@ -602,166 +646,7 @@
     line-height: 1.48;
   }
 
-  .timeline {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .timeline-item {
-    display: grid;
-    grid-template-columns: 22px 1fr;
-    gap: 0.85rem;
-    position: relative;
-  }
-
-  .timeline-dot {
-    width: 12px;
-    height: 12px;
-    margin-top: 18px;
-    border-radius: 999px;
-    background: var(--accent);
-    box-shadow: 0 0 0 7px rgba(var(--accent-rgb), 0.12);
-    justify-self: center;
-    position: relative;
-    z-index: 1;
-  }
-
-  .timeline-dot::before {
-    content: '';
-    position: absolute;
-    top: -42px;
-    bottom: -70px;
-    left: 50%;
-    width: 2px;
-    transform: translateX(-50%);
-    background: rgba(var(--accent-rgb), 0.2);
-    z-index: -1;
-  }
-
-  .timeline-item:first-child .timeline-dot::before {
-    top: 50%;
-  }
-
-  .timeline-item:last-child .timeline-dot::before {
-    bottom: 50%;
-  }
-
-  .timeline-card {
-    overflow: hidden;
-    padding: 1rem;
-    border-radius: 18px;
-    background: rgba(15, 23, 42, 0.025);
-    border: 1px solid rgba(15, 23, 42, 0.07);
-  }
-
-  .timeline-image {
-    display: block;
-    width: 100%;
-    margin-bottom: 0.85rem;
-    border-radius: 14px;
-    aspect-ratio: 16 / 8;
-    object-fit: cover;
-    background: rgba(15, 23, 42, 0.05);
-  }
-
-  .timeline-top {
-    display: flex;
-    gap: 0.75rem;
-    align-items: baseline;
-    flex-wrap: wrap;
-    margin-bottom: 0.35rem;
-  }
-
-  .timeline-year {
-    color: var(--accent);
-    font-weight: 950;
-  }
-
-  .timeline-card h3 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 950;
-  }
-
-  .timeline-card p {
-    margin: 0;
-    color: rgba(0, 0, 0, 0.68);
-    line-height: 1.55;
-  }
-
-  .side-stack {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
-
-  .stat-card {
-    display: grid;
-    gap: 0.45rem;
-    padding: 0.9rem;
-    border-radius: 18px;
-    background: rgba(var(--accent-rgb), 0.06);
-    border: 1px solid rgba(var(--accent-rgb), 0.14);
-  }
-
-  .stat-card strong {
-    font-size: 1.25rem;
-    font-weight: 1000;
-    line-height: 1;
-  }
-
-  .stat-card span:last-child {
-    color: rgba(0, 0, 0, 0.62);
-    font-weight: 850;
-    line-height: 1.2;
-  }
-
-  .pantry-photos {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
-    margin-bottom: 0.9rem;
-  }
-
-  .pantry-photos img {
-    display: block;
-    width: 100%;
-    border-radius: 16px;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-  }
-
-  .product-links {
-    display: grid;
-    gap: 0.65rem;
-  }
-
-  .product-links a {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.82rem;
-    border-radius: 16px;
-    color: rgba(20, 33, 43, 0.82);
-    background: rgba(15, 23, 42, 0.025);
-    border: 1px solid rgba(15, 23, 42, 0.07);
-    text-decoration: none;
-    font-weight: 900;
-  }
-
-  .product-links a:hover,
-  .product-links a:focus {
-    color: var(--accent);
-    background: rgba(var(--accent-rgb), 0.08);
-  }
-
+  /* --- CTA -------------------------------------------------------------------- */
   .final-cta {
     padding-top: 0;
   }
@@ -787,7 +672,9 @@
   }
 
   .cta-actions {
-    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
     flex: 0 0 auto;
   }
 
@@ -796,34 +683,24 @@
     font-weight: 950;
   }
 
-  :global(.btn-accent) {
-    background: var(--accent) !important;
-    border-color: var(--accent) !important;
-    color: #fff !important;
-    box-shadow: 0 10px 22px rgba(var(--accent-rgb), 0.22);
-  }
-
-  :global(.btn-accent:hover),
-  :global(.btn-accent:focus) {
-    background: var(--desaga-dark-blue) !important;
-    border-color: var(--desaga-dark-blue) !important;
-    color: #fff !important;
-  }
-
-  :global(.btn-outline-accent) {
-    border-color: rgba(var(--accent-rgb), 0.55) !important;
-    color: var(--accent) !important;
-  }
-
-  :global(.btn-outline-accent:hover),
-  :global(.btn-outline-accent:focus) {
-    background: rgba(var(--accent-rgb), 0.12) !important;
-    color: var(--accent) !important;
-  }
-
+  /* --- Mobile ------------------------------------------------------------------ */
   @media (max-width: 767.98px) {
     .section {
       padding: 2rem 0;
+    }
+
+    .tl {
+      --rail: 84px;
+      gap: 1.75rem;
+    }
+
+    .tl-badge {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.6rem;
+    }
+
+    .tl-rail {
+      top: 82px;
     }
 
     .section-title,
@@ -834,10 +711,6 @@
 
     .section-link {
       width: fit-content;
-    }
-
-    .stats-grid {
-      grid-template-columns: 1fr;
     }
 
     .cta-actions .btn {

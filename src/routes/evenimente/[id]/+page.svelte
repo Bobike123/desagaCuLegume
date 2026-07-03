@@ -131,4 +131,30 @@
   .text-brown {
     color: var(--desaga-brown) !important;
   }
+
+  @media (max-width: 767.98px) {
+    .container {
+      padding-top: 1.25rem !important;
+      padding-bottom: 1.5rem !important;
+    }
+
+    h1 {
+      font-size: 1.45rem;
+    }
+
+    article :global(.img-fluid) {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+    }
+
+    .lead {
+      font-size: 1rem;
+    }
+
+    .card-img-top {
+      aspect-ratio: 16 / 8;
+      object-fit: cover;
+    }
+  }
 </style>

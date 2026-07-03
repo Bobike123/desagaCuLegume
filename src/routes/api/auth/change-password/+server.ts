@@ -1,6 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { logRouteError } from '$lib/server/log';
-import { assertStrongPassword, getRequestMeta, hashPassword, insertAuthLog, verifyPassword } from '$lib/server/auth';
+import { assertStrongPassword, getRequestMeta, hashPassword, insertAuthLog, safeClientAddress, verifyPassword } from '$lib/server/auth';
 import { createAdminClient } from '$lib/server/supabase';
 import { LIMITS, readJsonBody, stringField, validationErrorResponse } from '$lib/server/validation';
 
@@ -79,7 +79,7 @@ export async function POST(event: RequestEvent) {
       userId: locals.user.id,
       sessionId: locals.session?.sessionId ?? null,
       eventType: 'PASSWORD_CHANGED',
-      meta: getRequestMeta(request, event.getClientAddress?.()),
+      meta: getRequestMeta(request, safeClientAddress(() => event.getClientAddress())),
     }).catch(() => undefined);
 
     return json({ success: true }, { status: 200 });

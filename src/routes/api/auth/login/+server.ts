@@ -11,6 +11,7 @@ import {
   insertAuthLog,
   setSessionCookie,
   verifyPassword,
+  safeClientAddress,
 } from '$lib/server/auth';
 import {
   checkRateLimitKey,
@@ -89,7 +90,7 @@ export async function POST(event: RequestEvent) {
     }
 
     const recordFailure = async (reason: string, userId?: number | null) => {
-      const failureMeta = getRequestMeta(request, event.getClientAddress());
+      const failureMeta = getRequestMeta(request, safeClientAddress(() => event.getClientAddress()));
       await Promise.all([
         failIdentityKey
           ? checkRateLimitKey({ key: failIdentityKey, limit: LOGIN_FAIL_IDENTITY_LIMIT, windowMs: LOGIN_FAIL_WINDOW_MS })
@@ -141,7 +142,7 @@ export async function POST(event: RequestEvent) {
       await resetRateLimitKey(failIdentityKey);
     }
 
-    const meta = getRequestMeta(request, event.getClientAddress());
+    const meta = getRequestMeta(request, safeClientAddress(() => event.getClientAddress()));
     let knownIpResult: { data: unknown[] | null; error: unknown | null } = { data: [], error: null };
     let knownAgentResult: { data: unknown[] | null; error: unknown | null } = { data: [], error: null };
 

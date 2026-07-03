@@ -274,13 +274,72 @@
     color: var(--accent, #2492cc);
   }
 
-  @media (max-width: 576px) {
+  /* Compact app-style list row on phones: image left, content right. */
+  @media (max-width: 767.98px) {
     .event-card {
-      min-height: 360px;
+      min-height: 0;
+      flex-direction: row;
+      align-items: stretch;
+      border-radius: 16px;
     }
 
     .media {
-      height: 158px;
+      flex: 0 0 122px;
+      width: 122px;
+      height: auto;
+      min-height: 132px;
+    }
+
+    .badges {
+      left: 6px;
+      right: 6px;
+      bottom: 6px;
+      gap: 4px;
+    }
+
+    .badge {
+      padding: 0.2rem 0.42rem;
+      font-size: 0.6rem;
+      gap: 4px;
+    }
+
+    .badge-type {
+      display: none;
+    }
+
+    .card-body {
+      padding: 10px 12px;
+      min-width: 0;
+    }
+
+    .event-title {
+      font-size: 0.94rem;
+      margin-bottom: 5px;
+    }
+
+    .event-description {
+      font-size: 0.8rem;
+      line-height: 1.35;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
+
+    .bottom {
+      margin-top: 8px;
+    }
+
+    .meta {
+      gap: 4px;
+      font-size: 0.78rem;
+    }
+
+    .meta span {
+      overflow: hidden;
+    }
+
+    .cta {
+      margin-top: 7px;
+      font-size: 0.8rem;
     }
   }
 </style>

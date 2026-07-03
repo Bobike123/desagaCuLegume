@@ -261,10 +261,10 @@
     }
   }
 
-  @media (max-width: 576px) {
+  @media (max-width: 767.98px) {
     .products-grid {
-      grid-template-columns: 1fr;
-      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
     }
   }
 

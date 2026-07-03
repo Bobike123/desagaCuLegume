@@ -1,44 +1,54 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  type ProductStatus = 'ACTIVE' | 'OUT_OF_STOCK' | 'DISCONTINUED' | 'DRAFT';
-
-  type ProductItem = {
-    id: string;
-    sku?: string;
-    name: string;
-    category: string;
-    price: number;
-    stock_quantity: number;
-    status?: ProductStatus | string;
-    in_stock: boolean;
+  type EventItem = {
+    id: string | number;
+    title: string | null;
+    description: string | null;
+    date: string | null;
+    location: string | null;
+    event_type: string | null;
+    image_url: string | null;
+    published: boolean | null;
   };
 
-  const STATUS_LABELS: Record<ProductStatus, string> = {
-    ACTIVE: 'În stoc',
-    OUT_OF_STOCK: 'Stoc epuizat',
-    DISCONTINUED: 'Retras',
-    DRAFT: 'Draft',
+  const TYPE_LABELS: Record<string, string> = {
+    festival: 'Festival',
+    piata: 'Piață',
+    atelier: 'Atelier',
   };
 
-  let items: ProductItem[] = [];
+  let items: EventItem[] = [];
   let loading = true;
   let error = '';
   let notice = '';
   let noticeType: 'success' | 'danger' | 'info' = 'info';
   let searchQuery = '';
-  let selectedProductIds = new Set<string>();
-  let bulkStatus: ProductStatus = 'ACTIVE';
+  let selectedEventIds = new Set<string>();
+  let bulkPublished = 'true';
   let bulkWorking = false;
+  let togglingId = '';
 
-  function productStatusLabel(status: string | undefined, inStock: boolean) {
-    const key = String(status ?? '').toUpperCase() as ProductStatus;
-    return STATUS_LABELS[key] ?? (inStock ? 'În stoc' : 'Stoc epuizat');
+  const dateFormat = new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium', timeStyle: 'short' });
+
+  function eventId(item: EventItem) {
+    return String(item.id);
   }
 
-  function isPositiveProductStatus(item: ProductItem) {
-    const key = String(item.status ?? '').toUpperCase();
-    return key ? key === 'ACTIVE' : item.in_stock;
+  function typeLabel(type: string | null) {
+    return TYPE_LABELS[String(type ?? '').toLowerCase()] ?? 'Eveniment';
+  }
+
+  function formatDate(value: string | null) {
+    if (!value) return 'Fără dată';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? 'Fără dată' : dateFormat.format(d);
+  }
+
+  function isPast(item: EventItem) {
+    if (!item.date) return false;
+    const d = new Date(item.date);
+    return !Number.isNaN(d.getTime()) && d.getTime() < Date.now();
   }
 
   function showNotice(message: string, type: typeof noticeType = 'info') {
@@ -50,18 +60,18 @@
   }
 
   function setSelection(id: string, checked: boolean) {
-    const next = new Set(selectedProductIds);
+    const next = new Set(selectedEventIds);
     if (checked) next.add(id);
     else next.delete(id);
-    selectedProductIds = next;
+    selectedEventIds = next;
   }
 
-  function selectVisibleProducts() {
-    selectedProductIds = new Set([...selectedProductIds, ...filtered.map((item) => item.id)]);
+  function selectVisibleEvents() {
+    selectedEventIds = new Set([...selectedEventIds, ...filtered.map(eventId)]);
   }
 
   function clearSelection() {
-    selectedProductIds = new Set();
+    selectedEventIds = new Set();
   }
 
   async function loadItems() {
@@ -69,10 +79,13 @@
     error = '';
 
     try {
-      const res = await fetch('/api/products?limit=100');
+      const res = await fetch('/api/evenimente?admin=true&limit=100');
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? 'Eroare la încărcarea produselor');
-items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      selectedProductIds = new Set([...selectedProductIds].filter((id) => items.some((item) => item.id === id)));
+      if (!res.ok) throw new Error(data?.error ?? 'Eroare la încărcarea evenimentelor');
+      items = Array.isArray(data?.items) ? (data.items as EventItem[]) : [];
+      selectedEventIds = new Set(
+        [...selectedEventIds].filter((id) => items.some((item) => eventId(item) === id))
+      );
     } catch (err) {
       error = err instanceof Error ? err.message : 'Eroare la încărcare';
     } finally {
@@ -80,57 +93,72 @@ items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      se
     }
   }
 
-  async function applyBulkStatus() {
+  async function setPublished(ids: string[], published: boolean) {
+    const res = await fetch('/api/evenimente', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, published }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error ?? 'Nu s-au putut actualiza evenimentele.');
+    return Number(data?.count ?? ids.length);
+  }
+
+  async function applyBulkPublish() {
     if (selectedIds.length === 0) {
-      showNotice('Selectează cel puțin un produs.', 'danger');
+      showNotice('Selectează cel puțin un eveniment.', 'danger');
       return;
     }
 
-    const label = STATUS_LABELS[bulkStatus] ?? bulkStatus;
-    if (!confirm(`Schimbi ${selectedIds.length} produse în statusul „${label}”?`)) return;
+    const publish = bulkPublished === 'true';
+    const label = publish ? 'publici' : 'treci în draft';
+    if (!confirm(`Sigur ${label} ${selectedIds.length} evenimente?`)) return;
 
     bulkWorking = true;
     error = '';
 
     try {
-      const res = await fetch('/api/products', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds, status: bulkStatus }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        showNotice(data?.error ?? 'Nu s-au putut actualiza produsele.', 'danger');
-        return;
-      }
-
-      const updatedCount = Number(data?.count ?? selectedIds.length);
-
+      const updatedCount = await setPublished(selectedIds, publish);
       clearSelection();
       await loadItems();
-
-      showNotice(`${updatedCount} produse actualizate.`, 'success');
+      showNotice(`${updatedCount} evenimente actualizate.`, 'success');
     } catch (err) {
-      console.error(err);
-      showNotice('Nu s-au putut actualiza produsele.', 'danger');
+      showNotice(err instanceof Error ? err.message : 'Nu s-au putut actualiza evenimentele.', 'danger');
     } finally {
       bulkWorking = false;
     }
   }
 
-  async function remove(id: string) {
-    if (!confirm('Ștergi produsul?')) return;
+  async function togglePublished(item: EventItem) {
+    const id = eventId(item);
+    togglingId = id;
+    try {
+      await setPublished([id], !item.published);
+      items = items.map((row) =>
+        eventId(row) === id ? { ...row, published: !item.published } : row
+      );
+      showNotice(item.published ? 'Eveniment trecut în draft.' : 'Eveniment publicat.', 'success');
+    } catch (err) {
+      showNotice(err instanceof Error ? err.message : 'Nu s-a putut actualiza evenimentul.', 'danger');
+    } finally {
+      togglingId = '';
+    }
+  }
 
-    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+  async function remove(item: EventItem) {
+    if (!confirm(`Ștergi evenimentul „${item.title ?? 'fără titlu'}”?`)) return;
+
+    const id = eventId(item);
+    const res = await fetch(`/api/evenimente/${id}`, { method: 'DELETE' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      error = data?.error ?? 'Nu s-a putut șterge produsul.';
+      error = data?.error ?? 'Nu s-a putut șterge evenimentul.';
       return;
     }
 
-    items = items.filter((item) => item.id !== id);
+    items = items.filter((row) => eventId(row) !== id);
     setSelection(id, false);
+    showNotice('Eveniment șters.', 'success');
   }
 
   onMount(loadItems);
@@ -138,58 +166,59 @@ items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      se
   $: filtered = items.filter((item) => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
-    return `${item.name} ${item.sku ?? ''} ${item.category}`.toLowerCase().includes(q);
+    return `${item.title ?? ''} ${item.location ?? ''} ${typeLabel(item.event_type)}`
+      .toLowerCase()
+      .includes(q);
   });
 
-  $: selectedIds = [...selectedProductIds];
+  $: selectedIds = [...selectedEventIds];
   $: selectedCount = selectedIds.length;
-  $: allVisibleSelected = filtered.length > 0 && filtered.every((item) => selectedProductIds.has(item.id));
+  $: allVisibleSelected =
+    filtered.length > 0 && filtered.every((item) => selectedEventIds.has(eventId(item)));
 </script>
 
 <svelte:head>
-  <title>Produse - Admin DeSaga</title>
+  <title>Evenimente - Admin DeSaga</title>
 </svelte:head>
 
 <div class="admin-page">
   <header class="topbar">
     <div>
-      <p class="eyebrow">Catalog</p>
-      <h1>Produse</h1>
-      <p>Gestionează produsele, prețurile, categoriile, stocurile și vizibilitatea publică.</p>
+      <p class="eyebrow">Calendar public</p>
+      <h1>Evenimente</h1>
+      <p>Gestionează evenimentele: creare, editare, publicare și ștergere.</p>
     </div>
     <div class="actions">
       <button class="pill" on:click={loadItems} disabled={loading}><i class="bi bi-arrow-clockwise"></i> Reîncarcă</button>
-      <a href="/admin/produse/new" class="pill primary"><i class="bi bi-plus-circle"></i> Produs nou</a>
+      <a href="/admin/evenimente/new" class="pill primary"><i class="bi bi-plus-circle"></i> Eveniment nou</a>
     </div>
   </header>
 
   <section class="toolbar">
-    <label class="searchBox" aria-label="Caută produse">
+    <label class="searchBox" aria-label="Caută evenimente">
       <i class="bi bi-search" aria-hidden="true"></i>
-      <input type="search" placeholder="Caută după nume, SKU sau categorie..." bind:value={searchQuery} />
+      <input type="search" placeholder="Caută după titlu, locație sau tip..." bind:value={searchQuery} />
     </label>
-    <span class="count">{loading ? '…' : filtered.length} produse</span>
+    <span class="count">{loading ? '…' : filtered.length} evenimente</span>
   </section>
 
-  <section class="bulkBar" aria-label="Acțiuni produse selectate">
+  <section class="bulkBar" aria-label="Acțiuni evenimente selectate">
     <div class="bulkSummary">
       <strong>{selectedCount}</strong>
-      <span>{selectedCount === 1 ? 'produs selectat' : 'produse selectate'}</span>
+      <span>{selectedCount === 1 ? 'eveniment selectat' : 'evenimente selectate'}</span>
     </div>
     <div class="bulkActions">
-      <button class="pill" type="button" on:click={selectVisibleProducts} disabled={loading || filtered.length === 0 || allVisibleSelected}>
+      <button class="pill" type="button" on:click={selectVisibleEvents} disabled={loading || filtered.length === 0 || allVisibleSelected}>
         Selectează toate
       </button>
       <button class="pill" type="button" on:click={clearSelection} disabled={selectedCount === 0 || bulkWorking}>
         Curăță selecția
       </button>
-      <select bind:value={bulkStatus} aria-label="Status nou pentru produsele selectate" disabled={bulkWorking}>
-        <option value="ACTIVE">În stoc</option>
-        <option value="OUT_OF_STOCK">Stoc epuizat</option>
-        <option value="DRAFT">Draft</option>
-        <option value="DISCONTINUED">Retras</option>
+      <select bind:value={bulkPublished} aria-label="Vizibilitate nouă pentru evenimentele selectate" disabled={bulkWorking}>
+        <option value="true">Public</option>
+        <option value="false">Draft</option>
       </select>
-      <button class="pill primary" type="button" on:click={applyBulkStatus} disabled={selectedCount === 0 || bulkWorking}>
+      <button class="pill primary" type="button" on:click={applyBulkPublish} disabled={selectedCount === 0 || bulkWorking}>
         {bulkWorking ? 'Se aplică…' : 'Aplică în masă'}
       </button>
     </div>
@@ -204,43 +233,51 @@ items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      se
   {/if}
 
   {#if loading}
-    <section class="stateCard"><span class="spinner" aria-hidden="true"></span><strong>Se încarcă produsele…</strong></section>
+    <section class="stateCard"><span class="spinner" aria-hidden="true"></span><strong>Se încarcă evenimentele…</strong></section>
   {:else if filtered.length === 0}
     <section class="emptyCard">
-      <i class="bi bi-box-seam"></i>
-      <h2>Nu există produse pentru filtrul curent</h2>
-      <p>Schimbă căutarea sau adaugă un produs nou.</p>
+      <i class="bi bi-calendar-x"></i>
+      <h2>Nu există evenimente pentru filtrul curent</h2>
+      <p>Schimbă căutarea sau adaugă un eveniment nou.</p>
     </section>
   {:else}
-    <section class="productGrid" aria-label="Lista produselor">
-      {#each filtered as item (item.id)}
-        <article class:selected={selectedProductIds.has(item.id)} class="productCard">
+    <section class="eventGrid" aria-label="Lista evenimentelor">
+      {#each filtered as item (eventId(item))}
+        <article class:selected={selectedEventIds.has(eventId(item))} class="eventCard">
           <label class="selectControl cardSelect">
             <input
               type="checkbox"
-              checked={selectedProductIds.has(item.id)}
-              on:change={(event) => setSelection(item.id, event.currentTarget.checked)}
+              checked={selectedEventIds.has(eventId(item))}
+              on:change={(event) => setSelection(eventId(item), event.currentTarget.checked)}
             />
-            <span>Selectează produsul</span>
+            <span>Selectează evenimentul</span>
           </label>
+
+          {#if item.image_url}
+            <img class="eventImage" src={item.image_url} alt={item.title ?? 'Imagine eveniment'} loading="lazy" decoding="async" />
+          {:else}
+            <div class="eventImage placeholder" aria-hidden="true"><i class="bi bi-card-image"></i></div>
+          {/if}
 
           <header>
             <div>
-              <h2>{item.name}</h2>
-              <p>{item.sku ?? 'Fără SKU'}</p>
+              <h2>{item.title ?? 'Fără titlu'}</h2>
+              <p>{typeLabel(item.event_type)}{isPast(item) ? ' · trecut' : ''}</p>
             </div>
-            <span class:mutedBadge={!isPositiveProductStatus(item)} class="stockBadge">{productStatusLabel(item.status, item.in_stock)}</span>
+            <span class:mutedBadge={!item.published} class="stateBadge">{item.published ? 'Public' : 'Draft'}</span>
           </header>
 
           <div class="metaGrid">
-            <div><span>Categorie</span><strong>{item.category}</strong></div>
-            <div><span>Preț</span><strong>{item.price.toFixed(2)} RON</strong></div>
-            <div><span>Stoc</span><strong>{item.stock_quantity}</strong></div>
+            <div><span>Data</span><strong>{formatDate(item.date)}</strong></div>
+            <div><span>Locație</span><strong>{item.location ?? '—'}</strong></div>
           </div>
 
           <footer>
-            <a class="cardBtn" href={`/admin/produse/${item.id}`}>Editează</a>
-            <button class="cardBtn danger" on:click={() => remove(item.id)}>Șterge</button>
+            <a class="cardBtn" href={`/admin/evenimente/${eventId(item)}`}>Editează</a>
+            <button class="cardBtn" on:click={() => togglePublished(item)} disabled={togglingId === eventId(item)}>
+              {item.published ? 'Trece în draft' : 'Publică'}
+            </button>
+            <button class="cardBtn danger" on:click={() => remove(item)}>Șterge</button>
           </footer>
         </article>
       {/each}
@@ -355,23 +392,24 @@ items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      se
     font-weight: 850;
   }
 
-  .productGrid {
+  .eventGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
     gap: 14px;
   }
 
-  .productCard {
+  .eventCard {
     border: 1px solid var(--line);
     border-radius: 28px;
     background: rgba(255, 253, 247, 0.92);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
     padding: 18px;
     display: grid;
-    gap: 18px;
+    gap: 14px;
+    align-content: start;
   }
 
-  .productCard.selected {
+  .eventCard.selected {
     border-color: rgba(139, 212, 80, 0.9);
     box-shadow: 0 20px 58px rgba(93, 151, 48, 0.16);
   }
@@ -396,15 +434,32 @@ items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      se
     width: fit-content;
   }
 
-  .productCard header,
-  .productCard footer {
+  .eventImage {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 8;
+    object-fit: cover;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.48);
+  }
+
+  .eventImage.placeholder {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 1.6rem;
+  }
+
+  .eventCard header,
+  .eventCard footer {
     display: flex;
     justify-content: space-between;
     gap: 12px;
     align-items: start;
   }
 
-  .productCard h2 {
+  .eventCard h2 {
     margin: 0;
     font-size: 1.18rem;
     font-weight: 950;
@@ -412,12 +467,12 @@ items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      se
     overflow-wrap: anywhere;
   }
 
-  .productCard p {
+  .eventCard header p {
     margin: 4px 0 0;
     color: var(--muted);
   }
 
-  .stockBadge {
+  .stateBadge {
     flex: 0 0 auto;
     border-radius: 999px;
     padding: 7px 10px;
@@ -427,14 +482,14 @@ items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      se
     font-weight: 950;
   }
 
-  .stockBadge.mutedBadge {
+  .stateBadge.mutedBadge {
     background: #eee9dd;
     color: #65685d;
   }
 
   .metaGrid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -488,8 +543,8 @@ items = Array.isArray(data?.items) ? (data.items as ProductItem[]) : [];      se
       grid-template-columns: 1fr;
     }
 
-    .productCard header,
-    .productCard footer {
+    .eventCard header,
+    .eventCard footer {
       grid-template-columns: 1fr;
       display: grid;
       align-items: stretch;

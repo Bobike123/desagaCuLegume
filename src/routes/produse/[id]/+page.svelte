@@ -542,6 +542,13 @@
     gap: 18px;
   }
 
+  @media (max-width: 767.98px) {
+    .related-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+  }
+
   @media (max-width: 576px) {
     .purchase-card .btn,
     .quantity-row .btn {
