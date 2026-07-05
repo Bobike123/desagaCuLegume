@@ -1,18 +1,57 @@
 # DeSaga cu Legume
 
-Aplicație SvelteKit + Supabase pentru magazinul DeSaga cu Legume: catalog de
-produse, coș, checkout, cont client, mesaje suport și panou de administrare.
+DeSaga cu Legume is a full-stack web application for the local DeSaga store in Cluj-Napoca. It includes a public storefront, product catalog, cart, checkout, customer accounts, support messaging, event pages, and an admin panel for daily operations.
 
-## Stack
+The application is built with SvelteKit. The public UI and admin interface run in Svelte, while private operations are handled through SvelteKit server routes connected to Supabase.
 
-- SvelteKit 2 + TypeScript
-- Supabase Postgres + Storage
-- Autentificare custom: hash scrypt, tabel `sessions`, cookie HTTP-only
-  `desaga_session`
-- Vercel (`@sveltejs/adapter-vercel`)
-- Vitest, ESLint, svelte-check
+## Features
 
-## Instalare Locală
+* Public catalog for seasonal products and jarred products.
+* Product cards with multiple images, measurement units, labels such as `NEW` and `PROMOTION`, and real stock status.
+* Shopping cart, authenticated checkout, and guest checkout.
+* Pickup or delivery options, with delivery rules stored in the database.
+* Customer account page, order history, and account deletion/anonymization.
+* Support messages linked to orders or general questions.
+* Public pages for events, HORECA, contact, legal information, and company details.
+* Admin panel for managing products, orders, events, conversations, HORECA requests, users, and operational records.
+* Basic operational monitoring for authentication, suspicious activity, and request handling.
+
+## Tech Stack
+
+* SvelteKit 2, Svelte 5, TypeScript, and Vite.
+* Supabase Postgres, Supabase Storage, and `@supabase/supabase-js`.
+* Custom authentication using server-side sessions and HTTP-only cookies.
+* Bootstrap 5 and Bootstrap Icons for the UI.
+* Vercel deployment through `@sveltejs/adapter-vercel`.
+* Vitest, Testing Library, Playwright browser provider, ESLint, and `svelte-check`.
+
+## Project Structure
+
+```text
+src/routes/                  SvelteKit pages and API endpoints
+src/routes/admin/            admin panel
+src/routes/api/              internal API used by the UI
+src/lib/components/          reusable UI components
+src/lib/stores/              client stores for products, events, and cart
+src/lib/server/              server-side auth, Supabase, validation, and utilities
+src/lib/styles/global.css    global styles
+static/images/               static page images
+supabase/migrations/         database schema and versioned patches
+supabase/apply_missing_cloud_migrations.sql
+                             SQL bundle for the current cloud schema
+scripts/create-clean-zip.mjs clean archive script
+```
+
+Static image details are documented in `static/images/README.md`. Product and event images uploaded from the admin panel are stored dynamically in the Supabase `images` bucket.
+
+## Local Requirements
+
+* Node.js 22.x or a version compatible with the dependencies in `package.json`.
+* npm.
+* A Supabase project with the required database and storage configuration.
+* Optional: Supabase CLI for applying database migrations from the terminal.
+
+## Local Setup
 
 ```bash
 npm install
@@ -20,117 +59,115 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Completează `.env.local` cu valori reale. Fișierul este ignorat de git și nu
-trebuie livrat.
+Fill `.env.local` with the required Supabase and application environment variables.
 
-## Variabile De Mediu
-
-Vezi [`.env.example`](./.env.example). Aplicația citește doar:
-
-| Variabilă | Obligatorie | Expunere |
-|---|---:|---|
-| `PUBLIC_SUPABASE_URL` | da | publică |
-| `PUBLIC_SUPABASE_ANON_KEY` | da | publică |
-| `SUPABASE_SERVICE_ROLE_KEY` | da | doar server |
-| `SECURITY_ENFORCE_HTTPS` | nu | doar server |
-| `TRUSTED_PROXY` | nu | doar server |
-| `SUPABASE_FETCH_TIMEOUT_MS` | nu | doar server |
-| `NODE_ENV` | nu | runtime |
-
-`TRUSTED_PROXY` selectează un singur header de IP de încredere, potrivit
-proxy-ului real din fața aplicației: `vercel` → `x-real-ip`, `cloudflare` →
-`cf-connecting-ip`. Nelăsat/`none` → se folosește doar adresa directă a
-conexiunii. Nu folosi o listă de headere: `cf-connecting-ip` trece nefiltrat
-prin Vercel și poate fi falsificat de client.
-
-`SUPABASE_SERVICE_ROLE_KEY` nu se importă în cod client. Validarea server-side
-refuză valori lipsă, placeholder sau service-role identic cu anon key.
-
-## Supabase De La Zero
-
-Baza Supabase poate fi ștearsă înainte de deploy. Schema canonică este:
+The Vite development server will show the local URL in the terminal, usually:
 
 ```text
-supabase/migrations/20260619_reproducible_schema.sql
+http://localhost:5173
 ```
 
-După resetarea bazei, rulează conținutul acestui fișier în SQL Editor Supabase
-sau aplică migrarea cu Supabase CLI:
+## Environment Variables
+
+The application expects the environment variables listed in `.env.example`.
+
+For local development, place them in:
+
+```text
+.env.local
+```
+
+For production deployment, add them in:
+
+```text
+Vercel → Project → Settings → Environment Variables
+```
+
+Vercel must contain the same required Supabase variables used by the application. Configure them for the correct Vercel environments: Production, Preview, and Development.
+
+## Supabase Database
+
+The Supabase schema is defined through SQL migration files and a catch-up SQL bundle.
+
+For development on a fresh Supabase project, apply these files in order:
+
+1. `supabase/migrations/20260619_reproducible_schema.sql`
+2. `supabase/migrations/20260619_admin_panels_patch.sql`
+3. `supabase/migrations/20260620_guest_checkout.sql`
+4. `supabase/apply_missing_cloud_migrations.sql`
+
+The catch-up bundle contains database functions, cart logic, stock updates, dashboard statistics, shipping rules, cleanup jobs, and recent schema patches required by the current codebase.
+
+Do not assume that only the files inside `supabase/migrations/` are enough for a new environment. The current application also depends on objects from `supabase/apply_missing_cloud_migrations.sql`.
+
+## Applying the Supabase Schema
+
+Using Supabase CLI:
 
 ```bash
 supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-Migrarea creează enum-uri, tabele, constrângeri, indexuri, RLS, trigger-e
-`updated_at`, bucket-ul public `images`, seed minim și RPC-urile folosite de
-aplicație:
+For the catch-up SQL bundle, run the file contents in the Supabase SQL Editor or with a SQL client connected to the project.
 
-- `replace_cart_items`
-- `support_conversation_summaries`
-- `update_order_admin`
-- `resolve_session`
-- `consume_rate_limit`
-- `place_order`
+## Minimal Seed Data
 
-După schema de bază, aplică în ordine migrările incrementale
-`supabase/migrations/20260619_admin_panels_patch.sql`,
-`20260620_guest_checkout.sql` și seria `20260702_*` (hardening privilegii
-funcții, coș atomic `add_cart_item`/`get_cart`, ledger stoc
-`admin_set_product_stock`, `orders.delivery_method` + mașina de stări,
-lockout login `peek_rate_limit`/`reset_rate_limit`, indexuri +
-`product_images`). Fișierul `20260702_00_verify_rls_readonly.sql` este doar de
-verificare (read-only) — rulează-l și compară rezultatele cu comentariile din
-el.
+The base schema creates:
 
-Seed minim inclus:
+* `USER` and `ADMIN` roles.
+* Product categories: `de-sezon` and `la-borcan`.
+* Public Supabase Storage bucket: `images`.
 
-- roluri `USER`, `ADMIN`
-- categorii produse `de-sezon`, `la-borcan`
+There is no hardcoded admin user or hardcoded admin password.
 
-Nu există parolă admin hardcodată.
+## Creating an Admin User
 
-## Creare Admin
-
-1. Creează un cont normal din `/cont`.
-2. În Supabase SQL Editor, promovează utilizatorul:
+1. Create a normal account from `/cont`.
+2. Run this in the Supabase SQL Editor:
 
 ```sql
 select public.grant_admin_role(user_id)
 from public.users
-where email = 'emailul-adminului@example.com';
+where email = 'admin-email@example.com';
 ```
 
-3. Autentifică-te în `/admin/login`.
+3. Log in through `/admin/login`.
 
-## Rulare, Build Și Teste
+## Useful Commands
 
 ```bash
-npm run check
-npm run lint
-npm run build
-npm test
+npm run dev        # local Vite server
+npm run check      # svelte-kit sync + svelte-check
+npm run lint       # ESLint
+npm run build      # production build
+npm run preview    # serve the production build locally
+npm test           # Vitest in --run mode
+npm run zip:clean  # clean archive in dist/
 ```
 
-Dacă testele cu browser cer Playwright instalat local:
+If browser tests require Playwright binaries:
 
 ```bash
 npx playwright install
 ```
 
-## Deploy
+## Deployment
 
-1. Resetează baza Supabase.
-2. Rulează `supabase/migrations/20260619_reproducible_schema.sql`.
-3. Creează/administrează contul admin prin procedura de mai sus.
-4. Setează variabilele de mediu în Vercel.
-5. Folosește build command:
+The project is configured for Vercel through `svelte.config.js` using the Vercel adapter.
+
+Deployment checklist:
+
+1. Apply the complete Supabase schema, including `supabase/apply_missing_cloud_migrations.sql`.
+2. Add the required environment variables in Vercel.
+3. Create or promote an admin account.
+4. Run a production build locally:
 
 ```bash
 npm run build
 ```
 
-Recomandat în producție:
+Recommended production configuration:
 
 ```text
 NODE_ENV=production
@@ -138,61 +175,75 @@ TRUSTED_PROXY=vercel
 SECURITY_ENFORCE_HTTPS=true
 ```
 
-## ZIP Curat Pentru Predare
+After pushing to GitHub, Vercel can automatically build and deploy the project from the configured production branch.
+
+## Data Handling
+
+Account deletion through `DELETE /api/user` anonymizes the user record and closes active sessions.
+
+Orders and support conversations are retained for operational and accounting purposes. The privacy policy should stay aligned with the actual application behavior.
+
+## Periodic Operations
+
+Periodic cleanup jobs are defined in:
+
+```text
+supabase/apply_missing_cloud_migrations.sql
+```
+
+The cleanup logic handles expired sessions, old request records, abandoned carts, closed conversations, and related operational data.
+
+Check scheduled jobs:
+
+```sql
+select * from cron.job;
+
+select *
+from cron.job_run_details
+order by start_time desc
+limit 20;
+```
+
+Run a cleanup function manually:
+
+```sql
+select public.run_cleanup_sessions();
+```
+
+The delivery rule is stored in:
+
+```text
+public.app_shipping_rules
+```
+
+Example update:
+
+```sql
+update public.app_shipping_rules
+set free_delivery_threshold = 200,
+    delivery_fee = 25
+where id = 1;
+```
+
+## Clean ZIP for Submission
 
 ```bash
 npm run zip:clean
 ```
 
-Arhiva se creează în:
+The archive is created at:
 
 ```text
 dist/desagaCuLegume-clean.zip
 ```
 
-Scriptul include fișierele urmărite/neignorate și exclude automat `.git`,
-`.env*`, `node_modules/`, `.svelte-kit/`, `.vercel/`, `build/`, `dist/`,
-`coverage/` și cache-uri locale.
+The script includes tracked and non-ignored files while excluding local build artifacts, dependency folders, generated files, and local environment files.
 
-## Securitate
+## Development Notes
 
-- Orice cheie expusă anterior trebuie regenerată înainte de deploy:
-  Supabase anon key, Supabase service-role key, Resend/API keys, parole admin
-  sau parole de conturi folosite la test.
-- Nu livra `.env.local`, `.env`, dump-uri DB sau arhive vechi.
-- Aplicația nu folosește Supabase Auth pentru sesiuni. Autentificarea reală
-  este custom: cookie HTTP-only, tabel `sessions`, hash scrypt versionat.
-- Toate operațiile private trec prin SvelteKit server routes cu
-  `SUPABASE_SERVICE_ROLE_KEY`; autorizarea reală se aplică în `locals.user` /
-  `locals.isAdmin`.
-- RLS rămâne protecție defensivă pentru acces direct prin rolurile
-  `anon`/`authenticated`, nu sursa primară de autorizare a aplicației.
-- Ruta `/security-decoy` și path-urile decoy din `hooks.server.ts` sunt
-  deliberate: înregistrează accesări suspecte în `security_events`.
-
-### Retenție Date / GDPR
-
-Ștergerea contului (`DELETE /api/user`) anonimizează rândul din `users`
-(email, username, nume, telefon, hash parolă) și închide sesiunile. Datele de
-facturare din `orders` (nume, email, telefon, adrese) și conversațiile de
-suport sunt păstrate intenționat: comenzile sunt documente
-contabile/fiscale cu termen legal de arhivare. Nu se șterg la ștergerea
-contului; documentează acest lucru în politica de confidențialitate.
-
-## Cleanup Periodic
-
-Cleanup-ul este automatizat prin `pg_cron` — activează extensia în Supabase
-(Dashboard → Database → Extensions) și rulează
-`supabase/migrations/20260710_07_pg_cron_cleanup.sql`. Migrarea creează câte o
-funcție `run_cleanup_*` pentru sesiuni expirate, `app_rate_limits`,
-`checkout_idempotency_keys`, `security_events`, `auth_logs`, coșuri abandonate
-și arhivarea conversațiilor închise, plus programările `cron.schedule`.
-Verifică rulările cu:
-
-```sql
-select * from cron.job;
-select * from cron.job_run_details order by start_time desc limit 20;
-```
-
-Funcțiile pot fi rulate și manual (ex. `select public.run_cleanup_sessions();`)
-dacă vrei cleanup imediat.
+* Public products are read through `/api/products`.
+* The admin panel uses internal endpoints for product creation, editing, image upload, and status changes.
+* The authenticated cart uses database functions for consistent cart updates.
+* Stock changes are handled through admin stock functions and inventory movement records.
+* Checkout totals are displayed in the UI, while the final authoritative total is calculated server-side.
+* Legal pages are static Svelte components and should remain aligned with the actual API behavior.
