@@ -44,7 +44,9 @@
 		"vitest-browser-svelte": "^2.0.1"
 	},
 	"dependencies": {
+		"@opentelemetry/api": "^1.9.1",
 		"@supabase/supabase-js": "^2.110.0",
+		"@vercel/analytics": "^2.0.1",
 		"bootstrap": "^5.3.8",
 		"bootstrap-icons": "^1.13.1",
 		"cookie": "1.1.1"
