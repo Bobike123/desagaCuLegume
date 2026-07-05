@@ -15,9 +15,9 @@
   const flutureHref = 'https://tinutulflutureluialbastru.ro/';
 
   const productLinks = [
-    { href: '/produse', label: 'Toate produsele', icon: '' },
-    { href: '/produse/de-sezon', label: 'De sezon', icon: '' },
-    { href: '/produse/la-borcan', label: 'La borcan', icon: '' },
+    { href: '/produse', label: 'Toate produsele', icon: 'bi-grid-3x3-gap' },
+    { href: '/produse/de-sezon', label: 'De sezon', icon: 'bi-brightness-high' },
+    { href: '/produse/la-borcan', label: 'La borcan', icon: 'bi-archive' },
   ];
 
   // The mobile drawer is driven entirely by this boolean + CSS — no Bootstrap
@@ -314,10 +314,13 @@
   <div class="offcanvas-header">
     <a class="mobile-brand" href="/" on:click={closeMenu}>
       <img src={logoUrl} alt="" height="34" />
-      <span>DeSaga</span>
+      <span class="mobile-brand__text">
+        <strong>DeSaga</strong>
+        <small>fermă locală</small>
+      </span>
     </a>
 
-    <button class="btn btn-link close-menu" type="button" on:click={closeMenu} aria-label="Închide meniul">
+    <button class="close-menu" type="button" on:click={closeMenu} aria-label="Închide meniul">
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
@@ -341,7 +344,7 @@
       </a>
 
       <a class={`mobile-link mobile-link-primary ${navActive(currentPath, '/produse')}`} href="/produse" on:click={closeMenu}>
-        <span><i class="bi "></i> Toate produsele</span>
+        <span><i class="bi bi-grid-3x3-gap"></i> Toate produsele</span>
         <i class="bi bi-chevron-right"></i>
       </a>
 
@@ -358,7 +361,7 @@
       </div>
 
       <a class={`mobile-link ${navActive(currentPath, '/horeca')}`} href="/horeca" on:click={closeMenu}>
-        <span><i class="bi "></i> HORECA</span>
+        <span><i class="bi bi-shop"></i> HORECA</span>
         <i class="bi bi-chevron-right"></i>
       </a>
 
@@ -776,6 +779,15 @@
     border: 0;
     padding: 8px;
     background: rgba(15, 23, 42, 0.05);
+    transition:
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .burger:hover,
+  .burger:focus,
+  .burger[aria-expanded='true'] {
+    background: var(--desaga-blue);
   }
 
   .burger:focus {
@@ -798,6 +810,12 @@
     transition:
       transform 220ms ease,
       opacity 180ms ease;
+  }
+
+  .burger:hover .burger__bar,
+  .burger:focus .burger__bar,
+  .burger[aria-expanded='true'] .burger__bar {
+    background: #fff;
   }
 
   .burger[aria-expanded='true'] .burger__bar:nth-child(1) {
@@ -825,7 +843,8 @@
     max-width: 100%;
     display: flex;
     flex-direction: column;
-    background: #fff;
+    background: var(--desaga-surface);
+    border-left: 1px solid var(--desaga-border);
     box-shadow: -14px 0 44px rgba(15, 23, 42, 0.18);
     transform: translateX(100%);
     visibility: hidden;
@@ -880,6 +899,8 @@
     gap: 12px;
     padding: 1rem;
     border-bottom: 1px solid var(--desaga-border);
+    background:
+      linear-gradient(180deg, rgba(var(--desaga-accent-rgb), 0.08), rgba(255, 255, 255, 0));
   }
 
   .offcanvas-body {
@@ -897,9 +918,46 @@
     text-decoration: none;
   }
 
+  .mobile-brand img {
+    flex: 0 0 auto;
+  }
+
+  .mobile-brand__text {
+    display: grid;
+    line-height: 1.05;
+  }
+
+  .mobile-brand__text strong {
+    font-weight: 950;
+  }
+
+  .mobile-brand__text small {
+    color: var(--desaga-muted);
+    font-size: 0.72rem;
+    font-weight: 850;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
   .close-menu {
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
     color: rgba(20, 33, 43, 0.72);
-    text-decoration: none;
+    background: rgba(15, 23, 42, 0.05);
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .close-menu:hover,
+  .close-menu:focus {
+    color: var(--desaga-blue);
+    background: rgba(var(--desaga-accent-rgb), 0.12);
   }
 
   .mobile-contact-card {
@@ -940,6 +998,21 @@
     border-radius: 15px;
     color: rgba(20, 33, 43, 0.85);
     font-weight: 900;
+  }
+
+  .mobile-link > span,
+  .mobile-sublink > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .mobile-link > span > i,
+  .mobile-sublink > span > i {
+    width: 20px;
+    text-align: center;
+    flex: 0 0 auto;
   }
 
   .mobile-link {
