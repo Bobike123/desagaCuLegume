@@ -43,3 +43,4 @@ temp/
 # Vite/SvelteKit
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+.env.local
