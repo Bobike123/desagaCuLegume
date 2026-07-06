@@ -31,6 +31,16 @@ const AUTH_ATTEMPT_PATHS = new Set([
   '/api/auth/change-password',
 ]);
 const CHECKOUT_PATHS = new Set(['/api/checkout']);
+const NEWSLETTER_PUBLIC_PATHS = new Set(['/api/newsletter/subscribe', '/api/newsletter/unsubscribe']);
+// RFC 8058 one-click unsubscribe POSTs come from mail providers without
+// Origin/Referer headers and with form-encoded bodies; the unsubscribe token
+// is the authorization, so the path is exempt from the same-origin and
+// JSON content-type checks (it stays rate limited).
+const CSRF_EXEMPT_PATHS = new Set(['/api/newsletter/unsubscribe']);
+
+function isCsrfExempt(event: RequestEvent) {
+  return CSRF_EXEMPT_PATHS.has(event.url.pathname) && event.request.method === 'POST';
+}
 
 function csrfErrorResponse() {
   return json({ error: 'Cerere respinsă.' }, { status: 403 });
@@ -81,7 +91,7 @@ async function enforceRequestEnvelope(event: RequestEvent) {
   const { pathname } = event.url;
   if (!pathname.startsWith('/api')) return null;
 
-  if (!isAllowedSameOriginRequest(event.request, event.url)) {
+  if (!isCsrfExempt(event) && !isAllowedSameOriginRequest(event.request, event.url)) {
     return csrfErrorResponse();
   }
 
@@ -99,6 +109,10 @@ async function enforceRequestEnvelope(event: RequestEvent) {
 
   if (CHECKOUT_PATHS.has(pathname) && event.request.method === 'POST') {
     limiterConfigs.push({ scope: 'checkout', limit: 20, windowMs: FIFTEEN_MINUTES });
+  }
+
+  if (NEWSLETTER_PUBLIC_PATHS.has(pathname) && event.request.method === 'POST') {
+    limiterConfigs.push({ scope: 'newsletter-public', limit: 5, windowMs: FIFTEEN_MINUTES });
   }
 
   if (pathname.startsWith('/api/admin')) {
@@ -128,6 +142,9 @@ async function enforceRequestEnvelope(event: RequestEvent) {
 
   if (!hasBody) return null;
 
+  // One-click unsubscribe bodies are form-encoded ("List-Unsubscribe=One-Click").
+  if (isCsrfExempt(event)) return null;
+
   if (isUpload) {
     if (!contentType.includes('multipart/form-data')) {
       return json({ error: 'Content-Type trebuie să fie multipart/form-data.' }, { status: 415 });
@@ -151,7 +168,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     return decoyResponse;
   }
 
-  if (!isAllowedSameOriginRequest(event.request, event.url)) {
+  if (!isCsrfExempt(event) && !isAllowedSameOriginRequest(event.request, event.url)) {
     const response = csrfErrorResponse();
     setSecurityHeaders(response.headers, event, env.publicSupabaseUrl);
     return response;

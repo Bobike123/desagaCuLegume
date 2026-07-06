@@ -110,6 +110,7 @@ function createAuthStore() {
       password: string;
       fullName?: string;
       phone?: string;
+      newsletter?: boolean;
     }) {
       update((state) => ({ ...state, loading: true, error: null }));
 

@@ -14,7 +14,9 @@ import {
   setSessionCookie,
   safeClientAddress,
 } from '$lib/server/auth';
+import { subscribeEmail } from '$lib/server/newsletter/subscribers';
 import {
+  booleanField,
   LIMITS,
   nullableStringField,
   readJsonBody,
@@ -45,6 +47,7 @@ export async function POST(event: RequestEvent) {
       stringField(body, 'username', { max: 80, pattern: USERNAME_PATTERN, fieldLabel: 'Username-ul' }) ||
         safeUsernameFromEmail(email)
     );
+    const wantsNewsletter = booleanField(body, 'newsletter', false);
 
     if (!email || !password) {
       return json({ error: 'Email și parola sunt obligatorii.' }, { status: 400 });
@@ -99,6 +102,16 @@ export async function POST(event: RequestEvent) {
     if (userRoleError) throw userRoleError;
 
     const meta = getRequestMeta(request, safeClientAddress(() => event.getClientAddress()));
+
+    if (wantsNewsletter) {
+      // Best-effort: a newsletter hiccup must never fail the registration.
+      try {
+        await subscribeEmail({ email, userId: inserted.user_id, source: 'REGISTER', ip: meta.ipAddress });
+      } catch (error) {
+        logRouteError('Newsletter opt-in on register failed', error);
+      }
+    }
+
     const timeoutMinutes = getSessionTimeoutMinutes(false);
     const { token } = await createSession(inserted.user_id, meta, timeoutMinutes);
     setSessionCookie(cookies, token, timeoutMinutes);

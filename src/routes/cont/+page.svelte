@@ -19,6 +19,7 @@
     username: '',
     email: '',
     password: '',
+    newsletter: false,
   };
 
   async function redirectAuthenticatedUser() {
@@ -148,6 +149,11 @@
             <small>Minim 8 caractere, o literă mare și o cifră.</small>
           </label>
 
+          <label class="newsletter-optin">
+            <input class="form-check-input" type="checkbox" bind:checked={registerForm.newsletter} disabled={loading} />
+            <span>Vreau să primesc noutăți pe email (newsletter). Mă pot dezabona oricând.</span>
+          </label>
+
           <button class="btn btn-primary btn-lg w-100" type="submit" disabled={loading}>
             {loading ? 'Se creează contul…' : 'Creează cont'}
           </button>
@@ -274,6 +280,24 @@
     display: block;
     margin-top: 0.35rem;
     color: var(--desaga-muted);
+  }
+
+  .newsletter-optin {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
+  .newsletter-optin input {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+  }
+
+  .newsletter-optin span {
+    margin-bottom: 0;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: rgba(20, 33, 43, 0.72);
   }
 
 

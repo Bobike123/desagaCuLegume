@@ -36,6 +36,12 @@
       active: (path: string) => path.startsWith('/admin/messages'),
     },
     {
+      href: '/admin/newsletter',
+      label: 'Newsletter',
+      icon: 'bi-envelope-paper',
+      active: (path: string) => path.startsWith('/admin/newsletter'),
+    },
+    {
       href: '/admin/security',
       label: 'Securitate',
       icon: 'bi-shield-exclamation',

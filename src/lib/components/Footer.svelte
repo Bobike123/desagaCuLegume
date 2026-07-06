@@ -30,6 +30,38 @@
   const phoneHref = 'tel:+40729969822';
   const facebookHref = 'https://www.facebook.com/desagaculegume/';
   const instagramHref = 'https://www.instagram.com/desaga_cu_legume/';
+
+  let newsletterEmail = '';
+  let newsletterState: 'idle' | 'loading' | 'success' | 'error' = 'idle';
+  let newsletterMessage = '';
+
+  async function subscribeNewsletter() {
+    if (newsletterState === 'loading') return;
+    newsletterState = 'loading';
+    newsletterMessage = '';
+
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newsletterEmail }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        newsletterState = 'error';
+        newsletterMessage = payload?.error ?? 'Abonarea a eșuat. Încearcă din nou.';
+        return;
+      }
+
+      newsletterState = 'success';
+      newsletterMessage = 'Te-ai abonat! Mulțumim.';
+      newsletterEmail = '';
+    } catch {
+      newsletterState = 'error';
+      newsletterMessage = 'Abonarea a eșuat. Încearcă din nou.';
+    }
+  }
 </script>
 
 <footer class="footer">
@@ -61,6 +93,34 @@
               <i class="bi bi-instagram"></i>
             </a>
           </div>
+
+          <form class="footer-newsletter" on:submit|preventDefault={subscribeNewsletter} aria-label="Newsletter">
+            <label class="footer-newsletter-label" for="footer-newsletter-email">Noutăți pe email</label>
+            <div class="footer-newsletter-row">
+              <input
+                id="footer-newsletter-email"
+                type="email"
+                required
+                maxlength="120"
+                placeholder="adresa@email.ro"
+                autocomplete="email"
+                bind:value={newsletterEmail}
+                disabled={newsletterState === 'loading'}
+              />
+              <button type="submit" disabled={newsletterState === 'loading'}>
+                {newsletterState === 'loading' ? 'Se trimite…' : 'Abonează-te'}
+              </button>
+            </div>
+            {#if newsletterMessage}
+              <p class="footer-newsletter-status" class:error={newsletterState === 'error'} role="status">
+                {newsletterMessage}
+              </p>
+            {/if}
+            <p class="footer-newsletter-consent">
+              Prin abonare ești de acord să primești emailuri cu noutăți. Te poți dezabona oricând.
+              Detalii în <a href="/politica-de-confidentialitate">politica de confidențialitate</a>.
+            </p>
+          </form>
         </section>
 
         <section class="footer-group">
@@ -232,6 +292,75 @@
   .footer-social a:hover,
   .footer-social a:focus {
     background: rgba(255, 255, 255, 0.16);
+  }
+
+  .footer-newsletter {
+    margin-top: 1.25rem;
+    max-width: 26rem;
+  }
+
+  .footer-newsletter-label {
+    display: block;
+    font-weight: 950;
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-newsletter-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .footer-newsletter-row input {
+    flex: 1 1 12rem;
+    min-width: 0;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    padding: 0.6rem 1rem;
+  }
+
+  .footer-newsletter-row input::placeholder {
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .footer-newsletter-row button {
+    border: 0;
+    border-radius: 999px;
+    background: var(--desaga-blue);
+    color: #fff;
+    font-weight: 900;
+    padding: 0.6rem 1.1rem;
+  }
+
+  .footer-newsletter-row button:hover,
+  .footer-newsletter-row button:focus {
+    background: var(--desaga-dark-blue);
+  }
+
+  .footer-newsletter-row button:disabled {
+    opacity: 0.7;
+  }
+
+  .footer-newsletter-status {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    color: #b9f0c9;
+  }
+
+  .footer-newsletter-status.error {
+    color: #ffc2c2;
+  }
+
+  .footer-newsletter-consent {
+    margin: 0.5rem 0 0;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .footer-newsletter-consent a {
+    color: rgba(255, 255, 255, 0.75);
   }
 
   .footer-title {
