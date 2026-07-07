@@ -521,7 +521,7 @@
             >
               <div class="slider-track" class:slider-track-nudge={borcaneNudge}>
                 {#each borcaneProducts as product, index (product.id)}
-                  <div class="grid-item slider-item" data-slide-index={index}>
+                  <div class="grid-item slider-item home-slider-item" data-slide-index={index}>
                     <ProductCard {product} />
                   </div>
                 {/each}
@@ -583,7 +583,7 @@
             >
               <div class="slider-track" class:slider-track-nudge={sezonNudge}>
                 {#each sezonProducts as product, index (product.id)}
-                  <div class="grid-item slider-item" data-slide-index={index}>
+                  <div class="grid-item slider-item home-slider-item" data-slide-index={index}>
                     <ProductCard {product} />
                   </div>
                 {/each}
@@ -1007,20 +1007,31 @@
 
   @media (max-width: 575.98px) {
     .slider-shell {
-      padding: 0 44px;
+      padding: 0;
     }
 
     .slider-window {
-      --slider-gap: 10px;
-      --slider-peek-distance: min(112px, 42vw);
-      padding: 10px 0;
-      scroll-padding-inline: 0;
+      --slider-gap: 8px;
+      --slider-peek-distance: min(96px, 32vw);
+      padding: 12px 18px 16px;
+      scroll-padding-inline: 18px;
+    }
+
+    .slider-track {
+      gap: var(--slider-gap);
+    }
+
+    .slider-item {
+      flex: 0 0 clamp(132px, 41.5vw, 158px);
     }
 
     .slider-btn-side {
-      width: 38px;
-      height: 50px;
-      font-size: 1.18rem;
+      width: 34px;
+      height: 44px;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.94);
+      border-color: rgba(var(--accent-rgb), 0.3);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
     }
 
     .slider-btn-prev {
@@ -1315,14 +1326,37 @@
       flex-direction: column;
     }
 
+    .catalog-sliders {
+      gap: 16px;
+      margin-inline: -2px;
+    }
+
     .product-slider-panel {
-      border-radius: 18px;
+      border-radius: 20px;
+      border-color: rgba(var(--accent-rgb), 0.14);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
     }
 
     .slider-head {
-      align-items: stretch;
-      flex-direction: column;
-      padding: 14px 14px 10px;
+      align-items: center;
+      flex-direction: row;
+      padding: 13px 16px 11px;
+      background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(255, 255, 255, 0.96));
+    }
+
+    .slider-kicker {
+      margin-bottom: 0.16rem;
+      font-size: 0.64rem;
+      letter-spacing: 0.09em;
+    }
+
+    .slider-head h3 {
+      font-size: 1rem;
+      line-height: 1.05;
+    }
+
+    .slider-meta {
+      align-self: center;
     }
 
     .slider-controls {
@@ -1333,21 +1367,135 @@
 
     .slider-count {
       display: inline-flex;
-      flex: 1 1 auto;
+      flex: 0 0 auto;
       align-items: center;
-      min-height: 46px;
+      min-height: 0;
+      padding: 0.32rem 0.52rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(var(--accent-rgb), 0.16);
+      color: rgba(15, 23, 42, 0.72);
+      font-size: 0.7rem;
+      line-height: 1;
     }
 
-    .slider-btn {
-      width: 46px;
-      height: 46px;
-      font-size: 1.05rem;
+    .slider-btn:not(.slider-btn-side) {
+      width: 40px;
+      height: 40px;
+      font-size: 1rem;
+    }
+
+    .slider-btn-side {
+      opacity: 0.92;
+    }
+
+    .slider-btn-side:disabled {
+      opacity: 0.2;
     }
 
     .slider-window {
-      --slider-gap: 12px;
-      padding: 12px;
-      scroll-padding-inline: 12px;
+      --slider-gap: 8px;
+      padding: 12px 18px 16px;
+      scroll-padding-inline: 18px;
+    }
+
+    .home-slider-item :global(.card) {
+      min-height: 0 !important;
+      border-radius: 12px !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+
+    .home-slider-item :global(.card[data-promotion='true']) {
+      border-color: rgba(194, 37, 45, 0.28) !important;
+      box-shadow: 0 8px 18px rgba(194, 37, 45, 0.1) !important;
+    }
+
+    .home-slider-item :global(.media-link) {
+      height: 86px !important;
+    }
+
+    .home-slider-item :global(.promo-stack) {
+      top: 5px !important;
+      right: 5px !important;
+      gap: 3px !important;
+      max-width: calc(100% - 10px) !important;
+    }
+
+    .home-slider-item :global(.promo-badge) {
+      min-height: 18px !important;
+      padding: 0.16rem 0.34rem !important;
+      font-size: 0.5rem !important;
+      letter-spacing: 0.04em !important;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14) !important;
+    }
+
+    .home-slider-item :global(.promo-badge::before) {
+      width: 5px !important;
+      height: 5px !important;
+      margin-right: 4px !important;
+      box-shadow: 0 0 0 2px rgba(194, 37, 45, 0.12) !important;
+    }
+
+    .home-slider-item :global(.badges) {
+      left: 5px !important;
+      right: 5px !important;
+      bottom: 5px !important;
+      gap: 3px !important;
+    }
+
+    .home-slider-item :global(.badges .pill:first-child) {
+      display: none !important;
+    }
+
+    .home-slider-item :global(.pill) {
+      padding: 0.16rem 0.34rem !important;
+      font-size: 0.54rem !important;
+      gap: 3px !important;
+    }
+
+    .home-slider-item :global(.body) {
+      padding: 7px 8px 9px !important;
+    }
+
+    .home-slider-item :global(.title) {
+      font-size: 0.76rem !important;
+      line-height: 1.13 !important;
+      letter-spacing: -0.01em !important;
+    }
+
+    .home-slider-item :global(.footer) {
+      margin-top: 7px !important;
+      gap: 6px !important;
+    }
+
+    .home-slider-item :global(.price) {
+      font-size: 0.84rem !important;
+      line-height: 1.05 !important;
+    }
+
+    .home-slider-item :global(.currency),
+    .home-slider-item :global(.unit) {
+      margin-left: 1px !important;
+      font-size: 0.58rem !important;
+    }
+
+    .home-slider-item :global(.btn-add),
+    .home-slider-item :global(.details-link) {
+      min-height: 32px !important;
+      padding: 0.32rem 0.45rem !important;
+      border-radius: 10px !important;
+      font-size: 0.74rem !important;
+      gap: 5px !important;
+    }
+
+    .home-slider-item :global(.step-btn) {
+      width: 32px !important;
+      height: 32px !important;
+    }
+
+    .home-slider-item :global(.qty-wrap) {
+      height: 32px !important;
     }
 
     .actions,
