@@ -7,6 +7,8 @@ import { sendEmail } from '$lib/server/newsletter/brevo';
 import { renderCampaignEmail } from '$lib/server/newsletter/render';
 import {
   LIMITS,
+  RequestValidationError,
+  parseIsoDate,
   readJsonBody,
   requireNumericId,
   stringField,
@@ -14,9 +16,10 @@ import {
 } from '$lib/server/validation';
 
 const CAMPAIGN_SELECT =
-  'campaign_id, subject, body_html, status, total_recipients, sent_count, failed_count, queued_at, sent_at, created_at, updated_at';
+  'campaign_id, subject, body_html, status, total_recipients, sent_count, failed_count, queued_at, scheduled_at, sent_at, created_at, updated_at';
 
 const BODY_HTML_MAX = 100_000;
+const SCHEDULE_PAST_GRACE_MS = 60_000;
 
 function mapCampaign(row: any) {
   return {
@@ -28,10 +31,33 @@ function mapCampaign(row: any) {
     sentCount: row.sent_count,
     failedCount: row.failed_count,
     queuedAt: row.queued_at ?? null,
+    scheduledAt: row.scheduled_at ?? null,
     sentAt: row.sent_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function scheduledAtField(
+  body: Record<string, unknown>,
+  options: { required?: boolean; requireFuture?: boolean } = {}
+) {
+  if (!('scheduledAt' in body)) {
+    if (options.required) throw new RequestValidationError('Ora trimiterii este obligatorie.');
+    return undefined;
+  }
+
+  const scheduledAt = parseIsoDate(body.scheduledAt, 'Ora trimiterii');
+  if (!scheduledAt) {
+    if (options.required) throw new RequestValidationError('Ora trimiterii este obligatorie.');
+    return null;
+  }
+
+  if (options.requireFuture && new Date(scheduledAt).getTime() < Date.now() - SCHEDULE_PAST_GRACE_MS) {
+    throw new RequestValidationError('Ora trimiterii trebuie să fie în viitor.');
+  }
+
+  return scheduledAt;
 }
 
 async function loadCampaign(admin: ReturnType<typeof createAdminClient>, campaignId: string) {
@@ -94,10 +120,11 @@ export async function POST({ locals, request }: RequestEvent) {
       max: BODY_HTML_MAX,
       fieldLabel: 'Conținutul',
     });
+    const scheduledAt = scheduledAtField(body, { requireFuture: true });
 
     const { data, error } = await createAdminClient()
       .from('newsletter_campaigns')
-      .insert({ subject, body_html: bodyHtml })
+      .insert({ subject, body_html: bodyHtml, scheduled_at: scheduledAt ?? null })
       .select(CAMPAIGN_SELECT)
       .single();
     if (error) throw error;
@@ -127,8 +154,10 @@ export async function PATCH({ locals, request }: RequestEvent) {
     if (!campaign) return json({ error: 'Campania nu există.' }, { status: 404 });
 
     if (action === 'queue') {
+      const scheduledAt = scheduledAtField(body, { required: true, requireFuture: true });
       const { data: total, error } = await admin.rpc('queue_newsletter_campaign', {
         p_campaign_id: Number(campaignId),
+        p_scheduled_at: scheduledAt,
       });
       if (error) {
         return json({ error: error.message || 'Nu am putut pune campania în coadă.' }, { status: 400 });
@@ -136,6 +165,29 @@ export async function PATCH({ locals, request }: RequestEvent) {
 
       const updated = await loadCampaign(admin, campaignId);
       return json({ item: mapCampaign(updated), totalRecipients: total }, { status: 200 });
+    }
+
+    if (action === 'reschedule') {
+      const scheduledAt = scheduledAtField(body, { required: true, requireFuture: true });
+      if (campaign.status !== 'SENDING') {
+        return json({ error: 'Doar campaniile programate pot fi reprogramate.' }, { status: 400 });
+      }
+      if (Number(campaign.sent_count) > 0 || Number(campaign.failed_count) > 0) {
+        return json({ error: 'Campania a început deja trimiterea și nu mai poate fi reprogramată.' }, { status: 400 });
+      }
+
+      const { data, error } = await admin
+        .from('newsletter_campaigns')
+        .update({ scheduled_at: scheduledAt })
+        .eq('campaign_id', campaignId)
+        .eq('status', 'SENDING')
+        .eq('sent_count', 0)
+        .eq('failed_count', 0)
+        .select(CAMPAIGN_SELECT)
+        .single();
+      if (error) throw error;
+
+      return json({ item: mapCampaign(data) }, { status: 200 });
     }
 
     if (action === 'test') {
@@ -197,6 +249,10 @@ export async function PATCH({ locals, request }: RequestEvent) {
         max: BODY_HTML_MAX,
         fieldLabel: 'Conținutul',
       });
+    }
+    const scheduledAt = scheduledAtField(body, { requireFuture: true });
+    if (scheduledAt !== undefined) {
+      patch.scheduled_at = scheduledAt;
     }
 
     if (Object.keys(patch).length === 0) {

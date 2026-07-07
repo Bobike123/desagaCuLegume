@@ -5,15 +5,21 @@ vi.mock('$env/dynamic/private', () => ({
     BREVO_API_KEY: 'test-api-key',
     NEWSLETTER_FROM_EMAIL: 'newsletter@example.ro',
     NEWSLETTER_FROM_NAME: 'DeSaga cu Legume',
-    PUBLIC_SITE_URL: 'https://example.ro/',
     NEWSLETTER_DAILY_LIMIT: '280',
     CRON_SECRET: 'test-cron-secret',
+  },
+}));
+
+vi.mock('$env/dynamic/public', () => ({
+  env: {
+    PUBLIC_SITE_URL: 'https://example.ro/',
   },
 }));
 
 import { getNewsletterEnv } from './env';
 import { renderCampaignEmail, unsubscribeOneClickUrl, unsubscribePageUrl } from './render';
 import { sendEmail } from './brevo';
+import { isCampaignReadyToSend, utcDayStartIso } from './schedule';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -24,6 +30,21 @@ describe('newsletter env', () => {
     const env = getNewsletterEnv();
     expect(env.siteUrl).toBe('https://example.ro');
     expect(env.dailyLimit).toBe(280);
+  });
+});
+
+describe('newsletter schedule helpers', () => {
+  it('checks whether a campaign reached its scheduled send time', () => {
+    const now = new Date('2026-07-06T10:15:00.000Z');
+
+    expect(isCampaignReadyToSend(null, now)).toBe(true);
+    expect(isCampaignReadyToSend('2026-07-06T10:15:00.000Z', now)).toBe(true);
+    expect(isCampaignReadyToSend('2026-07-06T10:20:00.000Z', now)).toBe(false);
+    expect(isCampaignReadyToSend('not-a-date', now)).toBe(false);
+  });
+
+  it('builds the UTC day boundary used for the daily send cap', () => {
+    expect(utcDayStartIso(new Date('2026-07-06T23:59:59.000Z'))).toBe('2026-07-06T00:00:00.000Z');
   });
 });
 

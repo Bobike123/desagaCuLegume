@@ -1,4 +1,7 @@
 import { env } from '$env/dynamic/private';
+// PUBLIC_-prefixed variables are excluded from $env/dynamic/private by
+// SvelteKit's publicPrefix split, so PUBLIC_SITE_URL must come from here.
+import { env as publicEnv } from '$env/dynamic/public';
 
 type NewsletterEnv = {
   brevoApiKey: string;
@@ -51,7 +54,7 @@ export function getNewsletterEnv(): NewsletterEnv {
     brevoApiKey: assertPresent('BREVO_API_KEY', env.BREVO_API_KEY),
     fromEmail: assertPresent('NEWSLETTER_FROM_EMAIL', env.NEWSLETTER_FROM_EMAIL),
     fromName: assertPresent('NEWSLETTER_FROM_NAME', env.NEWSLETTER_FROM_NAME),
-    siteUrl: assertUrl('PUBLIC_SITE_URL', assertPresent('PUBLIC_SITE_URL', env.PUBLIC_SITE_URL)),
+    siteUrl: assertUrl('PUBLIC_SITE_URL', assertPresent('PUBLIC_SITE_URL', publicEnv.PUBLIC_SITE_URL)),
     dailyLimit: parseDailyLimit(env.NEWSLETTER_DAILY_LIMIT),
     cronSecret: assertPresent('CRON_SECRET', env.CRON_SECRET),
   };

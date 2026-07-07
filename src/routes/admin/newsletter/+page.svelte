@@ -1,5 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
+  import { env as publicEnv } from '$env/dynamic/public';
+  import {
+    NEW_CAMPAIGN_SAMPLE_TEXT,
+    buildNewsletterHtml,
+    extractTemplateText,
+    wrapEmailShell,
+  } from '$lib/newsletter-template';
 
   type Campaign = {
     id: string;
@@ -10,6 +18,7 @@
     sentCount: number;
     failedCount: number;
     queuedAt: string | null;
+    scheduledAt: string | null;
     sentAt: string | null;
     createdAt: string;
     updatedAt: string;
@@ -32,8 +41,37 @@
   let selected: Campaign | null = null;
   let subjectDraft = '';
   let bodyDraft = '';
+  let textDraft = '';
+  let scheduledAtDraft = '';
+  let editorMode: 'text' | 'html' = 'text';
   let showPreview = false;
   let creating = false;
+
+  // Emails need absolute image URLs, so the template is built against the
+  // deployed site origin (falls back to the current origin in dev).
+  $: siteUrl = (publicEnv.PUBLIC_SITE_URL || $page.url.origin).replace(/\/$/, '');
+  $: effectiveHtml = editorMode === 'text' ? buildNewsletterHtml(textDraft, siteUrl) : bodyDraft;
+
+  const PREVIEW_FOOTER = `<div style="padding:16px 8px;font-size:12px;line-height:1.5;color:#6b6b66;text-align:center;"><p style="margin:0 0 4px;">Ai primit acest email pentru că te-ai abonat la newsletterul DeSaga cu Legume.</p><p style="margin:0;"><a href="#" style="color:#6b6b66;">Dezabonează-te</a></p></div>`;
+  $: minScheduledAt = toDatetimeLocal(new Date(Date.now() - 60_000).toISOString());
+
+  function switchEditorMode(next: 'text' | 'html') {
+    if (editorMode === next) return;
+    if (next === 'html') {
+      bodyDraft = effectiveHtml;
+      editorMode = 'html';
+      return;
+    }
+    const extracted = extractTemplateText(bodyDraft, siteUrl);
+    if (
+      extracted == null &&
+      !confirm('HTML-ul personalizat va fi înlocuit cu șablonul generat din text. Continui?')
+    ) {
+      return;
+    }
+    textDraft = extracted ?? (textDraft.trim() ? textDraft : NEW_CAMPAIGN_SAMPLE_TEXT);
+    editorMode = 'text';
+  }
 
   let subscribers: Subscriber[] = [];
   let counts = { active: 0, unsubscribed: 0 };
@@ -43,6 +81,46 @@
   let saving = false;
   let error = '';
   let success = '';
+
+  function nextDefaultScheduleDate() {
+    const date = new Date(Date.now() + 60 * 60 * 1000);
+    date.setSeconds(0, 0);
+    return date;
+  }
+
+  function padDatePart(value: number) {
+    return String(value).padStart(2, '0');
+  }
+
+  function toDatetimeLocal(value: string | null) {
+    const date = value ? new Date(value) : nextDefaultScheduleDate();
+    if (Number.isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}T${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`;
+  }
+
+  function defaultScheduledAtIso() {
+    return nextDefaultScheduleDate().toISOString();
+  }
+
+  function scheduledAtIsoFromDraft(requireFuture = false) {
+    if (!scheduledAtDraft) {
+      error = 'Alege data și ora trimiterii.';
+      return null;
+    }
+
+    const date = new Date(scheduledAtDraft);
+    if (Number.isNaN(date.getTime())) {
+      error = 'Ora trimiterii are un format invalid.';
+      return null;
+    }
+
+    if (requireFuture && date.getTime() < Date.now() - 60_000) {
+      error = 'Alege o oră de trimitere din viitor.';
+      return null;
+    }
+
+    return date.toISOString();
+  }
 
   function formatDate(value: string | null) {
     if (!value) return '—';
@@ -72,6 +150,32 @@
     if (value === 'SENDING') return 'info';
     if (value === 'SENT') return 'success';
     return 'neutral';
+  }
+
+  function isScheduledForFuture(item: Campaign) {
+    return (
+      item.status === 'SENDING' &&
+      item.sentCount === 0 &&
+      item.failedCount === 0 &&
+      Boolean(item.scheduledAt) &&
+      new Date(item.scheduledAt as string).getTime() > Date.now()
+    );
+  }
+
+  function campaignStatusLabel(item: Campaign) {
+    return isScheduledForFuture(item) ? 'Programată' : statusLabel(item.status);
+  }
+
+  function campaignStatusClass(item: Campaign) {
+    return isScheduledForFuture(item) ? 'info' : statusClass(item.status);
+  }
+
+  function canEditSchedule(item: Campaign | null) {
+    return Boolean(
+      item &&
+        (item.status === 'DRAFT' ||
+          (item.status === 'SENDING' && item.sentCount === 0 && item.failedCount === 0))
+    );
   }
 
   function sourceLabel(value: string) {
@@ -122,6 +226,10 @@
     selected = item;
     subjectDraft = item?.subject ?? '';
     bodyDraft = item?.bodyHtml ?? '';
+    scheduledAtDraft = toDatetimeLocal(item?.scheduledAt ?? null);
+    const extracted = item ? extractTemplateText(item.bodyHtml, siteUrl) : null;
+    textDraft = extracted ?? '';
+    editorMode = extracted != null || !item ? 'text' : 'html';
     showPreview = false;
     if (!options.keepMessages) {
       success = '';
@@ -140,7 +248,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subject: 'Newsletter DeSaga',
-          bodyHtml: '<h2>Salut!</h2>\n<p>Scrie aici conținutul newsletterului…</p>',
+          bodyHtml: buildNewsletterHtml(NEW_CAMPAIGN_SAMPLE_TEXT, siteUrl),
+          scheduledAt: defaultScheduledAtIso(),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -182,27 +291,62 @@
   }
 
   async function saveDraft() {
-    const data = await patchCampaign(
-      { subject: subjectDraft, bodyHtml: bodyDraft },
-      'Nu am putut salva campania.'
-    );
+    const data = await saveCurrentDraft();
     if (data) success = 'Ciorna a fost salvată.';
   }
 
   async function sendTest() {
+    // The server sends the saved body, so persist the on-screen draft first.
+    if (selected?.status === 'DRAFT') {
+      const saved = await saveCurrentDraft('Nu am putut salva campania.', { includeSchedule: false });
+      if (!saved) return;
+    }
     const data = await patchCampaign({ action: 'test' }, 'Trimiterea testului a eșuat.');
     if (data) success = `Email de test trimis către ${data.sentTo}.`;
   }
 
+  async function saveCurrentDraft(
+    failMessage = 'Nu am putut salva campania.',
+    options: { includeSchedule?: boolean; scheduledAt?: string } = {}
+  ) {
+    const payload: Record<string, unknown> = { subject: subjectDraft, bodyHtml: effectiveHtml };
+    if (options.includeSchedule !== false) {
+      const scheduledAt = options.scheduledAt ?? scheduledAtIsoFromDraft(true);
+      if (!scheduledAt) return null;
+      payload.scheduledAt = scheduledAt;
+    }
+    return patchCampaign(payload, failMessage);
+  }
+
   async function queueCampaign() {
     if (!selected) return;
+    const scheduledAt = scheduledAtIsoFromDraft(true);
+    if (!scheduledAt) return;
+
     const confirmed = confirm(
-      `Pui campania „${selected.subject}” în coada de trimitere către toți abonații activi (${counts.active})? Trimiterea se face automat, câte ~280 de emailuri pe zi.`
+      `Programezi campania „${subjectDraft || selected.subject}” pentru ${formatDate(scheduledAt)} către toți abonații activi (${counts.active})? Trimiterea începe automat la ora aleasă, câte ~280 de emailuri pe zi.`
     );
     if (!confirmed) return;
 
-    const data = await patchCampaign({ action: 'queue' }, 'Nu am putut pune campania în coadă.');
-    if (data) success = `Campania a fost pusă în coadă pentru ${data.totalRecipients} abonați.`;
+    if (selected.status === 'DRAFT') {
+      const saved = await saveCurrentDraft('Nu am putut salva campania înainte de trimitere.', { scheduledAt });
+      if (!saved) return;
+    }
+
+    const data = await patchCampaign({ action: 'queue', scheduledAt }, 'Nu am putut pune campania în coadă.');
+    if (data) success = `Campania a fost programată pentru ${formatDate(data.item?.scheduledAt ?? scheduledAt)} către ${data.totalRecipients} abonați.`;
+  }
+
+  async function rescheduleCampaign() {
+    if (!selected) return;
+    const scheduledAt = scheduledAtIsoFromDraft(true);
+    if (!scheduledAt) return;
+
+    const data = await patchCampaign(
+      { action: 'reschedule', scheduledAt },
+      'Nu am putut actualiza ora trimiterii.'
+    );
+    if (data) success = `Ora trimiterii a fost actualizată pentru ${formatDate(data.item?.scheduledAt ?? scheduledAt)}.`;
   }
 
   async function cancelCampaign() {
@@ -257,7 +401,8 @@
   }
 
   function progressText(item: Campaign) {
-    if (item.status === 'DRAFT') return 'Netrimisă';
+    if (item.status === 'DRAFT') return item.scheduledAt ? `Ciornă pentru ${formatDate(item.scheduledAt)}` : 'Netrimisă';
+    if (isScheduledForFuture(item)) return `Pornește ${formatDate(item.scheduledAt)}`;
     const failed = item.failedCount > 0 ? ` · ${item.failedCount} eșuate` : '';
     return `${item.sentCount} din ${item.totalRecipients} trimise${failed}`;
   }
@@ -276,7 +421,7 @@
     <div>
       <p class="eyebrow">Marketing</p>
       <h1>Newsletter</h1>
-      <p>Campanii de email către abonații care și-au dat acordul. Trimiterea rulează automat, câte ~280 de emailuri pe zi (limita Brevo gratuită).</p>
+      <p>Campanii de email către abonații care și-au dat acordul. Adminul alege ora exactă de pornire, iar trimiterea respectă limita Brevo gratuită de ~280 emailuri pe zi.</p>
     </div>
     <div class="topActions">
       <button class="pill" on:click={() => (tab === 'campaigns' ? loadCampaigns() : loadSubscribers())} disabled={loading}>
@@ -339,7 +484,7 @@
             >
               <div class="requestTop">
                 <strong>{item.subject}</strong>
-                <span class={`tag ${statusClass(item.status)}`}>{statusLabel(item.status)}</span>
+                <span class={`tag ${campaignStatusClass(item)}`}>{campaignStatusLabel(item)}</span>
               </div>
               <p>{progressText(item)}</p>
               <time>{formatDate(item.createdAt)}</time>
@@ -354,15 +499,30 @@
                 <h2>{selected.status === 'DRAFT' ? 'Editează ciorna' : selected.subject}</h2>
                 <p>Creată {formatDate(selected.createdAt)}{selected.sentAt ? ` · finalizată ${formatDate(selected.sentAt)}` : ''}</p>
               </div>
-              <span class={`tag ${statusClass(selected.status)}`}>{statusLabel(selected.status)}</span>
+              <span class={`tag ${campaignStatusClass(selected)}`}>{campaignStatusLabel(selected)}</span>
             </header>
+
+            <div class="campaignActions" role="group" aria-label="Acțiuni campanie newsletter">
+              <button type="button" disabled={saving} on:click={sendTest}>
+                <i class="bi bi-send"></i> Trimite test
+              </button>
+              {#if selected.status === 'DRAFT'}
+                <button class="primary" type="button" disabled={saving} on:click={queueCampaign}>
+                  <i class="bi bi-envelope-arrow-up"></i> Pune în coada de trimitere
+                </button>
+              {:else if selected.status === 'SENDING'}
+                <button class="dangerBtn" type="button" disabled={saving} on:click={cancelCampaign}>
+                  <i class="bi bi-x-circle"></i> Anulează trimiterea
+                </button>
+              {/if}
+            </div>
 
             {#if selected.status !== 'DRAFT'}
               <div class="progressBox">
                 <div class="progressTop">
                   <strong>{progressText(selected)}</strong>
                   {#if selected.status === 'SENDING'}
-                    <span>Restul se trimit automat în zilele următoare.</span>
+                    <span>{isScheduledForFuture(selected) ? 'Trimiterea pornește la ora programată.' : 'Restul se trimit automat în zilele următoare.'}</span>
                   {/if}
                 </div>
                 <div class="progressBar" role="progressbar" aria-valuemin="0" aria-valuemax={selected.totalRecipients} aria-valuenow={selected.sentCount}>
@@ -380,16 +540,64 @@
                 disabled={selected.status !== 'DRAFT' || saving}
               />
 
+              <div class="scheduleField">
+                <label for="campaign-scheduled-at">Ora trimiterii</label>
+                <div class="scheduleControls">
+                  <input
+                    id="campaign-scheduled-at"
+                    type="datetime-local"
+                    bind:value={scheduledAtDraft}
+                    min={minScheduledAt}
+                    disabled={!canEditSchedule(selected) || saving}
+                  />
+                  {#if selected.status === 'SENDING' && selected.sentCount === 0 && selected.failedCount === 0}
+                    <button type="button" class="pill small" disabled={saving} on:click={rescheduleCampaign}>
+                      <i class="bi bi-clock-history"></i> Actualizează ora
+                    </button>
+                  {/if}
+                </div>
+                <p class="hint">Ora este interpretată în fusul orar al browserului adminului. Cronul pornește trimiterea la primul rulaj după această oră.</p>
+              </div>
+
               <div class="editorHead">
-                <label for="campaign-body">Conținut (HTML)</label>
+                <div class="modeToggle" role="group" aria-label="Mod de editare">
+                  <button
+                    type="button"
+                    class:active={editorMode === 'text'}
+                    on:click={() => switchEditorMode('text')}
+                  >
+                    <i class="bi bi-fonts"></i> Text
+                  </button>
+                  <button
+                    type="button"
+                    class:active={editorMode === 'html'}
+                    on:click={() => switchEditorMode('html')}
+                  >
+                    <i class="bi bi-code-slash"></i> HTML (avansat)
+                  </button>
+                </div>
                 <button type="button" class="pill small" on:click={() => (showPreview = !showPreview)}>
-                  <i class={`bi ${showPreview ? 'bi-code-slash' : 'bi-eye'}`}></i>
+                  <i class={`bi ${showPreview ? 'bi-pencil' : 'bi-eye'}`}></i>
                   {showPreview ? 'Editează' : 'Previzualizează'}
                 </button>
               </div>
 
               {#if showPreview}
-                <iframe class="preview" title="Previzualizare email" sandbox="" srcdoc={bodyDraft}></iframe>
+                <iframe
+                  class="preview"
+                  title="Previzualizare email"
+                  sandbox=""
+                  srcdoc={wrapEmailShell(effectiveHtml, PREVIEW_FOOTER)}
+                ></iframe>
+              {:else if editorMode === 'text'}
+                <textarea
+                  id="campaign-body"
+                  rows="12"
+                  class="plainText"
+                  bind:value={textDraft}
+                  disabled={selected.status !== 'DRAFT' || saving}
+                  placeholder="Scrie aici textul newsletterului…"
+                ></textarea>
               {:else}
                 <textarea
                   id="campaign-body"
@@ -401,7 +609,13 @@
               {/if}
 
               <p class="hint">
-                Footerul cu identitatea expeditorului și linkul de dezabonare se adaugă automat la trimitere.
+                {#if editorMode === 'text'}
+                  Scrie doar textul — logo-ul, imaginile, butonul „Vezi produsele” și footerul de dezabonare
+                  se adaugă automat. Paragrafele se separă cu o linie goală; începe o linie cu „# ” pentru un titlu.
+                {:else}
+                  Editezi HTML-ul brut al conținutului. Footerul cu identitatea expeditorului și linkul de
+                  dezabonare se adaugă automat la trimitere.
+                {/if}
               </p>
 
               <div class="statusActions">
@@ -409,21 +623,8 @@
                   <button type="button" disabled={saving} on:click={deleteDraft}>
                     <i class="bi bi-trash"></i> Șterge
                   </button>
-                  <button type="button" disabled={saving} on:click={sendTest}>
-                    <i class="bi bi-send"></i> Trimite test
-                  </button>
                   <button type="button" disabled={saving} on:click={saveDraft}>
                     {saving ? 'Se salvează…' : 'Salvează'}
-                  </button>
-                  <button class="primary" type="button" disabled={saving} on:click={queueCampaign}>
-                    <i class="bi bi-envelope-arrow-up"></i> Pune în coadă
-                  </button>
-                {:else if selected.status === 'SENDING'}
-                  <button type="button" disabled={saving} on:click={sendTest}>
-                    <i class="bi bi-send"></i> Trimite test
-                  </button>
-                  <button class="dangerBtn" type="button" disabled={saving} on:click={cancelCampaign}>
-                    <i class="bi bi-x-circle"></i> Anulează trimiterea
                   </button>
                 {/if}
               </div>
@@ -512,6 +713,7 @@
 
   .pill,
   .filters button,
+  .campaignActions button,
   .statusActions button {
     min-height: 44px;
     border: 1px solid var(--line);
@@ -533,13 +735,13 @@
   }
 
   .pill.primary,
-  .statusActions .primary {
+  .campaignActions .primary {
     background: var(--accent);
     color: #fffdf7;
     border-color: transparent;
   }
 
-  .statusActions .dangerBtn {
+  .campaignActions .dangerBtn {
     color: #842029;
     border-color: #facaca;
     background: #fff1f1;
@@ -716,15 +918,43 @@
     transition: width 0.3s ease;
   }
 
+  .campaignActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    margin: -4px 0 16px;
+  }
+
   .composer {
     display: grid;
     gap: 10px;
   }
 
-  .composer > label,
-  .editorHead label {
+  .composer > label {
     font-weight: 950;
     color: var(--ink);
+  }
+
+  .scheduleField {
+    display: grid;
+    gap: 8px;
+  }
+
+  .scheduleField label {
+    font-weight: 950;
+    color: var(--ink);
+  }
+
+  .scheduleControls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .scheduleControls input {
+    flex: 1 1 240px;
   }
 
   .editorHead {
@@ -732,6 +962,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
   }
 
   .composer input,
@@ -751,6 +982,39 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-weight: 500;
     font-size: 0.9rem;
+  }
+
+  textarea.plainText {
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .modeToggle {
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .modeToggle button {
+    min-height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0 13px;
+    background: var(--surface);
+    color: var(--muted);
+    font-weight: 900;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .modeToggle button.active {
+    background: rgba(139, 212, 80, 0.22);
+    color: var(--accent);
+    border-color: rgba(139, 212, 80, 0.4);
   }
 
   .preview {
@@ -841,8 +1105,19 @@
       display: grid;
     }
 
+    .campaignActions button,
+    .scheduleControls .pill,
     .statusActions button {
       width: 100%;
+      justify-content: center;
+    }
+
+    .modeToggle {
+      width: 100%;
+    }
+
+    .modeToggle button {
+      flex: 1 1 140px;
       justify-content: center;
     }
   }

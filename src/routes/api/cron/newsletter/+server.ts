@@ -5,9 +5,10 @@ import { createAdminClient } from '$lib/server/supabase';
 import { getNewsletterEnv } from '$lib/server/newsletter/env';
 import { MAX_SEND_ATTEMPTS, sendEmail } from '$lib/server/newsletter/brevo';
 import { renderCampaignEmail } from '$lib/server/newsletter/render';
+import { isCampaignReadyToSend, utcDayStartIso } from '$lib/server/newsletter/schedule';
 
-// ~280 sends at concurrency 5 stay far below this, but a slow Brevo day
-// (8s timeout per call) needs the headroom.
+// The cron runs frequently so admins can choose a minute-level send time. The
+// route still enforces NEWSLETTER_DAILY_LIMIT across the UTC day.
 export const config = { maxDuration: 300 };
 
 const SEND_CONCURRENCY = 5;
@@ -23,6 +24,13 @@ type QueueRow = {
   } | null;
 };
 
+type CampaignRow = {
+  campaign_id: number;
+  subject: string;
+  body_html: string;
+  scheduled_at: string | null;
+};
+
 function chunk<T>(items: T[], size: number) {
   const chunks: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -31,8 +39,8 @@ function chunk<T>(items: T[], size: number) {
   return chunks;
 }
 
-// Daily sender behind Vercel Cron. Drains up to NEWSLETTER_DAILY_LIMIT pending
-// queue rows per run (Brevo free tier: 300/day), oldest campaign first.
+// Sender behind Vercel Cron. Drains eligible campaign queues after their
+// scheduled time, while keeping the daily Brevo free-tier cap intact.
 export async function GET({ request }: RequestEvent) {
   let env: ReturnType<typeof getNewsletterEnv>;
   try {
@@ -48,31 +56,62 @@ export async function GET({ request }: RequestEvent) {
 
   try {
     const admin = createAdminClient();
+    const now = new Date();
+    const todayStartIso = utcDayStartIso(now);
+
+    const { count: sentToday, error: sentTodayError } = await admin
+      .from('newsletter_queue')
+      .select('queue_id', { count: 'exact', head: true })
+      .eq('status', 'SENT')
+      .gte('sent_at', todayStartIso);
+    if (sentTodayError) throw sentTodayError;
+
+    const remainingToday = Math.max(0, env.dailyLimit - (sentToday ?? 0));
+    if (remainingToday <= 0) {
+      return json(
+        { processed: 0, sent: 0, failed: 0, skipped: 0, dailyLimitReached: true },
+        { status: 200 }
+      );
+    }
+
+    const { data: sendingCampaigns, error: campaignsError } = await admin
+      .from('newsletter_campaigns')
+      .select('campaign_id, subject, body_html, scheduled_at')
+      .eq('status', 'SENDING')
+      .order('campaign_id', { ascending: true });
+    if (campaignsError) throw campaignsError;
+
+    const eligibleCampaigns = ((sendingCampaigns ?? []) as unknown as CampaignRow[]).filter((campaign) =>
+      isCampaignReadyToSend(campaign.scheduled_at, now)
+    );
+    const eligibleCampaignIds = eligibleCampaigns.map((campaign) => Number(campaign.campaign_id));
+
+    if (eligibleCampaignIds.length === 0) {
+      return json(
+        { processed: 0, sent: 0, failed: 0, skipped: 0, dailyLimitReached: false },
+        { status: 200 }
+      );
+    }
 
     const { data: pendingRows, error: pendingError } = await admin
       .from('newsletter_queue')
       .select('queue_id, campaign_id, attempts, newsletter_subscribers(email, unsubscribe_token, unsubscribed_at)')
+      .in('campaign_id', eligibleCampaignIds)
       .eq('status', 'PENDING')
       .order('campaign_id', { ascending: true })
       .order('queue_id', { ascending: true })
-      .limit(env.dailyLimit);
+      .limit(remainingToday);
     if (pendingError) throw pendingError;
 
     const rows = (pendingRows ?? []) as unknown as QueueRow[];
     const campaignIds = [...new Set(rows.map((row) => row.campaign_id))];
 
     const campaigns = new Map<number, { subject: string; body_html: string }>();
-    if (campaignIds.length > 0) {
-      const { data, error } = await admin
-        .from('newsletter_campaigns')
-        .select('campaign_id, subject, body_html, status')
-        .in('campaign_id', campaignIds);
-      if (error) throw error;
-      for (const row of data ?? []) {
-        if (row.status === 'SENDING') {
-          campaigns.set(Number(row.campaign_id), { subject: row.subject, body_html: row.body_html });
-        }
-      }
+    for (const campaign of eligibleCampaigns) {
+      campaigns.set(Number(campaign.campaign_id), {
+        subject: campaign.subject,
+        body_html: campaign.body_html,
+      });
     }
 
     let sent = 0;
@@ -184,7 +223,7 @@ export async function GET({ request }: RequestEvent) {
       }
     }
 
-    return json({ processed: rows.length, sent, failed, skipped }, { status: 200 });
+    return json({ processed: rows.length, sent, failed, skipped, dailyLimitReached: false }, { status: 200 });
   } catch (error) {
     const requestId = logRouteError('Newsletter cron failed', error);
     return json({ error: 'Trimiterea newsletterului a eșuat.', requestId }, { status: 500 });
