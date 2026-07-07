@@ -8,6 +8,10 @@
 
   const MAX_VISIBLE_SLIDER_ITEMS = 4;
   const SLIDER_SETTLE_DELAY = 130;
+  const FIRST_SLIDER_NUDGE_DELAY = 4000;
+  const MIN_SLIDER_NUDGE_DELAY = 15000;
+  const MAX_SLIDER_NUDGE_DELAY = 20000;
+  const SLIDER_NUDGE_DURATION = 1500;
 
   let products: Product[] = [];
   let events: Event[] = [];
@@ -20,6 +24,10 @@
   let sezonSliderViewport: HTMLDivElement | null = null;
   let borcaneScrollTimer: number | null = null;
   let sezonScrollTimer: number | null = null;
+  let sliderNudgeTimer: number | null = null;
+  let sliderNudgeResetTimer: number | null = null;
+  let borcaneNudge = false;
+  let sezonNudge = false;
   let sortedProducts: Product[] = [];
   let borcaneProducts: Product[] = [];
   let sezonProducts: Product[] = [];
@@ -112,6 +120,7 @@
     })();
 
     window.addEventListener('resize', updateVisibleSliderItems);
+    scheduleSliderNudge(FIRST_SLIDER_NUDGE_DELAY);
 
     return () => {
       mounted = false;
@@ -164,6 +173,16 @@
       window.clearTimeout(sezonScrollTimer);
       sezonScrollTimer = null;
     }
+
+    if (sliderNudgeTimer !== null) {
+      window.clearTimeout(sliderNudgeTimer);
+      sliderNudgeTimer = null;
+    }
+
+    if (sliderNudgeResetTimer !== null) {
+      window.clearTimeout(sliderNudgeResetTimer);
+      sliderNudgeResetTimer = null;
+    }
   }
 
   function clampSliderIndex(value: number, max: number) {
@@ -173,6 +192,52 @@
   function shouldAnimateSlider() {
     if (typeof window === 'undefined') return false;
     return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function randomSliderNudgeDelay() {
+    return Math.floor(
+      MIN_SLIDER_NUDGE_DELAY + Math.random() * (MAX_SLIDER_NUDGE_DELAY - MIN_SLIDER_NUDGE_DELAY)
+    );
+  }
+
+  function scheduleSliderNudge(delay = randomSliderNudgeDelay()) {
+    if (typeof window === 'undefined' || !shouldAnimateSlider()) return;
+
+    if (sliderNudgeTimer !== null) {
+      window.clearTimeout(sliderNudgeTimer);
+    }
+
+    sliderNudgeTimer = window.setTimeout(() => {
+      sliderNudgeTimer = null;
+      triggerSliderNudge();
+      scheduleSliderNudge();
+    }, delay);
+  }
+
+  function triggerSliderNudge() {
+    if (typeof window === 'undefined' || !shouldAnimateSlider()) return;
+
+    const availableSliders = [
+      { key: 'borcane', canNudge: borcaneProducts.length > visibleSliderItems },
+      { key: 'sezon', canNudge: sezonProducts.length > visibleSliderItems },
+    ].filter((item) => item.canNudge);
+
+    if (availableSliders.length === 0) return;
+
+    const target = availableSliders[Math.floor(Math.random() * availableSliders.length)]?.key;
+
+    borcaneNudge = target === 'borcane';
+    sezonNudge = target === 'sezon';
+
+    if (sliderNudgeResetTimer !== null) {
+      window.clearTimeout(sliderNudgeResetTimer);
+    }
+
+    sliderNudgeResetTimer = window.setTimeout(() => {
+      borcaneNudge = false;
+      sezonNudge = false;
+      sliderNudgeResetTimer = null;
+    }, SLIDER_NUDGE_DURATION);
   }
 
   function getSliderItems(viewport: HTMLDivElement | null) {
@@ -422,7 +487,7 @@
               <h3 id="borcane-slider-title">Borcane</h3>
             </div>
 
-            <div class="slider-controls">
+            <div class="slider-meta">
               <span class="slider-count">
                 {#if borcaneProducts.length > 0}
                   {borcaneSlideIndex + 1}–{Math.min(borcaneSlideIndex + visibleSliderItems, borcaneProducts.length)} din {borcaneProducts.length}
@@ -430,26 +495,19 @@
                   0 produse
                 {/if}
               </span>
-              <button
-                type="button"
-                class="slider-btn"
-                aria-label="Produsele la borcan anterioare"
-                disabled={borcaneSlideIndex === 0}
-                on:click={() => moveBorcaneSlider(-1)}
-              >
-                <i class="bi bi-chevron-left"></i>
-              </button>
-              <button
-                type="button"
-                class="slider-btn"
-                aria-label="Produsele la borcan următoare"
-                disabled={borcaneSlideIndex >= borcaneMaxIndex}
-                on:click={() => moveBorcaneSlider(1)}
-              >
-                <i class="bi bi-chevron-right"></i>
-              </button>
             </div>
           </div>
+
+          <div class="slider-shell">
+            <button
+              type="button"
+              class="slider-btn slider-btn-side slider-btn-prev"
+              aria-label="Produsele la borcan anterioare"
+              disabled={borcaneSlideIndex === 0}
+              on:click={() => moveBorcaneSlider(-1)}
+            >
+              <i class="bi bi-chevron-left"></i>
+            </button>
 
             <div
               class="slider-window"
@@ -461,7 +519,7 @@
               on:touchend={settleBorcaneSlider}
               on:pointerup={settleBorcaneSlider}
             >
-              <div class="slider-track">
+              <div class="slider-track" class:slider-track-nudge={borcaneNudge}>
                 {#each borcaneProducts as product, index (product.id)}
                   <div class="grid-item slider-item" data-slide-index={index}>
                     <ProductCard {product} />
@@ -469,6 +527,17 @@
                 {/each}
               </div>
             </div>
+
+            <button
+              type="button"
+              class="slider-btn slider-btn-side slider-btn-next"
+              aria-label="Produsele la borcan următoare"
+              disabled={borcaneSlideIndex >= borcaneMaxIndex}
+              on:click={() => moveBorcaneSlider(1)}
+            >
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
         </section>
         {/if}
 
@@ -480,7 +549,7 @@
               <h3 id="sezon-slider-title">Produse de sezon</h3>
             </div>
 
-            <div class="slider-controls">
+            <div class="slider-meta">
               <span class="slider-count">
                 {#if sezonProducts.length > 0}
                   {sezonSlideIndex + 1}–{Math.min(sezonSlideIndex + visibleSliderItems, sezonProducts.length)} din {sezonProducts.length}
@@ -488,26 +557,19 @@
                   0 produse
                 {/if}
               </span>
-              <button
-                type="button"
-                class="slider-btn"
-                aria-label="Produsele de sezon anterioare"
-                disabled={sezonSlideIndex === 0}
-                on:click={() => moveSezonSlider(-1)}
-              >
-                <i class="bi bi-chevron-left"></i>
-              </button>
-              <button
-                type="button"
-                class="slider-btn"
-                aria-label="Produsele de sezon următoare"
-                disabled={sezonSlideIndex >= sezonMaxIndex}
-                on:click={() => moveSezonSlider(1)}
-              >
-                <i class="bi bi-chevron-right"></i>
-              </button>
             </div>
           </div>
+
+          <div class="slider-shell">
+            <button
+              type="button"
+              class="slider-btn slider-btn-side slider-btn-prev"
+              aria-label="Produsele de sezon anterioare"
+              disabled={sezonSlideIndex === 0}
+              on:click={() => moveSezonSlider(-1)}
+            >
+              <i class="bi bi-chevron-left"></i>
+            </button>
 
             <div
               class="slider-window"
@@ -519,7 +581,7 @@
               on:touchend={settleSezonSlider}
               on:pointerup={settleSezonSlider}
             >
-              <div class="slider-track">
+              <div class="slider-track" class:slider-track-nudge={sezonNudge}>
                 {#each sezonProducts as product, index (product.id)}
                   <div class="grid-item slider-item" data-slide-index={index}>
                     <ProductCard {product} />
@@ -527,6 +589,17 @@
                 {/each}
               </div>
             </div>
+
+            <button
+              type="button"
+              class="slider-btn slider-btn-side slider-btn-next"
+              aria-label="Produsele de sezon următoare"
+              disabled={sezonSlideIndex >= sezonMaxIndex}
+              on:click={() => moveSezonSlider(1)}
+            >
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
         </section>
         {/if}
       </div>
@@ -779,7 +852,8 @@
     letter-spacing: -0.01em;
   }
 
-  .slider-controls {
+  .slider-controls,
+  .slider-meta {
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -831,15 +905,55 @@
     cursor: not-allowed;
   }
 
+  .slider-btn-side {
+    position: absolute;
+    top: 50%;
+    z-index: 4;
+    width: 52px;
+    height: 58px;
+    font-size: 1.45rem;
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(var(--accent-rgb), 0.34);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  }
+
+  .slider-btn-prev {
+    left: 8px;
+    transform: translateY(-50%);
+  }
+
+  .slider-btn-next {
+    right: 8px;
+    transform: translateY(-50%);
+  }
+
+  .slider-btn-prev:hover:not(:disabled),
+  .slider-btn-prev:focus-visible:not(:disabled),
+  .slider-btn-next:hover:not(:disabled),
+  .slider-btn-next:focus-visible:not(:disabled) {
+    transform: translateY(-50%) scale(1.03);
+  }
+
+  .slider-btn-prev:active:not(:disabled),
+  .slider-btn-next:active:not(:disabled) {
+    transform: translateY(-50%) scale(0.98);
+  }
+
+  .slider-shell {
+    position: relative;
+    padding: 0 58px;
+  }
+
   .slider-window {
     --slider-gap: 14px;
+    --slider-peek-distance: min(140px, 36vw);
     position: relative;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 14px;
+    padding: 14px 0;
     scroll-behavior: smooth;
     scroll-snap-type: x mandatory;
-    scroll-padding-inline: 14px;
+    scroll-padding-inline: 0;
     scrollbar-width: none;
     overscroll-behavior-inline: contain;
     -webkit-overflow-scrolling: touch;
@@ -868,6 +982,22 @@
     align-items: stretch;
   }
 
+  .slider-track-nudge {
+    animation: slider-peek 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes slider-peek {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    42%,
+    62% {
+      transform: translateX(calc(-1 * var(--slider-peek-distance)));
+    }
+  }
+
   .slider-item {
     flex: 0 0 calc((100% - var(--slider-gap)) / 2);
     min-width: 0;
@@ -876,10 +1006,29 @@
   }
 
   @media (max-width: 575.98px) {
+    .slider-shell {
+      padding: 0 44px;
+    }
+
     .slider-window {
       --slider-gap: 10px;
-      padding: 10px;
-      scroll-padding-inline: 10px;
+      --slider-peek-distance: min(112px, 42vw);
+      padding: 10px 0;
+      scroll-padding-inline: 0;
+    }
+
+    .slider-btn-side {
+      width: 38px;
+      height: 50px;
+      font-size: 1.18rem;
+    }
+
+    .slider-btn-prev {
+      left: 4px;
+    }
+
+    .slider-btn-next {
+      right: 4px;
     }
   }
 
@@ -1093,6 +1242,11 @@
 
     .slider-btn {
       transition: none;
+    }
+
+    .slider-track-nudge {
+      animation: none;
+      transform: none;
     }
   }
 

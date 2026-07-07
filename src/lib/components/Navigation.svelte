@@ -173,7 +173,10 @@
     <a class="navbar-brand brand" href="/" aria-label="DeSaga cu Legume - Acasă">
       <img src={logoUrl} alt="" height="38" class="brand-logo" />
       <span class="brand-text">
-        <span class="brand-name">DeSaga cu Legume</span>
+        <span class="brand-name">
+          <span class="brand-line">DeSaga cu</span>
+          <span class="brand-line">Legume</span>
+        </span>
         <span class="brand-subtitle">fermă locală</span>
       </span>
     </a>
@@ -265,12 +268,6 @@
     <div class="mobile-actions d-lg-none">
       <a class="mobile-call" href={phoneHref} aria-label="Sună DeSaga">
         <i class="bi bi-telephone-fill"></i>
-      </a>
-      <a class={`mobile-cart ${navActive(currentPath, '/cos')}`} href="/cos" aria-label={$cartCount > 0 ? `Coș, ${$cartCount} produse` : 'Coș'}>
-        <i class="bi bi-basket"></i>
-        {#if $cartCount > 0}
-          <span class="cart-badge">{$cartCount}</span>
-        {/if}
       </a>
       <a class={`mobile-account ${navActive(currentPath, accountHref)}`} href={accountHref} aria-label={$auth.isAuthenticated ? 'Contul meu' : 'Intră în cont'}>
         <i class={'bi ' + accountIcon}></i>
@@ -498,10 +495,16 @@
   }
 
   .brand-name {
+    display: inline-flex;
+    align-items: baseline;
     font-weight: 950;
     font-size: 1.08rem;
     color: var(--desaga-heading);
     white-space: nowrap;
+  }
+
+  .brand-line + .brand-line::before {
+    content: ' ';
   }
 
   .brand-subtitle {
@@ -1121,16 +1124,24 @@
     }
 
     .brand-name {
-      max-width: 42vw;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      display: grid;
+      max-width: none;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+      line-height: 0.96;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-line + .brand-line::before {
+      content: '';
     }
   }
 
   @media (max-width: 420px) {
     .brand-name {
-      max-width: 34vw;
-      font-size: 0.98rem;
+      font-size: 0.94rem;
     }
 
     .brand-logo {
