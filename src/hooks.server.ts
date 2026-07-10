@@ -31,6 +31,14 @@ const AUTH_ATTEMPT_PATHS = new Set([
   '/api/auth/change-password',
 ]);
 const CHECKOUT_PATHS = new Set(['/api/checkout']);
+// Server-to-server calls arrive without Origin/Referer, so the same-origin
+// check would always reject them; these routes authenticate the caller
+// themselves (Stripe webhook signature verification).
+const SIGNED_WEBHOOK_PATHS = new Set(['/api/stripe/webhook']);
+
+function requiresSameOrigin(pathname: string) {
+  return !SIGNED_WEBHOOK_PATHS.has(pathname);
+}
 
 function csrfErrorResponse() {
   return json({ error: 'Cerere respinsă.' }, { status: 403 });
@@ -81,7 +89,7 @@ async function enforceRequestEnvelope(event: RequestEvent) {
   const { pathname } = event.url;
   if (!pathname.startsWith('/api')) return null;
 
-  if (!isAllowedSameOriginRequest(event.request, event.url)) {
+  if (requiresSameOrigin(pathname) && !isAllowedSameOriginRequest(event.request, event.url)) {
     return csrfErrorResponse();
   }
 
@@ -151,7 +159,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     return decoyResponse;
   }
 
-  if (!isAllowedSameOriginRequest(event.request, event.url)) {
+  if (requiresSameOrigin(event.url.pathname) && !isAllowedSameOriginRequest(event.request, event.url)) {
     const response = csrfErrorResponse();
     setSecurityHeaders(response.headers, event, env.publicSupabaseUrl);
     return response;

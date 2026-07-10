@@ -8,6 +8,8 @@
 
   const MAX_VISIBLE_SLIDER_ITEMS = 4;
   const SLIDER_SETTLE_DELAY = 130;
+  const SLIDER_ANIMATION_DURATION = 480;
+  const SLIDER_ARROW_STEP = 3;
   const FIRST_SLIDER_NUDGE_DELAY = 4000;
   const MIN_SLIDER_NUDGE_DELAY = 15000;
   const MAX_SLIDER_NUDGE_DELAY = 20000;
@@ -45,12 +47,6 @@
     schedule: 'L–V: 9:00–18:00',
   };
 
-  const heroFacts = [
-    { href: '/contact', icon: 'bi-geo-alt-fill', label: contact.address },
-    { href: '/contact', icon: 'bi-clock-fill', label: contact.schedule },
-    { href: contact.phoneHref, icon: 'bi-telephone-fill', label: contact.phone },
-  ];
-
   const orderSteps = [
     {
       title: 'Alegi produsele',
@@ -63,24 +59,6 @@
     {
       title: 'Ridici sau primești livrarea',
       text: 'Ridicare de la rulota DeSaga sau livrare în Cluj\u2011Napoca, confirmată telefonic.',
-    },
-  ];
-
-  const trustItems = [
-    {
-      icon: 'bi-arrow-repeat',
-      title: 'Stoc actualizat după recoltă',
-      text: 'Disponibilitatea se schimbă natural. Produsele afișate vin din catalogul aplicației.',
-    },
-    {
-      icon: 'bi-bag-check',
-      title: 'Coș conectat la produsele reale',
-      text: 'Adaugi produse direct din lista încărcată prin API, fără liste statice separate.',
-    },
-    {
-      icon: 'bi-telephone',
-      title: 'Confirmare rapidă',
-      text: 'Pentru stoc, ridicare și livrare, ai numărul de telefon vizibil în primul ecran.',
     },
   ];
 
@@ -183,6 +161,9 @@
       window.clearTimeout(sliderNudgeResetTimer);
       sliderNudgeResetTimer = null;
     }
+
+    cancelSliderAnimation(borcaneSliderViewport);
+    cancelSliderAnimation(sezonSliderViewport);
   }
 
   function clampSliderIndex(value: number, max: number) {
@@ -279,6 +260,77 @@
     return clampSliderIndex(nearestIndex, maxIndex);
   }
 
+  // Scripted arrow animation instead of native smooth scrollTo: with
+  // scroll-snap-type mandatory, native smooth scrolling jumps instantly in
+  // Safari and can be cut short elsewhere, so the slide was not visible.
+  type SliderAnimation = { frame: number; restoreSnap: string; restoreBehavior: string };
+  const sliderAnimations = new Map<HTMLDivElement, SliderAnimation>();
+
+  function cancelSliderAnimation(viewport: HTMLDivElement | null) {
+    if (!viewport) return;
+
+    const animation = sliderAnimations.get(viewport);
+    if (!animation) return;
+
+    cancelAnimationFrame(animation.frame);
+    viewport.style.scrollSnapType = animation.restoreSnap;
+    viewport.style.scrollBehavior = animation.restoreBehavior;
+    sliderAnimations.delete(viewport);
+  }
+
+  function isSliderAnimating(viewport: HTMLDivElement | null) {
+    return Boolean(viewport && sliderAnimations.has(viewport));
+  }
+
+  function animateSliderTo(viewport: HTMLDivElement, targetLeft: number) {
+    const from = viewport.scrollLeft;
+    const delta = targetLeft - from;
+
+    if (Math.abs(delta) < 1) {
+      cancelSliderAnimation(viewport);
+      return;
+    }
+
+    // Keep the original inline values across chained clicks: a restarted
+    // animation must not capture the temporary 'none'/'auto' as the restore
+    // point.
+    const existing = sliderAnimations.get(viewport);
+    const restoreSnap = existing ? existing.restoreSnap : viewport.style.scrollSnapType;
+    const restoreBehavior = existing ? existing.restoreBehavior : viewport.style.scrollBehavior;
+    if (existing) cancelAnimationFrame(existing.frame);
+
+    // Mandatory snap and CSS smooth behavior both fight a scripted scroll;
+    // park them while the animation runs.
+    viewport.style.scrollSnapType = 'none';
+    viewport.style.scrollBehavior = 'auto';
+
+    const startTime = performance.now();
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const stepFrame = (now: number) => {
+      const progress = Math.min(1, (now - startTime) / SLIDER_ANIMATION_DURATION);
+      viewport.scrollLeft = from + delta * easeOutCubic(progress);
+
+      if (progress < 1) {
+        sliderAnimations.set(viewport, {
+          frame: requestAnimationFrame(stepFrame),
+          restoreSnap,
+          restoreBehavior,
+        });
+      } else {
+        viewport.style.scrollSnapType = restoreSnap;
+        viewport.style.scrollBehavior = restoreBehavior;
+        sliderAnimations.delete(viewport);
+      }
+    };
+
+    sliderAnimations.set(viewport, {
+      frame: requestAnimationFrame(stepFrame),
+      restoreSnap,
+      restoreBehavior,
+    });
+  }
+
   async function scrollSliderToIndex(viewport: HTMLDivElement | null, index: number, smooth = true) {
     await tick();
 
@@ -286,10 +338,16 @@
 
     const left = getSliderLeftForIndex(viewport, index);
 
-    viewport.scrollTo({
-      left,
-      behavior: smooth && shouldAnimateSlider() ? 'smooth' : 'auto',
-    });
+    // Deliberately not gated on prefers-reduced-motion: OS-level "animations
+    // off" (e.g. GNOME) would otherwise make arrow presses jump instantly.
+    // This is short, user-initiated, functional motion; only the decorative
+    // idle nudge respects the OS setting (shouldAnimateSlider).
+    if (smooth) {
+      animateSliderTo(viewport, left);
+    } else {
+      cancelSliderAnimation(viewport);
+      viewport.scrollTo({ left, behavior: 'auto' });
+    }
   }
 
   function settleSlider(
@@ -343,7 +401,7 @@
   }
 
   function handleBorcaneScroll() {
-    if (!borcaneSliderViewport) return;
+    if (!borcaneSliderViewport || isSliderAnimating(borcaneSliderViewport)) return;
 
     const nearestIndex = getNearestSliderIndex(borcaneSliderViewport, borcaneMaxIndex);
 
@@ -355,7 +413,7 @@
   }
 
   function handleSezonScroll() {
-    if (!sezonSliderViewport) return;
+    if (!sezonSliderViewport || isSliderAnimating(sezonSliderViewport)) return;
 
     const nearestIndex = getNearestSliderIndex(sezonSliderViewport, sezonMaxIndex);
 
@@ -367,7 +425,7 @@
   }
 
   function moveBorcaneSlider(direction: 1 | -1) {
-    const nextIndex = clampSliderIndex(borcaneSlideIndex + direction, borcaneMaxIndex);
+    const nextIndex = clampSliderIndex(borcaneSlideIndex + direction * SLIDER_ARROW_STEP, borcaneMaxIndex);
     if (nextIndex === borcaneSlideIndex) return;
 
     borcaneSlideIndex = nextIndex;
@@ -375,7 +433,7 @@
   }
 
   function moveSezonSlider(direction: 1 | -1) {
-    const nextIndex = clampSliderIndex(sezonSlideIndex + direction, sezonMaxIndex);
+    const nextIndex = clampSliderIndex(sezonSlideIndex + direction * SLIDER_ARROW_STEP, sezonMaxIndex);
     if (nextIndex === sezonSlideIndex) return;
 
     sezonSlideIndex = nextIndex;
@@ -406,16 +464,12 @@
 </svelte:head>
 
 <Hero
-  eyebrow="DeSaga cu Legume"
   title={heroTitle}
-  subtitle="Vezi stocul de azi, adaugă produsele în coș și ridică de la rulota DeSaga. Pentru confirmare rapidă, sună direct."
+  subtitle="Vezi stocul de azi, adaugă produsele în coș și ridică de la rulota DeSaga sau primește livrarea în Cluj-Napoca."
   backgroundImage="/images/home/hero-produse-locale.jpg"
   height="430px"
   primaryHref="/produse"
   primaryLabel="Vezi produsele disponibile"
-  secondaryHref={contact.phoneHref}
-  secondaryLabel="Sună acum"
-  facts={heroFacts}
 />
 
 <section class="section">
@@ -516,6 +570,8 @@
               aria-live="polite"
               role="region"
               on:scroll={handleBorcaneScroll}
+              on:touchstart={() => cancelSliderAnimation(borcaneSliderViewport)}
+              on:wheel={() => cancelSliderAnimation(borcaneSliderViewport)}
               on:touchend={settleBorcaneSlider}
               on:pointerup={settleBorcaneSlider}
             >
@@ -578,6 +634,8 @@
               aria-live="polite"
               role="region"
               on:scroll={handleSezonScroll}
+              on:touchstart={() => cancelSliderAnimation(sezonSliderViewport)}
+              on:wheel={() => cancelSliderAnimation(sezonSliderViewport)}
               on:touchend={settleSezonSlider}
               on:pointerup={settleSezonSlider}
             >
@@ -631,89 +689,16 @@
         </article>
       {/each}
     </div>
+
+    <p class="order-note">
+      Ridicare de la rulota DeSaga ({contact.shortAddress}, {contact.schedule}) sau livrare în
+      Cluj&#8209;Napoca — detaliile se confirmă telefonic la
+      <a href={contact.phoneHref}>{contact.phone}</a>.
+    </p>
   </div>
 </section>
 
 <section class="section">
-  <div class="container">
-    <div class="grid two-col">
-      <div class="panel panel-soft">
-        <div class="panel-head">
-          <h2 class="h5 fw-bold m-0">
-            <i class="bi bi-shop-window"></i> Ridicare și livrare
-          </h2>
-          <span class="badge-soft">confirmare rapidă</span>
-        </div>
-
-        <div class="list">
-          <div class="list-row">
-            <span class="list-icon"><i class="bi bi-geo-alt-fill"></i></span>
-            <div class="list-text">
-              <div class="list-title">Ridicare de la rulota DeSaga</div>
-              <div class="list-sub">{contact.address}</div>
-            </div>
-          </div>
-
-          <div class="list-row">
-            <span class="list-icon"><i class="bi bi-clock-fill"></i></span>
-            <div class="list-text">
-              <div class="list-title">Program</div>
-              <div class="list-sub">{contact.schedule}</div>
-            </div>
-          </div>
-
-          <div class="list-row">
-            <span class="list-icon"><i class="bi bi-truck"></i></span>
-            <div class="list-text">
-              <div class="list-title">Livrare în Cluj&#8209;Napoca</div>
-              <div class="list-sub">Costul și intervalul se confirmă telefonic în funcție de comandă.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="actions">
-          <a href={contact.phoneHref} class="btn btn-accent">
-            <i class="bi bi-telephone"></i> Sună acum
-          </a>
-          <a href="/contact" class="btn btn-outline-accent">
-            <i class="bi bi-map"></i> Hartă și contact
-          </a>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head">
-          <h2 class="h5 fw-bold m-0">
-            <i class="bi bi-shield-check"></i> De ce e mai simplu
-          </h2>
-        </div>
-
-        <div class="list">
-          {#each trustItems as item}
-            <div class="list-row">
-              <span class="list-icon"><i class={'bi ' + item.icon}></i></span>
-              <div class="list-text">
-                <div class="list-title">{item.title}</div>
-                <div class="list-sub">{item.text}</div>
-              </div>
-            </div>
-          {/each}
-        </div>
-
-        <div class="actions">
-          <a href="/produse" class="btn btn-accent">
-            <i class="bi bi-basket"></i> Vezi produsele
-          </a>
-          <a href="/despre-noi" class="btn btn-outline-accent">
-            <i class="bi bi-info-circle"></i> Despre noi
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section bg-soft">
   <div class="container">
     <div class="section-head">
       <div>
@@ -766,11 +751,7 @@
   }
 
   .section {
-    padding: 2.5rem 0;
-  }
-
-  .section-compact {
-    padding: 1.25rem 0;
+    padding: 3.25rem 0;
   }
 
   .bg-soft {
@@ -785,8 +766,7 @@
     margin-bottom: 1rem;
   }
 
-  .section-kicker,
-  .eyebrow {
+  .section-kicker {
     display: inline-flex;
     align-items: center;
     margin-bottom: 0.35rem;
@@ -802,14 +782,9 @@
     gap: 14px;
   }
 
-  .two-col,
   .three-col,
   .events-grid {
     grid-template-columns: 1fr;
-  }
-
-  .products-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .catalog-sliders {
@@ -822,7 +797,6 @@
     border-radius: 22px;
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.07);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
   }
 
   .slider-head {
@@ -1069,10 +1043,6 @@
   }
 
   @media (min-width: 768px) {
-    .products-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
     .events-grid,
     .three-col {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1080,12 +1050,6 @@
   }
 
   @media (min-width: 992px) {
-    .two-col {
-      grid-template-columns: 1fr 1fr;
-      align-items: stretch;
-    }
-
-    .products-grid,
     .slider-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
@@ -1107,44 +1071,11 @@
     text-decoration: none;
   }
 
-  .panel,
   .step-card,
   .empty-state {
     background: #fff;
     border-radius: 18px;
     border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
-  }
-
-  .panel {
-    padding: 16px;
-    height: 100%;
-  }
-
-  .panel-soft {
-    background: rgba(var(--accent-rgb), 0.06);
-    border-color: rgba(var(--accent-rgb), 0.18);
-  }
-
-  .panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-
-  .badge-soft {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.78rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 999px;
-    background: rgba(var(--accent-rgb), 0.14);
-    border: 1px solid rgba(var(--accent-rgb), 0.25);
-    color: var(--accent);
-    white-space: nowrap;
-    font-weight: 900;
   }
 
   .actions {
@@ -1154,50 +1085,20 @@
     flex-wrap: wrap;
   }
 
-  .list {
-    display: grid;
-    gap: 10px;
+  .order-note {
+    margin: 18px 0 0;
+    color: rgba(0, 0, 0, 0.62);
+    font-size: 0.95rem;
   }
 
-  .list-row {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    padding: 10px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-  }
-
-  .panel:not(.panel-soft) .list-row {
-    background: rgba(0, 0, 0, 0.02);
-  }
-
-  .list-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    display: grid;
-    place-items: center;
-    background: rgba(var(--accent-rgb), 0.14);
+  .order-note a {
     color: var(--accent);
-    flex: 0 0 auto;
-  }
-
-  .list-title {
-    font-weight: 950;
-    line-height: 1.2;
-  }
-
-  .list-sub {
-    font-size: 0.92rem;
-    opacity: 0.78;
-    margin-top: 2px;
+    font-weight: 900;
+    text-decoration: none;
   }
 
   .step-card {
-    padding: 16px;
-    min-height: 190px;
+    padding: 20px;
   }
 
   .step-number {
@@ -1209,7 +1110,6 @@
     background: var(--accent);
     color: #fff;
     font-weight: 950;
-    box-shadow: 0 10px 22px rgba(var(--accent-rgb), 0.24);
   }
 
   .step-card h3 {

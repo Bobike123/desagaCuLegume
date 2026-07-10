@@ -206,6 +206,17 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Checkout-ul a eșuat.');
 
+      if (data.payment?.url) {
+        // Card order: the order is placed; hand off to Stripe Checkout. The
+        // confirmation message is shown when the customer lands back here.
+        cart.clear();
+        localCartChanged = false;
+        serverSynced = true;
+        checkoutAttemptKey = '';
+        window.location.href = data.payment.url;
+        return;
+      }
+
       checkoutSuccess = `Comanda ${data.order.orderNumber} a fost creată. Vei fi contactat pentru confirmare.`;
       cart.clear();
       localCartChanged = false;
@@ -218,6 +229,50 @@
     } finally {
       checkoutSubmitting = false;
     }
+  }
+
+  async function confirmCardPayment(sessionId: string, orderNumber: string) {
+    try {
+      const res = await fetch('/api/stripe/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Nu am putut verifica plata.');
+
+      const order = data.orderNumber || orderNumber || '';
+      if (data.status === 'paid') {
+        checkoutSuccess = `Plata pentru comanda ${order} a fost confirmată. Mulțumim!`;
+        await loadOrders();
+      } else if (data.status === 'pending') {
+        checkoutSuccess = `Comanda ${order} a fost înregistrată, iar plata este în curs de procesare.`;
+      } else {
+        checkoutError = `Plata pentru comanda ${order} nu a fost finalizată. Te vom contacta pentru confirmare.`;
+      }
+    } catch (err) {
+      checkoutError = err instanceof Error ? err.message : 'Nu am putut verifica plata.';
+    }
+  }
+
+  function handlePaymentReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    if (!payment) return;
+
+    const orderNumber = params.get('order') ?? '';
+    if (payment === 'success') {
+      const sessionId = params.get('session_id');
+      if (sessionId) {
+        checkoutSuccess = 'Verificăm plata…';
+        void confirmCardPayment(sessionId, orderNumber);
+      }
+    } else if (payment === 'cancelled') {
+      checkoutError = `Plata pentru comanda ${orderNumber} a fost anulată. Comanda rămâne înregistrată ca neplătită — ne poți contacta sau poți plasa una nouă.`;
+    }
+
+    // Drop the payment params so a refresh does not replay the message.
+    window.history.replaceState(window.history.state, '', window.location.pathname);
   }
 
   let shippingRules: ShippingRules = { ...DEFAULT_SHIPPING_RULES };
@@ -258,6 +313,7 @@
   }
 
   onMount(() => {
+    handlePaymentReturn();
     void loadShippingRules();
     if ($auth.isAuthenticated && !$auth.isAdmin) {
       loadedDataForUserId = String($auth.user?.id ?? '');
@@ -409,7 +465,15 @@
                   <option value="delivery">Livrare în Cluj-Napoca</option>
                 </select>
               </label>
-              <input type="hidden" bind:value={checkoutForm.paymentMethod} />
+              <label>
+                <span>Metodă de plată</span>
+                <select class="form-select" bind:value={checkoutForm.paymentMethod}>
+                  <option value="CASH_ON_DELIVERY">
+                    {checkoutForm.deliveryMethod === 'delivery' ? 'Numerar la livrare' : 'Numerar la ridicare'}
+                  </option>
+                  <option value="CARD">Card online (Stripe)</option>
+                </select>
+              </label>
 
               {#if checkoutForm.deliveryMethod === 'pickup'}
                 <div class="pickup-box">
@@ -452,6 +516,8 @@
               <button class="btn btn-accent w-100" type="submit" disabled={checkoutDisabled}>
                 {#if checkoutSubmitting}
                   Se finalizează…
+                {:else if checkoutForm.paymentMethod === 'CARD'}
+                  Continuă la plata cu cardul
                 {:else}
                   Finalizează comanda
                 {/if}

@@ -10,7 +10,6 @@
   let q = '';
 
   const phoneHref = 'tel:+40729969822';
-  const phoneLabel = '+40 729 969 822';
 
   onMount(async () => {
     loading = true;
@@ -35,8 +34,6 @@
   }
 
   $: availableProducts = products.filter((p) => p.in_stock === true).sort(sortProductPriority);
-  $: totalProducts = products.length;
-  $: totalAvailable = availableProducts.length;
   $: filteredProducts = availableProducts.filter((p) => {
     const needle = normalizeText(q.trim());
     if (!needle) return true;
@@ -59,25 +56,6 @@
 
 <section class="products-page py-5">
   <div class="container">
-    <div class="toolbar">
-      <div>
-        <p class="eyebrow mb-2">Stoc de azi</p>
-        <h2 class="toolbar-title">Alege produse disponibile acum</h2>
-        <p class="toolbar-subtitle mb-0">
-          {totalAvailable} produse disponibile din {totalProducts} afișate. Pentru stocul exact de la rulotă, sună la {phoneLabel}.
-        </p>
-      </div>
-
-      <div class="toolbar-actions">
-        <a href={phoneHref} class="btn btn-primary">
-          <i class="bi bi-telephone"></i> Sună pentru stoc
-        </a>
-        <a href="/contact" class="btn btn-outline-primary">
-          <i class="bi bi-geo-alt"></i> Unde ne găsești
-        </a>
-      </div>
-    </div>
-
     <div class="search-panel">
       <div class="search" role="search">
         <i class="bi bi-search" aria-hidden="true"></i>
@@ -125,7 +103,6 @@
         <div>
           <strong>{filteredProducts.length}</strong> produse disponibile
         </div>
-        <div class="results-note">Afișăm doar produse disponibile în stoc.</div>
       </div>
 
       <div class="products-grid">
@@ -142,46 +119,6 @@
     background: linear-gradient(180deg, #fff 0%, rgba(var(--desaga-accent-rgb), 0.05) 100%);
   }
 
-  .toolbar {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 18px;
-    margin-bottom: 18px;
-    padding: 18px;
-    border-radius: 22px;
-    border: 1px solid rgba(var(--desaga-accent-rgb), 0.14);
-    background: #fff;
-    box-shadow: var(--desaga-shadow-sm);
-  }
-
-  @media (min-width: 992px) {
-    .toolbar {
-      grid-template-columns: 1fr auto;
-      align-items: center;
-    }
-  }
-
-  .eyebrow {
-    color: var(--desaga-blue);
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.78rem;
-  }
-
-  .toolbar-title {
-    margin: 0 0 0.4rem;
-    font-weight: 950;
-    color: var(--desaga-brown);
-    letter-spacing: -0.04em;
-  }
-
-  .toolbar-subtitle {
-    color: rgba(0, 0, 0, 0.68);
-    max-width: 680px;
-  }
-
-  .toolbar-actions,
   .empty-actions {
     display: flex;
     gap: 10px;
@@ -243,10 +180,6 @@
     flex-wrap: wrap;
     margin-bottom: 14px;
     color: rgba(0, 0, 0, 0.7);
-  }
-
-  .results-note {
-    font-size: 0.9rem;
   }
 
   .products-grid {
@@ -320,7 +253,6 @@
       grid-template-columns: 1fr;
     }
 
-    .toolbar-actions .btn,
     .empty-actions .btn {
       width: 100%;
     }

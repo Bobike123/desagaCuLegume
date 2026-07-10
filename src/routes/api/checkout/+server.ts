@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { logRouteError } from '$lib/server/log';
 import { normalizeCartItems } from '$lib/server/cart-validation';
 import { mapRpcError } from '$lib/server/checkout-errors';
+import { createCardPaymentSession, isStripeConfigured } from '$lib/server/stripe';
 import { createAdminClient } from '$lib/server/supabase';
 import {
   arrayField,
@@ -50,7 +51,7 @@ function checkoutErrorResponse(error: unknown) {
   return json({ error: 'Nu am putut finaliza comanda. Încearcă din nou.', requestId }, { status: 500 });
 }
 
-export async function POST({ locals, request }) {
+export async function POST({ locals, request, url }) {
   if (locals.isAdmin) {
     return json({ error: 'Adminii nu pot face comenzi.' }, { status: 403 });
   }
@@ -83,7 +84,11 @@ export async function POST({ locals, request }) {
       max: LIMITS.message,
       fieldLabel: 'Mesajul',
     });
-    const paymentMethod = enumField(body, 'paymentMethod', ['CASH_ON_DELIVERY'], 'CASH_ON_DELIVERY');
+    const paymentMethod = enumField(body, 'paymentMethod', ['CASH_ON_DELIVERY', 'CARD'], 'CASH_ON_DELIVERY');
+
+    if (paymentMethod === 'CARD' && !isStripeConfigured()) {
+      return json({ error: 'Plata cu cardul nu este disponibilă momentan.' }, { status: 503 });
+    }
 
     if (!fullName) {
       return json({ error: 'Numele complet este obligatoriu.' }, { status: 400 });
@@ -144,6 +149,34 @@ export async function POST({ locals, request }) {
 
     const order = orderResult.data as CheckoutRpcOrder;
 
+    let paymentUrl: string | null = null;
+    if (paymentMethod === 'CARD') {
+      try {
+        const session = await createCardPaymentSession(
+          {
+            orderId: String(order.order_id),
+            orderNumber: order.order_number,
+            totalAmount: Number(order.total_amount),
+            currencyCode: order.currency_code,
+            email: email || null,
+          },
+          url.origin
+        );
+        paymentUrl = session.url;
+      } catch (error) {
+        // The order already exists (unpaid); surface that instead of a generic
+        // failure so the customer does not retry and duplicate it.
+        const requestId = logRouteError('Stripe session creation failed', error);
+        return json(
+          {
+            error: `Comanda ${order.order_number} a fost înregistrată, dar plata cu cardul nu a putut fi inițiată. Te vom contacta pentru confirmare.`,
+            requestId,
+          },
+          { status: 502 }
+        );
+      }
+    }
+
     return json(
       {
         success: true,
@@ -157,6 +190,7 @@ export async function POST({ locals, request }) {
           currency: order.currency_code,
           createdAt: order.created_at,
         },
+        payment: paymentUrl ? { provider: 'stripe', url: paymentUrl } : null,
       },
       { status: 201 }
     );

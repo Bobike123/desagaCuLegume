@@ -1661,6 +1661,10 @@ language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
+-- The OUT column "key" collides with app_rate_limits.key inside the INSERT's
+-- ON CONFLICT clause (42702). use_column makes ambiguous references in SQL
+-- statements resolve to the table column; assignments still hit the OUT vars.
+#variable_conflict use_column
 declare
   v_now timestamptz := now();
   raw_check jsonb;

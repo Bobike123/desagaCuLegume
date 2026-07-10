@@ -30,30 +30,29 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  const LOW_STOCK_THRESHOLD = 20;
+
   $: id = product?.id != null ? String(product.id) : '';
   $: name = safeText(product?.name).trim();
-  $: description = safeText(product?.description).trim();
   $: imageUrls = productImageUrls(product);
   $: cardImageUrl = imageUrls[0] || PLACEHOLDER_IMAGE;
   $: cardImageSrc = cardImageUrl === PLACEHOLDER_IMAGE ? PLACEHOLDER_IMAGE : optimizedImageUrl(cardImageUrl, { width: 720, height: 540, quality: 78 });
   $: price = toNumber(product?.price);
   $: measureUnitSuffix = productMeasureUnitSuffix(product?.measure_unit);
   $: promotionBadges = productPromotionBadges(product?.promotion_label);
-  $: hasPromotion = promotionBadges.length > 0;
+  // One badge per card keeps the grid calm; Promoție wins over Nou.
+  $: promotionBadge = promotionBadges.includes('PROMOȚIE') ? 'PROMOȚIE' : (promotionBadges[0] ?? null);
+  $: hasPromotion = Boolean(promotionBadge);
   $: isAvailable = Boolean(product?.in_stock);
   $: currentQty = $cart.items.find((item) => item.productId === id)?.quantity ?? 0;
-  $: category = safeText(product?.category);
   $: stockQuantity = toNumber(product?.stock_quantity);
-  $: categoryMeta =
-    category === 'la-borcan'
-      ? { label: 'La borcan', tone: 'tone-amber' }
-      : { label: 'De sezon', tone: 'tone-green' };
   $: href = id ? `/produse/${id}` : undefined;
-  $: stockLabel = isAvailable
-    ? stockQuantity > 0
-      ? `${stockQuantity} în stoc`
-      : 'Disponibil'
-    : 'Stoc epuizat';
+  // Stock is only worth a label when it changes the decision: out or nearly out.
+  $: stockLabel = !isAvailable
+    ? 'Stoc epuizat'
+    : stockQuantity > 0 && stockQuantity <= LOW_STOCK_THRESHOLD
+      ? 'Stoc limitat'
+      : null;
 
   let lastDelta: 1 | -1 = 1;
   let bumpTick = 0;
@@ -90,30 +89,25 @@
       on:error={fallbackImage}
     />
 
-    {#if hasPromotion}
+    {#if promotionBadge}
       <div class="promo-stack" aria-label="Etichete produs">
-        {#each promotionBadges as badge}
-          <span class="promo-badge">{badge}</span>
-        {/each}
+        <span class="promo-badge">{promotionBadge}</span>
       </div>
     {/if}
 
-    <div class="badges">
-      <span class={'pill ' + categoryMeta.tone}>
-        {categoryMeta.label}
-      </span>
-
-      <span class={`pill ${isAvailable ? 'tone-stock' : 'tone-warning'}`}>
-        <i class={`bi ${isAvailable ? 'bi-check2-circle' : 'bi-exclamation-triangle'}`}></i>
-        {stockLabel}
-      </span>
-    </div>
+    {#if stockLabel}
+      <div class="badges">
+        <span class="pill tone-warning">
+          <i class="bi bi-exclamation-triangle"></i>
+          {stockLabel}
+        </span>
+      </div>
+    {/if}
   </a>
 
   <div class="body">
     <a class="content-link" href={href}>
       <h5 class="title">{name || 'Produs'}</h5>
-      <p class="desc">{description || 'Descrierea produsului va fi actualizată în curând.'}</p>
     </a>
 
     <div class="footer">
@@ -153,7 +147,6 @@
   .card {
     width: 100%;
     height: 100%;
-    min-height: 340px;
     display: flex;
     flex-direction: column;
     border-radius: 18px;
@@ -171,14 +164,12 @@
   }
 
   .card[data-promotion='true'] {
-    border-color: rgba(194, 37, 45, 0.42);
-    box-shadow: 0 18px 42px rgba(194, 37, 45, 0.16), 0 0 0 4px rgba(194, 37, 45, 0.05);
-    transform: translateY(-1px);
+    border-color: rgba(194, 37, 45, 0.35);
   }
 
   .card[data-promotion='true']:hover {
-    box-shadow: 0 22px 54px rgba(194, 37, 45, 0.22), 0 0 0 5px rgba(194, 37, 45, 0.08);
-    border-color: rgba(194, 37, 45, 0.58);
+    box-shadow: 0 12px 26px rgba(194, 37, 45, 0.14);
+    border-color: rgba(194, 37, 45, 0.5);
   }
 
   .card[data-available='false'] {
@@ -233,31 +224,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 30px;
-    padding: 0.34rem 0.68rem;
+    min-height: 26px;
+    padding: 0.3rem 0.6rem;
     border-radius: 999px;
-    border: 1px solid rgba(194, 37, 45, 0.38);
-    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(194, 37, 45, 0.3);
+    background: rgba(255, 255, 255, 0.95);
     color: #9f1f27;
-    box-shadow:
-      0 12px 26px rgba(0, 0, 0, 0.18),
-      0 0 0 4px rgba(255, 255, 255, 0.28);
-    backdrop-filter: blur(8px);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     line-height: 1;
-    font-weight: 950;
-    letter-spacing: 0.055em;
+    font-weight: 900;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-  }
-
-  .promo-badge::before {
-    content: '';
-    width: 7px;
-    height: 7px;
-    margin-right: 6px;
-    border-radius: 999px;
-    background: #c2252d;
-    box-shadow: 0 0 0 3px rgba(194, 37, 45, 0.12);
   }
 
   .badges {
@@ -285,12 +262,7 @@
     white-space: nowrap;
   }
 
-  .tone-green { border-color: rgba(25, 135, 84, 0.22); background: rgba(25, 135, 84, 0.12); }
-  .tone-amber { border-color: rgba(255, 193, 7, 0.28); background: rgba(255, 193, 7, 0.14); }
-  .tone-blue { border-color: rgba(13, 110, 253, 0.22); background: rgba(13, 110, 253, 0.12); }
-  .tone-purple { border-color: rgba(111, 66, 193, 0.22); background: rgba(111, 66, 193, 0.12); }
-  .tone-warning { border-color: rgba(255, 193, 7, 0.35); background: rgba(255, 193, 7, 0.24); }
-  .tone-stock { border-color: rgba(25, 135, 84, 0.22); background: rgba(255, 255, 255, 0.92); }
+  .tone-warning { border-color: rgba(255, 193, 7, 0.35); background: rgba(255, 248, 224, 0.95); }
 
   .body {
     flex: 1;
@@ -321,18 +293,6 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .desc {
-    margin: 8px 0 0;
-    font-size: 0.88rem;
-    color: rgba(0, 0, 0, 0.68);
-    line-height: 1.35;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -489,10 +449,6 @@
 
     .title {
       font-size: 0.86rem;
-    }
-
-    .desc {
-      display: none;
     }
 
     .footer {
