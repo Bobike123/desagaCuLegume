@@ -308,7 +308,7 @@
 
       <section class="panel summary">
         <h2>Rezumat</h2>
-        <div><span>Nume</span><strong>{form.name || '—'}</strong></div>
+        <div><span>Nume</span><strong>{form.name || '-'}</strong></div>
         <div><span>Categorie</span><strong>{selectedCategory.label}</strong></div>
         <div><span>Stare</span><strong>{selectedStatus.label}</strong></div>
         <div><span>Stoc</span><strong>{Number(form.stock_quantity || 0)}</strong></div>

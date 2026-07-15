@@ -151,7 +151,7 @@ function isExpiredSessionRow(row: { expires_at?: string | null }) {
 }
 
 // Absolute lifetime cap: sliding idle timeouts alone let an active session
-// renew forever. Rows without created_at (pre-migration RPC) pass — the SQL
+// renew forever. Rows without created_at (pre-migration RPC) pass - the SQL
 // filter in resolve_session enforces the cap once 20260702_04 is applied.
 function isBeyondAbsoluteLifetime(row: { created_at?: string | null }) {
   if (row.created_at == null) return false;

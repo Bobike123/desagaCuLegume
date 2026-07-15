@@ -53,8 +53,8 @@ describe('formatDate', () => {
   });
 
   it('accepts a custom fallback string', () => {
-    expect(formatDate(null, '—')).toBe('—');
-    expect(formatDate('bad', '—')).toBe('—');
+    expect(formatDate(null, '-')).toBe('-');
+    expect(formatDate('bad', '-')).toBe('-');
   });
 });
 

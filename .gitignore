@@ -20,7 +20,7 @@ bundles/
 .DS_Store
 Thumbs.db
 
-# Env — never commit real secrets. .env.example holds placeholders only.
+# Env - never commit real secrets. .env.example holds placeholders only.
 .env
 .env.*
 !.env.example

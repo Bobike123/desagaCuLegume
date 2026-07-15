@@ -276,7 +276,7 @@
         </div>
         <div class="stat-card surface">
           <span>Ultima comandă</span>
-          <strong>{lastOrder ? lastOrder.orderNumber : '—'}</strong>
+          <strong>{lastOrder ? lastOrder.orderNumber : '-'}</strong>
         </div>
       </div>
 

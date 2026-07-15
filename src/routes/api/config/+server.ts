@@ -5,7 +5,7 @@ import { publicCacheHeaders } from '$lib/server/pagination';
 import { createAdminClient } from '$lib/server/supabase';
 
 // Public storefront config. Shipping values come from app_shipping_rules
-// (20260711_09) — the same row place_order charges from — so the cart display
+// (20260711_09) - the same row place_order charges from - so the cart display
 // can never drift from what customers actually pay.
 export async function GET({ setHeaders }) {
   setHeaders(publicCacheHeaders());

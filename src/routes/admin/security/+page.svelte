@@ -258,7 +258,7 @@
   let selectedUserLoading = false;
 
   function formatDate(value: string | null | undefined) {
-    if (!value) return '—';
+    if (!value) return '-';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return new Intl.DateTimeFormat('ro-RO', {
@@ -785,7 +785,7 @@
                     <small>@{user.username}</small>
                   </td>
                   <td>{user.email}</td>
-                  <td>{user.phone ?? '—'}</td>
+                  <td>{user.phone ?? '-'}</td>
                   <td>{user.orderCount}</td>
                   <td>{formatDate(user.createdAt)}</td>
                   <td>{formatDate(user.lastLoginAt)}</td>
@@ -826,7 +826,7 @@
           </div>
 
           <div class="detailGrid">
-            <div><span>Telefon</span><strong>{selectedUser.phone ?? '—'}</strong></div>
+            <div><span>Telefon</span><strong>{selectedUser.phone ?? '-'}</strong></div>
             <div><span>Comenzi</span><strong>{selectedUser.orderCount}</strong></div>
             <div><span>Creat</span><strong>{formatDate(selectedUser.createdAt)}</strong></div>
             <div><span>Ultimul login</span><strong>{formatDate(selectedUser.lastLoginAt)}</strong></div>
@@ -911,7 +911,7 @@
                 <td><span class="eventType">{eventLabel(event.eventType)}</span></td>
                 <td><span class={`riskPill risk-${event.severity.toLowerCase()}`}>{riskLabel(event.severity)}</span></td>
                 <td><span class={`badge review-${event.reviewStatus.toLowerCase()}`}>{reviewLabels[event.reviewStatus]}</span></td>
-                <td>{event.targetUser ? `${event.targetUser.label} · ${event.targetUser.email}` : '—'}</td>
+                <td>{event.targetUser ? `${event.targetUser.label} · ${event.targetUser.email}` : '-'}</td>
                 <td>{event.method} {event.route}</td>
                 <td>{event.observedIp}</td>
                 <td>{event.frequencyCount}</td>

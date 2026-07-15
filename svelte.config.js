@@ -9,7 +9,7 @@ const config = {
 	// only for confirmed third-party noise, never for a11y codes.
 	kit: {
 		// dub1 = AWS eu-west-1, same region as the Supabase project (from
-		// supabase/.temp/pooler-url) — keeps app↔DB latency single-digit ms.
+		// supabase/.temp/pooler-url) - keeps app↔DB latency single-digit ms.
 		adapter: adapter({ regions: ["dub1"] }),
 		// Page responses get a nonce-based CSP (no 'unsafe-inline' scripts);
 		// SvelteKit adds the nonce to its own inline bootstrap script. API and

@@ -4,7 +4,7 @@
  * Pure and unit-testable. The authoritative rule lives in the
  * app_shipping_rules table (read by the place_order RPC); the page fetches it
  * via GET /api/config and passes it in. The constants below are only the
- * compiled fallback for when that fetch has not resolved / failed — they must
+ * compiled fallback for when that fetch has not resolved / failed - they must
  * match the table's seeded defaults.
  */
 export const FREE_DELIVERY_THRESHOLD = 150;

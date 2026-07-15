@@ -12,10 +12,10 @@
 -- ============================================================================
 -- 20260702_01_cart_upsert.sql
 -- 1) Hardens function EXECUTE privileges (closes the PUBLIC-grant hole).
--- 2) get_cart(p_user_id)          — single-query cart read with product state.
--- 3) add_cart_item(...)           — atomic add/increment (fixes the lost-update
+-- 2) get_cart(p_user_id)          - single-query cart read with product state.
+-- 3) add_cart_item(...)           - atomic add/increment (fixes the lost-update
 --                                    race in POST /api/cart read-merge-write).
--- 4) replace_cart_items(...) v2   — clamps quantities / drops dead lines and
+-- 4) replace_cart_items(...) v2   - clamps quantities / drops dead lines and
 --                                    reports them instead of rejecting the
 --                                    whole cart when one product is bad.
 -- Notes:
@@ -52,7 +52,7 @@ grant execute on function public.current_app_is_admin() to anon, authenticated;
 alter default privileges in schema public revoke execute on functions from public;
 
 -- ---------------------------------------------------------------------------
--- 1b) Make sure the (cart_id, product_id) unique index exists — ON CONFLICT
+-- 1b) Make sure the (cart_id, product_id) unique index exists - ON CONFLICT
 --     below depends on it. The base schema creates it as uq_cart_product_once;
 --     recreate defensively in case the live DB drifted. Duplicate rows (if
 --     any) are merged by summing quantities into the oldest row first.
@@ -87,7 +87,7 @@ create unique index if not exists uq_cart_product_once
   on public.cart_items(cart_id, product_id);
 
 -- ---------------------------------------------------------------------------
--- 2) get_cart — one round-trip cart payload including live product state
+-- 2) get_cart - one round-trip cart payload including live product state
 --    (category slug, status, stock), replacing the app's 3-query read and the
 --    hardcoded in_stock/category values on cart restore.
 -- ---------------------------------------------------------------------------
@@ -158,7 +158,7 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- 3) add_cart_item — atomic increment under the same per-user advisory lock
+-- 3) add_cart_item - atomic increment under the same per-user advisory lock
 --    used by replace_cart_items. The product row is locked FOR UPDATE, the
 --    quantity is clamped to LEAST(99, stock, current + delta), and the upsert
 --    goes through the uq_cart_product_once unique index. Two concurrent adds
@@ -255,7 +255,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- 4) replace_cart_items v2 — same signature, new return type (void → jsonb),
+-- 4) replace_cart_items v2 - same signature, new return type (void → jsonb),
 --    so the old function must be dropped first. Instead of raising when any
 --    line is unavailable or over stock, it now:
 --      * drops lines whose product is missing / deleted / inactive / stock 0,
@@ -422,7 +422,7 @@ commit;
 -- 1) Privilege hole is closed (expect only current_app_* rows):
 --    see step 4 of 20260702_00_verify_rls_readonly.sql
 --
--- 2) Concurrent adds sum instead of overwriting — in two SQL editor tabs run
+-- 2) Concurrent adds sum instead of overwriting - in two SQL editor tabs run
 --    simultaneously (replace 1/2 with a real user_id/product_id):
 --      select public.add_cart_item(1, 2, 1);
 --    Final quantity must equal the number of calls (capped by stock/99).
@@ -586,7 +586,7 @@ commit;
 -- 20260702_03_orders_delivery_and_transitions.sql
 -- 1) orders.delivery_method becomes a first-class column (it was smuggled
 --    through payments.provider_payload and reverse-engineered on read).
--- 2) assert_order_transition() — order status state machine; update_order_admin
+-- 2) assert_order_transition() - order status state machine; update_order_admin
 --    now rejects nonsense transitions (e.g. DELIVERED → PENDING).
 -- 3) update_order_admin also writes payments.status when p_payment_status is
 --    given, and the payments→orders sync trigger fires only on real status
@@ -1222,7 +1222,7 @@ commit;
 --    returns created_at so the app fallback can mirror the check.
 -- 2) peek_rate_limit / reset_rate_limit: read-only check + counter reset used
 --    by the login lockout (fail counters accumulate on bad credentials and
---    clear on success — see src/routes/api/auth/login/+server.ts).
+--    clear on success - see src/routes/api/auth/login/+server.ts).
 --
 -- Deploy order: run this file, then deploy the login/lockout code. The app's
 -- built-in fallback (multi-query session lookup, in-memory limits) covers the
@@ -1420,7 +1420,7 @@ create trigger set_updated_at_product_images
   before update on public.product_images
   for each row execute function public.set_updated_at();
 
--- RLS: same defense-in-depth model as products — public read for images of
+-- RLS: same defense-in-depth model as products - public read for images of
 -- publicly visible products, admin full access, app writes via service_role.
 alter table public.product_images enable row level security;
 
@@ -1742,7 +1742,7 @@ commit;
 -- 20260710_07_pg_cron_cleanup.sql
 -- Automated data cleanup. Before this, nothing pruned sessions,
 -- app_rate_limits, checkout_idempotency_keys, security_events, auth_logs or
--- abandoned carts — every table grew forever and the README's cleanup SQL was
+-- abandoned carts - every table grew forever and the README's cleanup SQL was
 -- a manual step nobody runs.
 --
 -- Prerequisite: enable the pg_cron extension (Dashboard → Database →
@@ -1980,7 +1980,7 @@ select cron.schedule('desaga-cleanup-carts', '40 3 * * *', $$select public.run_c
 -- 20260711_08_admin_stats_rpc.sql
 -- admin_dashboard_stats: one round-trip for the admin dashboard counters.
 -- The /api/admin/stats route previously issued 6 count:'exact' queries plus
--- the security counters — each a separate PostgREST round-trip, all of which
+-- the security counters - each a separate PostgREST round-trip, all of which
 -- degrade as orders/messages/security_events grow.
 --
 -- Deploy order: run this file, then deploy the updated stats route.

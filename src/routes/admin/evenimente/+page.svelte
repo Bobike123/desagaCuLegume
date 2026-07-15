@@ -269,7 +269,7 @@
 
           <div class="metaGrid">
             <div><span>Data</span><strong>{formatDate(item.date)}</strong></div>
-            <div><span>Locație</span><strong>{item.location ?? '—'}</strong></div>
+            <div><span>Locație</span><strong>{item.location ?? '-'}</strong></div>
           </div>
 
           <footer>

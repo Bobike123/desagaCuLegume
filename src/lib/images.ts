@@ -1,7 +1,7 @@
 /**
  * Global fallback image, served from the editable static images folder.
  * See `static/images/README.md`. Change the file at this path to swap it
- * site-wide — no code change needed.
+ * site-wide - no code change needed.
  */
 export const PLACEHOLDER_IMAGE = '/images/shared/placeholder.png';
 

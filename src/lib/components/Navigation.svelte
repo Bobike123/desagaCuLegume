@@ -1,6 +1,6 @@
 <script lang="ts">
   import Fluture from '$lib/IconList.svelte';
-  // Served from the editable static images folder — see static/images/README.md.
+  // Served from the editable static images folder - see static/images/README.md.
   const logoUrl = '/images/shared/logo.png';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
@@ -20,11 +20,11 @@
     { href: '/produse/la-borcan', label: 'La borcan', icon: 'bi-archive' },
   ];
 
-  // The mobile drawer is driven entirely by this boolean + CSS — no Bootstrap
+  // The mobile drawer is driven entirely by this boolean + CSS - no Bootstrap
   // JS. The previous version called window.bootstrap.Offcanvas, but Bootstrap's
   // bundle is imported asynchronously in the parent layout's onMount, and child
   // components mount before parents, so window.bootstrap was never ready when
-  // this ran — the hamburger silently did nothing on mobile (the only place the
+  // this ran - the hamburger silently did nothing on mobile (the only place the
   // drawer is used).
   let isOpen = false;
 
@@ -578,7 +578,7 @@
     transform-origin: top center;
     clip-path: inset(0 0 100% 0 round 18px);
 
-    /* Exit animation — applied when the .open class is removed. */
+    /* Exit animation - applied when the .open class is removed. */
     transition:
       opacity 160ms ease,
       transform 220ms cubic-bezier(0.7, 0, 0.84, 0),
@@ -593,7 +593,7 @@
     transform: translateY(0) scale(1);
     clip-path: inset(0 0 0 0 round 18px);
 
-    /* Enter animation — applied when the .open class is added. */
+    /* Enter animation - applied when the .open class is added. */
     transition:
       opacity 180ms ease,
       transform 260ms cubic-bezier(0.16, 1, 0.3, 1),

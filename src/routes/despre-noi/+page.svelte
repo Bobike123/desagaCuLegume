@@ -211,7 +211,7 @@
         An cu an
       </div>
       <h2>Cum a crescut DeSaga</h2>
-      <p>Derulează povestea — fiecare an se aprinde pe măsură ce ajungi la el.</p>
+      <p>Derulează povestea - fiecare an se aprinde pe măsură ce ajungi la el.</p>
     </header>
 
     <div class="tl" class:enhanced bind:this={timelineEl}>
@@ -511,7 +511,7 @@
     line-height: 1.6;
   }
 
-  /* Dormant state — only once JS is driving the activation. */
+  /* Dormant state - only once JS is driving the activation. */
   .tl.enhanced .tl-item:not(.active) .tl-card {
     opacity: 0.55;
     transform: translateY(14px);

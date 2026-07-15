@@ -11,7 +11,7 @@
  */
 
 // --- replace_cart_items (no runtime fallback) ------------------------------
-// src/routes/api/cart/+server.ts — returns CartRpcPayload with dropped/clamped
+// src/routes/api/cart/+server.ts - returns CartRpcPayload with dropped/clamped
 // product-id arrays since 20260702_01.
 export interface ReplaceCartItemsArgs {
   p_user_id: number;
@@ -19,7 +19,7 @@ export interface ReplaceCartItemsArgs {
 }
 
 // --- get_cart / add_cart_item (no runtime fallback) -------------------------
-// src/routes/api/cart/+server.ts — defined in 20260702_01_cart_upsert.sql.
+// src/routes/api/cart/+server.ts - defined in 20260702_01_cart_upsert.sql.
 export interface GetCartArgs {
   p_user_id: number;
 }
@@ -55,7 +55,7 @@ export interface CartRpcPayload {
 }
 
 // --- admin_dashboard_stats (no runtime fallback) -----------------------------
-// src/routes/api/admin/stats/+server.ts — defined in 20260711_08_admin_stats_rpc.sql.
+// src/routes/api/admin/stats/+server.ts - defined in 20260711_08_admin_stats_rpc.sql.
 export interface AdminDashboardStatsRow {
   products: number | string;
   orders: number | string;
@@ -70,7 +70,7 @@ export interface AdminDashboardStatsRow {
 }
 
 // --- admin_set_product_stock (no runtime fallback) --------------------------
-// src/routes/api/products/*+server.ts — defined in 20260702_02_stock_ledger.sql.
+// src/routes/api/products/*+server.ts - defined in 20260702_02_stock_ledger.sql.
 export interface AdminSetProductStockArgs {
   p_product_id: number;
   p_new_quantity: number;
@@ -79,7 +79,7 @@ export interface AdminSetProductStockArgs {
 }
 
 // --- support_conversation_summaries (no runtime fallback) ------------------
-// src/lib/server/support.ts — return row is the local `SupportSummaryRow`.
+// src/lib/server/support.ts - return row is the local `SupportSummaryRow`.
 export interface SupportConversationSummariesArgs {
   p_viewer_user_id: number | null;
   p_is_admin: boolean;
@@ -91,7 +91,7 @@ export interface SupportConversationSummariesArgs {
 }
 
 // --- update_order_admin (no runtime fallback) ------------------------------
-// src/routes/api/orders/[id]/+server.ts — return row consumed by `mapOrder`.
+// src/routes/api/orders/[id]/+server.ts - return row consumed by `mapOrder`.
 export interface UpdateOrderAdminArgs {
   p_order_id: number;
   p_admin_user_id: number | null;
@@ -145,7 +145,7 @@ export interface ConsumeRateLimitRow {
 }
 
 // --- consume_rate_limits (batch; fallback: in-memory buckets) ---------------
-// src/lib/server/rate-limit.ts — defined in 20260710_06_rate_limit_batch.sql.
+// src/lib/server/rate-limit.ts - defined in 20260710_06_rate_limit_batch.sql.
 export interface ConsumeRateLimitsArgs {
   p_checks: Array<{ key: string; limit: number; window_seconds: number }>;
 }
@@ -158,7 +158,7 @@ export interface ConsumeRateLimitsRow {
 }
 
 // --- peek_rate_limit / reset_rate_limit (fallback: in-memory buckets) ------
-// src/lib/server/rate-limit.ts — login lockout counters.
+// src/lib/server/rate-limit.ts - login lockout counters.
 export interface PeekRateLimitArgs {
   p_key: string;
   p_limit: number;

@@ -109,7 +109,7 @@ async function consumePersistent({ key, limit, windowMs }: RateLimitConfig): Pro
 
 // One trusted header per deployment. Vercel overwrites x-real-ip but passes
 // cf-connecting-ip through untouched, so trusting a header list lets clients
-// spoof their IP — the selector must match the actual proxy in front.
+// spoof their IP - the selector must match the actual proxy in front.
 const TRUSTED_PROXY_IP_HEADERS: Record<string, string> = {
   vercel: 'x-real-ip',
   cloudflare: 'cf-connecting-ip',

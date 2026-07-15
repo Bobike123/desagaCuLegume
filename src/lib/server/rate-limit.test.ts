@@ -34,7 +34,7 @@ describe('rate limiting', () => {
     expect(second.retryAfterSeconds).toBeGreaterThan(0);
   });
 
-  it('isolates different scopes — blocking one does not block another', async () => {
+  it('isolates different scopes - blocking one does not block another', async () => {
     const event = eventForIp('203.0.113.11');
     const scopeA = `test-scope-a-${crypto.randomUUID()}`;
     const scopeB = `test-scope-b-${crypto.randomUUID()}`;

@@ -5,7 +5,7 @@ import { createAdminClient } from '$lib/server/supabase';
  * Sets a product's stock through the inventory ledger (admin_set_product_stock
  * RPC, 20260702_02): the delta is recorded as an inventory_movements row and
  * the trigger applies it, so SUM(movements) reconciles with
- * products.stock_quantity. Never write stock_quantity directly from routes —
+ * products.stock_quantity. Never write stock_quantity directly from routes -
  * that bypasses the ledger and desyncs it.
  *
  * Returns the resulting stock quantity.

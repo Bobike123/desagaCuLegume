@@ -183,11 +183,11 @@ function relationRow(value: any) {
 }
 
 function displayUser(row: any) {
-  if (!row) return { id: '', label: 'Utilizator necunoscut', email: '—', status: 'UNKNOWN' };
+  if (!row) return { id: '', label: 'Utilizator necunoscut', email: '-', status: 'UNKNOWN' };
   return {
     id: String(row.user_id ?? ''),
     label: sanitizeLogValue(row.full_name || row.username || row.email || 'Utilizator', 120),
-    email: sanitizeLogValue(row.email, 160) || '—',
+    email: sanitizeLogValue(row.email, 160) || '-',
     status: sanitizeLogValue(row.status, 40) || 'UNKNOWN',
   };
 }
@@ -778,7 +778,7 @@ async function loadAdminAudit(admin: ReturnType<typeof createAdminClient>) {
       id: String(row.event_id),
       action: sanitizeLogValue(details.action ?? row.event_type, 80) || 'ADMIN_SECURITY_ACTION',
       adminLabel: sanitizeLogValue(details.admin ?? details.adminEmail, 120) || 'Admin',
-      targetLabel: target.email !== '—' ? `${target.label} · ${target.email}` : sanitizeLogValue(details.target ?? '—', 120),
+      targetLabel: target.email !== '-' ? `${target.label} · ${target.email}` : sanitizeLogValue(details.target ?? '-', 120),
       note: sanitizeLogValue(row.admin_note ?? details.note, 240) || null,
       createdAt: row.created_at,
     };

@@ -9,7 +9,7 @@ describe('computeCartSummary', () => {
     // supabase/migrations/20260702_03_orders_delivery_and_transitions.sql):
     // free delivery at subtotal >= 150 RON, otherwise a flat 20 RON fee.
     // If this test fails you changed the display rule without changing what
-    // customers are actually charged — update both together.
+    // customers are actually charged - update both together.
     expect(FREE_DELIVERY_THRESHOLD).toBe(150);
     expect(DELIVERY_FEE).toBe(20);
   });

@@ -287,9 +287,9 @@ export function messageBubbleClass(senderType: string | null | undefined, mode: 
 }
 
 export function formatMessageDate(value: string | null | undefined, mode: Mode) {
-  if (!value) return '—';
+  if (!value) return '-';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
+  if (Number.isNaN(date.getTime())) return '-';
 
   return date.toLocaleString('ro-RO', {
     day: '2-digit',

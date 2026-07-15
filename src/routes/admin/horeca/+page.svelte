@@ -41,7 +41,7 @@
 
   function formatDate(value: string) {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '—';
+    if (Number.isNaN(date.getTime())) return '-';
     return date.toLocaleString('ro-RO', {
       day: '2-digit',
       month: 'short',
@@ -237,23 +237,23 @@
               {#if selected.email}
                 <a href={`mailto:${selected.email}`}>{selected.email}</a>
               {:else}
-                <strong>—</strong>
+                <strong>-</strong>
               {/if}
             </div>
             <div><span>Contact preferat</span><strong>{selected.preferredContact}</strong></div>
             <div class="full">
               <span>Adresă / zonă</span>
-              <strong>{selected.address || selected.city || '—'}</strong>
+              <strong>{selected.address || selected.city || '-'}</strong>
             </div>
             <div class="full">
               <span>Produse dorite</span>
               <p>{selected.productsNeeded}</p>
             </div>
-            <div><span>Cantitate estimată</span><strong>{selected.estimatedQuantity || '—'}</strong></div>
-            <div><span>Frecvență</span><strong>{selected.frequency || '—'}</strong></div>
+            <div><span>Cantitate estimată</span><strong>{selected.estimatedQuantity || '-'}</strong></div>
+            <div><span>Frecvență</span><strong>{selected.frequency || '-'}</strong></div>
             <div class="full">
               <span>Mesaj</span>
-              <p>{selected.message || '—'}</p>
+              <p>{selected.message || '-'}</p>
             </div>
           </div>
 
