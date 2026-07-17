@@ -23,7 +23,7 @@ const CART_PAYLOAD = {
       quantity: 2,
       unit_price: '7.50',
       currency_code: 'RON',
-      category_slug: 'de-sezon',
+      category_slug: 'legume',
       status: 'ACTIVE',
       stock_quantity: 4,
     },
@@ -102,7 +102,7 @@ describe('/api/cart', () => {
       productId: '3',
       quantity: 2,
       price: 7.5,
-      category: 'de-sezon',
+      category: 'legume',
       in_stock: true,
     });
   });

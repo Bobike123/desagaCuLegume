@@ -4,12 +4,13 @@
   import { fallbackImage, optimizedImageUrl, PLACEHOLDER_IMAGE } from '$lib/images';
   import { productMeasureUnitSuffix, productPromotionBadges } from '$lib/format';
   import { productImageUrls, type Product } from '$lib/stores/products';
+  import { categoryMeta as getCategoryMeta, DEFAULT_CATEGORY_SLUG } from '$lib/categories';
 
   const EMPTY_PRODUCT: Product = {
     id: '',
     name: '',
     description: '',
-    category: 'de-sezon',
+    category: DEFAULT_CATEGORY_SLUG,
     price: 0,
     measure_unit: 'PER_KG',
     promotion_label: 'NONE',
@@ -44,10 +45,7 @@
   $: currentQty = $cart.items.find((item) => item.productId === id)?.quantity ?? 0;
   $: category = safeText(product?.category);
   $: stockQuantity = toNumber(product?.stock_quantity);
-  $: categoryMeta =
-    category === 'la-borcan'
-      ? { label: 'La borcan', tone: 'tone-amber' }
-      : { label: 'De sezon', tone: 'tone-green' };
+  $: catMeta = getCategoryMeta(category);
   $: href = id ? `/produse/${id}` : undefined;
   $: stockLabel = isAvailable
     ? stockQuantity > 0
@@ -99,8 +97,8 @@
     {/if}
 
     <div class="badges">
-      <span class={'pill ' + categoryMeta.tone}>
-        {categoryMeta.label}
+      <span class={'pill cat ' + catMeta.tone}>
+        {catMeta.name}
       </span>
 
       <span class={`pill ${isAvailable ? 'tone-stock' : 'tone-warning'}`}>
@@ -276,7 +274,7 @@
     align-items: center;
     gap: 6px;
     padding: 0.28rem 0.6rem;
-    border-radius: 999px;
+    border-radius: 7px;
     font-size: 0.76rem;
     font-weight: 850;
     border: 1px solid rgba(0, 0, 0, 0.08);
@@ -285,8 +283,31 @@
     white-space: nowrap;
   }
 
-  .tone-green { border-color: rgba(25, 135, 84, 0.22); background: rgba(25, 135, 84, 0.12); }
-  .tone-amber { border-color: rgba(255, 193, 7, 0.28); background: rgba(255, 193, 7, 0.14); }
+  /* Category pill: a solid coloured chip with a white dot, one tone per
+     category. Solid (not translucent) so it stays readable over any product
+     photo. */
+  .pill.cat {
+    gap: 5px;
+    font-weight: 900;
+    color: #fff;
+    border-color: transparent;
+    background: var(--cat-solid, #157347);
+    backdrop-filter: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+  }
+
+  .pill.cat::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    flex: 0 0 auto;
+  }
+
+  .tone-green { --cat-solid: #157347; }
+  .tone-orange { --cat-solid: #c2410c; }
+  .tone-amber { --cat-solid: #9a6a04; }
   .tone-blue { border-color: rgba(13, 110, 253, 0.22); background: rgba(13, 110, 253, 0.12); }
   .tone-purple { border-color: rgba(111, 66, 193, 0.22); background: rgba(111, 66, 193, 0.12); }
   .tone-warning { border-color: rgba(255, 193, 7, 0.35); background: rgba(255, 193, 7, 0.24); }

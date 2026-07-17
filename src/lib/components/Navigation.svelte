@@ -7,6 +7,7 @@
   import { onDestroy } from 'svelte';
   import { cartCount } from '$lib/stores/cart';
   import { auth } from '$lib/stores/auth';
+  import { PRODUCT_CATEGORIES } from '$lib/categories';
 
   const phoneHref = 'tel:+40729969822';
   const addressHref = '/contact';
@@ -16,8 +17,11 @@
 
   const productLinks = [
     { href: '/produse', label: 'Toate produsele', icon: 'bi-grid-3x3-gap' },
-    { href: '/produse/de-sezon', label: 'De sezon', icon: 'bi-brightness-high' },
-    { href: '/produse/la-borcan', label: 'La borcan', icon: 'bi-archive' },
+    ...PRODUCT_CATEGORIES.map((category) => ({
+      href: `/produse/${category.slug}`,
+      label: category.name,
+      icon: category.icon,
+    })),
   ];
 
   // The mobile drawer is driven entirely by this boolean + CSS - no Bootstrap
@@ -624,6 +628,10 @@
 
   .products-dropdown.open li:nth-child(3) .dropdown-item {
     transition-delay: 110ms;
+  }
+
+  .products-dropdown.open li:nth-child(4) .dropdown-item {
+    transition-delay: 145ms;
   }
 
   .dropdown-item {

@@ -12,7 +12,7 @@ function makeProduct(overrides: Record<string, unknown> = {}) {
     sku: 'SKU-001',
     name: 'Roșii',
     description: 'Roșii de sezon',
-    category: 'de-sezon',
+    category: 'legume',
     price: 8.5,
     image_url: 'http://example.com/rosii.jpg',
     in_stock: true,
@@ -108,10 +108,10 @@ describe('productsStore row normalization', () => {
     expect(get(productsStore).items[0].in_stock).toBe(false);
   });
 
-  it('defaults category to de-sezon when absent', async () => {
+  it('defaults category to legume when absent', async () => {
     fetchMock.mockReturnValueOnce(fakeResponse({ items: [makeProduct({ category: undefined })] }));
     await productsStore.loadAll();
-    expect(get(productsStore).items[0].category).toBe('de-sezon');
+    expect(get(productsStore).items[0].category).toBe('legume');
   });
 
   it('converts numeric id to string', async () => {

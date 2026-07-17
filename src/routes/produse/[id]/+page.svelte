@@ -6,6 +6,7 @@
   import { productImageUrls, productsStore, sortProductPriority, type Product } from "$lib/stores/products";
   import { PLACEHOLDER_IMAGE } from "$lib/images";
   import { productMeasureUnitSuffix, productPromotionBadges } from "$lib/format";
+  import { categoryMeta as getCategoryMeta } from "$lib/categories";
   import { onDestroy } from "svelte";
 
   let product: Product | null = null;
@@ -30,8 +31,8 @@
   $: imageUrls = productImageUrls(product);
   $: slideshowImages = imageUrls.length > 0 ? imageUrls : [PLACEHOLDER_IMAGE];
   $: currentQty = product ? ($cart.items.find((item) => item.productId === String(product?.id))?.quantity ?? 0) : 0;
-  $: categoryMeta = getCategoryMeta(product?.category ?? "de-sezon");
-  $: categoryHref = product?.category === "la-borcan" ? "/produse/la-borcan" : "/produse/de-sezon";
+  $: catMeta = getCategoryMeta(product?.category);
+  $: categoryHref = `/produse/${catMeta.slug}`;
   $: measureUnitSuffix = productMeasureUnitSuffix(product?.measure_unit);
   $: promotionBadges = productPromotionBadges(product?.promotion_label);
   $: hasPromotion = promotionBadges.length > 0;
@@ -68,11 +69,6 @@
       if (!alive || t !== token) return;
       loading = false;
     }
-  }
-
-  function getCategoryMeta(category: string) {
-    if (category === "la-borcan") return { label: "La borcan", icon: "" };
-    return { label: "De sezon", icon: "" };
   }
 
   function addToBasket() {
@@ -132,10 +128,10 @@
           <a href="/produse" class="back-link"><i class="bi bi-arrow-left"></i> Înapoi la produse</a>
 
           <div class="top-pills">
-            <div class="category-pill">
-              <i class={`bi ${categoryMeta.icon}`}></i>
-              {categoryMeta.label}
-            </div>
+            <a class={`category-pill ${catMeta.tone}`} href={categoryHref}>
+              <i class={`bi ${catMeta.icon}`}></i>
+              {catMeta.name}
+            </a>
             {#if hasPromotion}
               {#each promotionBadges as badge}
                 <span class="promo-pill">{badge}</span>
@@ -370,13 +366,24 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--desaga-blue);
-    background: rgba(36, 146, 204, 0.12);
-    border: 1px solid rgba(36, 146, 204, 0.25);
+    color: var(--cat-ink, var(--desaga-blue));
+    background: var(--cat-bg, rgba(36, 146, 204, 0.12));
+    border: 1px solid var(--cat-border, rgba(36, 146, 204, 0.25));
     border-radius: 999px;
     padding: 7px 12px;
     font-weight: 900;
+    text-decoration: none;
+    transition: filter 0.12s ease;
   }
+
+  .category-pill:hover,
+  .category-pill:focus {
+    filter: brightness(0.96);
+  }
+
+  .category-pill.tone-green { --cat-ink: #146c43; --cat-bg: rgba(25, 135, 84, 0.14); --cat-border: rgba(25, 135, 84, 0.32); }
+  .category-pill.tone-orange { --cat-ink: #c2410c; --cat-bg: rgba(234, 88, 12, 0.14); --cat-border: rgba(234, 88, 12, 0.32); }
+  .category-pill.tone-amber { --cat-ink: #9a6a04; --cat-bg: rgba(202, 138, 4, 0.16); --cat-border: rgba(202, 138, 4, 0.36); }
 
   .promo-pill {
     box-shadow: none;

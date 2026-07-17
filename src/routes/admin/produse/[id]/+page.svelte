@@ -4,6 +4,7 @@
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { fallbackImage, PLACEHOLDER_IMAGE } from '$lib/images';
+  import { PRODUCT_CATEGORIES, DEFAULT_CATEGORY_SLUG } from '$lib/categories';
 
   type Option = { value: string; label: string; hint?: string };
   type ProductImage = { url?: string | null; image_url?: string | null } | string;
@@ -15,10 +16,7 @@
     source: 'url' | 'upload' | 'existing';
   };
 
-  const categories: Option[] = [
-    { value: 'de-sezon', label: 'De sezon', hint: 'Legume și fructe proaspete' },
-    { value: 'la-borcan', label: 'La borcan', hint: 'Conserve, murături, sosuri' },
-  ];
+  const categories: Option[] = PRODUCT_CATEGORIES.map((c) => ({ value: c.slug, label: c.name, hint: c.hint }));
   const statuses: Option[] = [
     { value: 'ACTIVE', label: 'Activ', hint: 'Apare pe site dacă stocul este peste 0' },
     { value: 'OUT_OF_STOCK', label: 'Stoc epuizat', hint: 'Vizibil public, dar nu poate fi comandat' },
@@ -39,7 +37,7 @@
   let form = {
     sku: '',
     name: '',
-    category: 'de-sezon',
+    category: DEFAULT_CATEGORY_SLUG,
     description: '',
     price: 0,
     measure_unit: 'PER_KG',
@@ -100,7 +98,7 @@
       form = {
         sku: data.item?.sku ?? '',
         name: data.item?.name ?? '',
-        category: data.item?.category ?? 'de-sezon',
+        category: data.item?.category ?? DEFAULT_CATEGORY_SLUG,
         description: data.item?.description ?? '',
         price: Number(data.item?.price ?? 0),
         measure_unit: data.item?.measure_unit ?? 'PER_KG',

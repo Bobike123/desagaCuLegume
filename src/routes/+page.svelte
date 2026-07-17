@@ -1,39 +1,17 @@
 <script lang="ts">
   import Hero from '$lib/components/Hero.svelte';
-  import ProductCard from '$lib/components/ProductCard.svelte';
+  import CategorySlider from '$lib/components/CategorySlider.svelte';
   import EventCard from '$lib/components/EventCard.svelte';
   import { getAllProducts, sortProductPriority, type Product } from '$lib/stores/products';
   import { getAllEvents, type Event } from '$lib/stores/events';
-  import { onMount, tick } from 'svelte';
-
-  const MAX_VISIBLE_SLIDER_ITEMS = 4;
-  const SLIDER_SETTLE_DELAY = 130;
-  const FIRST_SLIDER_NUDGE_DELAY = 4000;
-  const MIN_SLIDER_NUDGE_DELAY = 15000;
-  const MAX_SLIDER_NUDGE_DELAY = 20000;
-  const SLIDER_NUDGE_DURATION = 1500;
+  import { PRODUCT_CATEGORIES, categoryMeta } from '$lib/categories';
+  import { onMount } from 'svelte';
 
   let products: Product[] = [];
   let events: Event[] = [];
   let loadingProducts = true;
   let loadingEvents = true;
-  let borcaneSlideIndex = 0;
-  let sezonSlideIndex = 0;
-  let visibleSliderItems = MAX_VISIBLE_SLIDER_ITEMS;
-  let borcaneSliderViewport: HTMLDivElement | null = null;
-  let sezonSliderViewport: HTMLDivElement | null = null;
-  let borcaneScrollTimer: number | null = null;
-  let sezonScrollTimer: number | null = null;
-  let sliderNudgeTimer: number | null = null;
-  let sliderNudgeResetTimer: number | null = null;
-  let borcaneNudge = false;
-  let sezonNudge = false;
   let sortedProducts: Product[] = [];
-  let borcaneProducts: Product[] = [];
-  let sezonProducts: Product[] = [];
-  let borcaneMaxIndex = 0;
-  let sezonMaxIndex = 0;
-  let hasCatalogProducts = false;
 
   const heroTitle = 'Legume locale, proaspete, în\u00A0Cluj\u2011Napoca';
 
@@ -114,285 +92,27 @@
         }
       }
 
-      if (mounted) {
-        updateVisibleSliderItems();
-      }
     })();
-
-    window.addEventListener('resize', updateVisibleSliderItems);
-    scheduleSliderNudge(FIRST_SLIDER_NUDGE_DELAY);
 
     return () => {
       mounted = false;
-      window.removeEventListener('resize', updateVisibleSliderItems);
-      clearSliderTimers();
     };
   });
 
-  function productCategory(product: Product) {
-    const raw = String(product.category ?? '').toLowerCase().trim();
-
-    if (raw === 'la-borcan' || raw === 'borcane' || raw.includes('borcan')) {
-      return 'la-borcan';
-    }
-
-    return 'de-sezon';
-  }
-
-  function updateVisibleSliderItems() {
-    if (typeof window === 'undefined') return;
-
-    if (window.innerWidth >= 992) {
-      visibleSliderItems = 4;
-    } else {
-      visibleSliderItems = 2;
-    }
-
-    void syncSliderPositions(false);
-  }
-
-  async function syncSliderPositions(smooth = false) {
-    await tick();
-
-    borcaneSlideIndex = clampSliderIndex(borcaneSlideIndex, borcaneMaxIndex);
-    sezonSlideIndex = clampSliderIndex(sezonSlideIndex, sezonMaxIndex);
-
-    await scrollSliderToIndex(borcaneSliderViewport, borcaneSlideIndex, smooth);
-    await scrollSliderToIndex(sezonSliderViewport, sezonSlideIndex, smooth);
-  }
-
-  function clearSliderTimers() {
-    if (typeof window === 'undefined') return;
-
-    if (borcaneScrollTimer !== null) {
-      window.clearTimeout(borcaneScrollTimer);
-      borcaneScrollTimer = null;
-    }
-
-    if (sezonScrollTimer !== null) {
-      window.clearTimeout(sezonScrollTimer);
-      sezonScrollTimer = null;
-    }
-
-    if (sliderNudgeTimer !== null) {
-      window.clearTimeout(sliderNudgeTimer);
-      sliderNudgeTimer = null;
-    }
-
-    if (sliderNudgeResetTimer !== null) {
-      window.clearTimeout(sliderNudgeResetTimer);
-      sliderNudgeResetTimer = null;
-    }
-  }
-
-  function clampSliderIndex(value: number, max: number) {
-    return Math.min(Math.max(value, 0), max);
-  }
-
-  function shouldAnimateSlider() {
-    if (typeof window === 'undefined') return false;
-    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }
-
-  function randomSliderNudgeDelay() {
-    return Math.floor(
-      MIN_SLIDER_NUDGE_DELAY + Math.random() * (MAX_SLIDER_NUDGE_DELAY - MIN_SLIDER_NUDGE_DELAY)
-    );
-  }
-
-  function scheduleSliderNudge(delay = randomSliderNudgeDelay()) {
-    if (typeof window === 'undefined' || !shouldAnimateSlider()) return;
-
-    if (sliderNudgeTimer !== null) {
-      window.clearTimeout(sliderNudgeTimer);
-    }
-
-    sliderNudgeTimer = window.setTimeout(() => {
-      sliderNudgeTimer = null;
-      triggerSliderNudge();
-      scheduleSliderNudge();
-    }, delay);
-  }
-
-  function triggerSliderNudge() {
-    if (typeof window === 'undefined' || !shouldAnimateSlider()) return;
-
-    const availableSliders = [
-      { key: 'borcane', canNudge: borcaneProducts.length > visibleSliderItems },
-      { key: 'sezon', canNudge: sezonProducts.length > visibleSliderItems },
-    ].filter((item) => item.canNudge);
-
-    if (availableSliders.length === 0) return;
-
-    const target = availableSliders[Math.floor(Math.random() * availableSliders.length)]?.key;
-
-    borcaneNudge = target === 'borcane';
-    sezonNudge = target === 'sezon';
-
-    if (sliderNudgeResetTimer !== null) {
-      window.clearTimeout(sliderNudgeResetTimer);
-    }
-
-    sliderNudgeResetTimer = window.setTimeout(() => {
-      borcaneNudge = false;
-      sezonNudge = false;
-      sliderNudgeResetTimer = null;
-    }, SLIDER_NUDGE_DURATION);
-  }
-
-  function getSliderItems(viewport: HTMLDivElement | null) {
-    if (!viewport) return [];
-    return Array.from(viewport.querySelectorAll<HTMLElement>('[data-slide-index]'));
-  }
-
-  function getSliderLeftForIndex(viewport: HTMLDivElement | null, index: number) {
-    const items = getSliderItems(viewport);
-    const first = items[0];
-    const target = items[index];
-
-    if (!first || !target) return 0;
-
-    return Math.max(0, target.offsetLeft - first.offsetLeft);
-  }
-
-  function getNearestSliderIndex(viewport: HTMLDivElement | null, maxIndex: number) {
-    const items = getSliderItems(viewport);
-    const first = items[0];
-
-    if (!viewport || !first || items.length === 0) return 0;
-
-    const currentLeft = viewport.scrollLeft;
-    let nearestIndex = 0;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    for (const item of items) {
-      const index = Number(item.dataset.slideIndex ?? 0);
-      const itemLeft = Math.max(0, item.offsetLeft - first.offsetLeft);
-      const distance = Math.abs(currentLeft - itemLeft);
-
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestIndex = index;
-      }
-    }
-
-    return clampSliderIndex(nearestIndex, maxIndex);
-  }
-
-  async function scrollSliderToIndex(viewport: HTMLDivElement | null, index: number, smooth = true) {
-    await tick();
-
-    if (!viewport) return;
-
-    const left = getSliderLeftForIndex(viewport, index);
-
-    viewport.scrollTo({
-      left,
-      behavior: smooth && shouldAnimateSlider() ? 'smooth' : 'auto',
-    });
-  }
-
-  function settleSlider(
-    viewport: HTMLDivElement | null,
-    maxIndex: number,
-    setIndex: (index: number) => void
-  ) {
-    if (!viewport) return;
-
-    const nearestIndex = getNearestSliderIndex(viewport, maxIndex);
-    setIndex(nearestIndex);
-    void scrollSliderToIndex(viewport, nearestIndex, true);
-  }
-
-  function settleBorcaneSlider() {
-    settleSlider(borcaneSliderViewport, borcaneMaxIndex, (index) => {
-      borcaneSlideIndex = index;
-    });
-  }
-
-  function settleSezonSlider() {
-    settleSlider(sezonSliderViewport, sezonMaxIndex, (index) => {
-      sezonSlideIndex = index;
-    });
-  }
-
-  function scheduleBorcaneSettle() {
-    if (typeof window === 'undefined') return;
-
-    if (borcaneScrollTimer !== null) {
-      window.clearTimeout(borcaneScrollTimer);
-    }
-
-    borcaneScrollTimer = window.setTimeout(() => {
-      borcaneScrollTimer = null;
-      settleBorcaneSlider();
-    }, SLIDER_SETTLE_DELAY);
-  }
-
-  function scheduleSezonSettle() {
-    if (typeof window === 'undefined') return;
-
-    if (sezonScrollTimer !== null) {
-      window.clearTimeout(sezonScrollTimer);
-    }
-
-    sezonScrollTimer = window.setTimeout(() => {
-      sezonScrollTimer = null;
-      settleSezonSlider();
-    }, SLIDER_SETTLE_DELAY);
-  }
-
-  function handleBorcaneScroll() {
-    if (!borcaneSliderViewport) return;
-
-    const nearestIndex = getNearestSliderIndex(borcaneSliderViewport, borcaneMaxIndex);
-
-    if (nearestIndex !== borcaneSlideIndex) {
-      borcaneSlideIndex = nearestIndex;
-    }
-
-    scheduleBorcaneSettle();
-  }
-
-  function handleSezonScroll() {
-    if (!sezonSliderViewport) return;
-
-    const nearestIndex = getNearestSliderIndex(sezonSliderViewport, sezonMaxIndex);
-
-    if (nearestIndex !== sezonSlideIndex) {
-      sezonSlideIndex = nearestIndex;
-    }
-
-    scheduleSezonSettle();
-  }
-
-  function moveBorcaneSlider(direction: 1 | -1) {
-    const nextIndex = clampSliderIndex(borcaneSlideIndex + direction, borcaneMaxIndex);
-    if (nextIndex === borcaneSlideIndex) return;
-
-    borcaneSlideIndex = nextIndex;
-    void scrollSliderToIndex(borcaneSliderViewport, borcaneSlideIndex);
-  }
-
-  function moveSezonSlider(direction: 1 | -1) {
-    const nextIndex = clampSliderIndex(sezonSlideIndex + direction, sezonMaxIndex);
-    if (nextIndex === sezonSlideIndex) return;
-
-    sezonSlideIndex = nextIndex;
-    void scrollSliderToIndex(sezonSliderViewport, sezonSlideIndex);
+  function productCategorySlug(product: Product) {
+    return categoryMeta(product.category).slug;
   }
 
   $: sortedProducts = [...products].sort((a, b) => {
     const stockRank = Number(Boolean(b.in_stock)) - Number(Boolean(a.in_stock));
     return stockRank || sortProductPriority(a, b);
   });
-  $: borcaneProducts = sortedProducts.filter((product) => productCategory(product) === 'la-borcan');
-  $: sezonProducts = sortedProducts.filter((product) => productCategory(product) === 'de-sezon');
-  $: borcaneMaxIndex = Math.max(0, borcaneProducts.length - visibleSliderItems);
-  $: sezonMaxIndex = Math.max(0, sezonProducts.length - visibleSliderItems);
-  $: if (borcaneSlideIndex > borcaneMaxIndex) borcaneSlideIndex = borcaneMaxIndex;
-  $: if (sezonSlideIndex > sezonMaxIndex) sezonSlideIndex = sezonMaxIndex;
-  $: hasCatalogProducts = borcaneProducts.length > 0 || sezonProducts.length > 0;
+  $: categoryBuckets = PRODUCT_CATEGORIES.map((category) => ({
+    slug: category.slug,
+    kicker: category.homeKicker,
+    title: category.name,
+    products: sortedProducts.filter((product) => productCategorySlug(product) === category.slug),
+  })).filter((bucket) => bucket.products.length > 0);
   $: availableCount = products.filter((product) => product.in_stock).length;
   $: upcoming = events.slice(0, 3);
 </script>
@@ -441,20 +161,13 @@
 
     {#if loadingProducts}
       <div class="catalog-sliders" aria-label="Se încarcă produsele">
-        {#each ['Produse la borcan', 'Produse de sezon'] as title}
-          <div class="product-slider-panel">
-            <div class="slider-head">
-              <div>
-                <span class="slider-kicker">Catalog</span>
-                <h3>{title}</h3>
-              </div>
-              <div class="slider-controls skeleton-controls">
-                <span></span>
-                <span></span>
-              </div>
+        {#each Array(2) as _}
+          <div class="slider-skeleton">
+            <div class="slider-skeleton__head">
+              <span class="slider-skeleton__title"></span>
+              <span class="slider-skeleton__count"></span>
             </div>
-
-            <div class="slider-grid">
+            <div class="slider-skeleton__grid">
               {#each Array(4) as _}
                 <div class="skeleton-card skeleton-product"></div>
               {/each}
@@ -462,7 +175,7 @@
           </div>
         {/each}
       </div>
-    {:else if !hasCatalogProducts}
+    {:else if categoryBuckets.length === 0}
       <div class="empty-state">
         <div class="empty-title">Nu avem produse afișate momentan</div>
         <div class="empty-sub">
@@ -479,129 +192,14 @@
       </div>
     {:else}
       <div class="catalog-sliders">
-        {#if borcaneProducts.length > 0}
-        <section class="product-slider-panel" aria-labelledby="borcane-slider-title">
-          <div class="slider-head">
-            <div>
-              <span class="slider-kicker">La borcan</span>
-              <h3 id="borcane-slider-title">Borcane</h3>
-            </div>
-
-            <div class="slider-meta">
-              <span class="slider-count">
-                {#if borcaneProducts.length > 0}
-                  {borcaneSlideIndex + 1}–{Math.min(borcaneSlideIndex + visibleSliderItems, borcaneProducts.length)} din {borcaneProducts.length}
-                {:else}
-                  0 produse
-                {/if}
-              </span>
-            </div>
-          </div>
-
-          <div class="slider-shell">
-            <button
-              type="button"
-              class="slider-btn slider-btn-side slider-btn-prev"
-              aria-label="Produsele la borcan anterioare"
-              disabled={borcaneSlideIndex === 0}
-              on:click={() => moveBorcaneSlider(-1)}
-            >
-              <i class="bi bi-chevron-left"></i>
-            </button>
-
-            <div
-              class="slider-window"
-              bind:this={borcaneSliderViewport}
-              aria-label="Slider produse la borcan"
-              aria-live="polite"
-              role="region"
-              on:scroll={handleBorcaneScroll}
-              on:touchend={settleBorcaneSlider}
-              on:pointerup={settleBorcaneSlider}
-            >
-              <div class="slider-track" class:slider-track-nudge={borcaneNudge}>
-                {#each borcaneProducts as product, index (product.id)}
-                  <div class="grid-item slider-item home-slider-item" data-slide-index={index}>
-                    <ProductCard {product} />
-                  </div>
-                {/each}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="slider-btn slider-btn-side slider-btn-next"
-              aria-label="Produsele la borcan următoare"
-              disabled={borcaneSlideIndex >= borcaneMaxIndex}
-              on:click={() => moveBorcaneSlider(1)}
-            >
-              <i class="bi bi-chevron-right"></i>
-            </button>
-          </div>
-        </section>
-        {/if}
-
-        {#if sezonProducts.length > 0}
-        <section class="product-slider-panel" aria-labelledby="sezon-slider-title">
-          <div class="slider-head">
-            <div>
-              <span class="slider-kicker">De sezon</span>
-              <h3 id="sezon-slider-title">Produse de sezon</h3>
-            </div>
-
-            <div class="slider-meta">
-              <span class="slider-count">
-                {#if sezonProducts.length > 0}
-                  {sezonSlideIndex + 1}–{Math.min(sezonSlideIndex + visibleSliderItems, sezonProducts.length)} din {sezonProducts.length}
-                {:else}
-                  0 produse
-                {/if}
-              </span>
-            </div>
-          </div>
-
-          <div class="slider-shell">
-            <button
-              type="button"
-              class="slider-btn slider-btn-side slider-btn-prev"
-              aria-label="Produsele de sezon anterioare"
-              disabled={sezonSlideIndex === 0}
-              on:click={() => moveSezonSlider(-1)}
-            >
-              <i class="bi bi-chevron-left"></i>
-            </button>
-
-            <div
-              class="slider-window"
-              bind:this={sezonSliderViewport}
-              aria-label="Slider produse de sezon"
-              aria-live="polite"
-              role="region"
-              on:scroll={handleSezonScroll}
-              on:touchend={settleSezonSlider}
-              on:pointerup={settleSezonSlider}
-            >
-              <div class="slider-track" class:slider-track-nudge={sezonNudge}>
-                {#each sezonProducts as product, index (product.id)}
-                  <div class="grid-item slider-item home-slider-item" data-slide-index={index}>
-                    <ProductCard {product} />
-                  </div>
-                {/each}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="slider-btn slider-btn-side slider-btn-next"
-              aria-label="Produsele de sezon următoare"
-              disabled={sezonSlideIndex >= sezonMaxIndex}
-              on:click={() => moveSezonSlider(1)}
-            >
-              <i class="bi bi-chevron-right"></i>
-            </button>
-          </div>
-        </section>
-        {/if}
+        {#each categoryBuckets as bucket (bucket.slug)}
+          <CategorySlider
+            kicker={bucket.kicker}
+            title={bucket.title}
+            products={bucket.products}
+            titleId={`slider-${bucket.slug}`}
+          />
+        {/each}
       </div>
     {/if}
 
@@ -817,7 +415,7 @@
     gap: 18px;
   }
 
-  .product-slider-panel {
+  .slider-skeleton {
     overflow: hidden;
     border-radius: 22px;
     background: #fff;
@@ -825,246 +423,41 @@
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
   }
 
-  .slider-head {
+  .slider-skeleton__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 16px 16px 12px;
+    padding: 16px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.08), rgba(255, 255, 255, 0.94));
   }
 
-  .slider-kicker {
-    display: inline-flex;
-    margin-bottom: 0.28rem;
-    color: var(--accent);
-    font-size: 0.72rem;
-    font-weight: 950;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .slider-head h3 {
-    margin: 0;
-    font-size: 1.08rem;
-    font-weight: 950;
-    letter-spacing: -0.01em;
-  }
-
-  .slider-controls,
-  .slider-meta {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    flex: 0 0 auto;
-  }
-
-  .slider-count {
-    display: none;
-    color: rgba(0, 0, 0, 0.62);
-    font-size: 0.82rem;
-    font-weight: 850;
-    white-space: nowrap;
-  }
-
-  .slider-btn {
-    width: 40px;
-    height: 40px;
-    display: grid;
-    place-items: center;
+  .slider-skeleton__title,
+  .slider-skeleton__count {
+    height: 18px;
     border-radius: 999px;
-    border: 1px solid rgba(var(--accent-rgb), 0.26);
-    background: rgba(var(--accent-rgb), 0.1);
-    color: var(--accent);
-    cursor: pointer;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    transition:
-      transform 0.12s ease,
-      background 0.12s ease,
-      border-color 0.12s ease,
-      opacity 0.12s ease;
+    background: rgba(0, 0, 0, 0.08);
   }
 
-  .slider-btn:hover:not(:disabled),
-  .slider-btn:focus-visible:not(:disabled) {
-    transform: translateY(-1px);
-    background: rgba(var(--accent-rgb), 0.16);
-    border-color: rgba(var(--accent-rgb), 0.46);
-    outline: none;
+  .slider-skeleton__title {
+    width: 160px;
   }
 
-  .slider-btn:active:not(:disabled) {
-    transform: translateY(0) scale(0.97);
+  .slider-skeleton__count {
+    width: 64px;
   }
 
-  .slider-btn:disabled {
-    opacity: 0.38;
-    cursor: not-allowed;
-  }
-
-  .slider-btn-side {
-    position: absolute;
-    top: 50%;
-    z-index: 4;
-    width: 52px;
-    height: 58px;
-    font-size: 1.45rem;
-    background: rgba(255, 255, 255, 0.96);
-    border-color: rgba(var(--accent-rgb), 0.34);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
-  }
-
-  .slider-btn-prev {
-    left: 8px;
-    transform: translateY(-50%);
-  }
-
-  .slider-btn-next {
-    right: 8px;
-    transform: translateY(-50%);
-  }
-
-  .slider-btn-prev:hover:not(:disabled),
-  .slider-btn-prev:focus-visible:not(:disabled),
-  .slider-btn-next:hover:not(:disabled),
-  .slider-btn-next:focus-visible:not(:disabled) {
-    transform: translateY(-50%) scale(1.03);
-  }
-
-  .slider-btn-prev:active:not(:disabled),
-  .slider-btn-next:active:not(:disabled) {
-    transform: translateY(-50%) scale(0.98);
-  }
-
-  .slider-shell {
-    position: relative;
-    padding: 0 58px;
-  }
-
-  .slider-window {
-    --slider-gap: 14px;
-    --slider-peek-distance: min(140px, 36vw);
-    position: relative;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 14px 0;
-    scroll-behavior: smooth;
-    scroll-snap-type: x mandatory;
-    scroll-padding-inline: 0;
-    scrollbar-width: none;
-    overscroll-behavior-inline: contain;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y;
-  }
-
-  .slider-window:focus-visible {
-    outline: 3px solid rgba(var(--accent-rgb), 0.28);
-    outline-offset: -3px;
-  }
-
-  .slider-window::-webkit-scrollbar {
-    display: none;
-  }
-
-  .slider-grid {
+  .slider-skeleton__grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
     padding: 14px;
   }
 
-  .slider-track {
-    display: flex;
-    gap: var(--slider-gap);
-    align-items: stretch;
-  }
-
-  .slider-track-nudge {
-    animation: slider-peek 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  @keyframes slider-peek {
-    0%,
-    100% {
-      transform: translateX(0);
-    }
-
-    42%,
-    62% {
-      transform: translateX(calc(-1 * var(--slider-peek-distance)));
-    }
-  }
-
-  .slider-item {
-    flex: 0 0 calc((100% - var(--slider-gap)) / 2);
-    min-width: 0;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-  }
-
-  @media (max-width: 575.98px) {
-    .slider-shell {
-      padding: 0;
-    }
-
-    .slider-window {
-      --slider-gap: 8px;
-      --slider-peek-distance: min(96px, 32vw);
-      padding: 12px 18px 16px;
-      scroll-padding-inline: 18px;
-    }
-
-    .slider-track {
-      gap: var(--slider-gap);
-    }
-
-    .slider-item {
-      flex: 0 0 clamp(132px, 41.5vw, 158px);
-    }
-
-    .slider-btn-side {
-      width: 34px;
-      height: 44px;
-      font-size: 1rem;
-      background: rgba(255, 255, 255, 0.94);
-      border-color: rgba(var(--accent-rgb), 0.3);
-      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
-    }
-
-    .slider-btn-prev {
-      left: 4px;
-    }
-
-    .slider-btn-next {
-      right: 4px;
-    }
-  }
-
-  .slider-item :global(*) {
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .skeleton-controls span {
-    width: 40px;
-    height: 40px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.07);
-  }
-
-  @media (min-width: 576px) {
-    .slider-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .slider-item {
-      flex-basis: calc((100% - var(--slider-gap)) / 2);
-    }
-
-    .slider-count {
-      display: inline-flex;
+  @media (min-width: 992px) {
+    .slider-skeleton__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
 
@@ -1085,13 +478,8 @@
       align-items: stretch;
     }
 
-    .products-grid,
-    .slider-grid {
+    .products-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .slider-item {
-      flex-basis: calc((100% - (var(--slider-gap) * 3)) / 4);
     }
   }
 
@@ -1329,173 +717,6 @@
     .catalog-sliders {
       gap: 16px;
       margin-inline: -2px;
-    }
-
-    .product-slider-panel {
-      border-radius: 20px;
-      border-color: rgba(var(--accent-rgb), 0.14);
-      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-    }
-
-    .slider-head {
-      align-items: center;
-      flex-direction: row;
-      padding: 13px 16px 11px;
-      background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(255, 255, 255, 0.96));
-    }
-
-    .slider-kicker {
-      margin-bottom: 0.16rem;
-      font-size: 0.64rem;
-      letter-spacing: 0.09em;
-    }
-
-    .slider-head h3 {
-      font-size: 1rem;
-      line-height: 1.05;
-    }
-
-    .slider-meta {
-      align-self: center;
-    }
-
-    .slider-controls {
-      width: 100%;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .slider-count {
-      display: inline-flex;
-      flex: 0 0 auto;
-      align-items: center;
-      min-height: 0;
-      padding: 0.32rem 0.52rem;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.74);
-      border: 1px solid rgba(var(--accent-rgb), 0.16);
-      color: rgba(15, 23, 42, 0.72);
-      font-size: 0.7rem;
-      line-height: 1;
-    }
-
-    .slider-btn:not(.slider-btn-side) {
-      width: 40px;
-      height: 40px;
-      font-size: 1rem;
-    }
-
-    .slider-btn-side {
-      opacity: 0.92;
-    }
-
-    .slider-btn-side:disabled {
-      opacity: 0.2;
-    }
-
-    .slider-window {
-      --slider-gap: 8px;
-      padding: 12px 18px 16px;
-      scroll-padding-inline: 18px;
-    }
-
-    .home-slider-item :global(.card) {
-      min-height: 0 !important;
-      border-radius: 12px !important;
-      box-shadow: none !important;
-      transform: none !important;
-    }
-
-    .home-slider-item :global(.card[data-promotion='true']) {
-      border-color: rgba(194, 37, 45, 0.28) !important;
-      box-shadow: 0 8px 18px rgba(194, 37, 45, 0.1) !important;
-    }
-
-    .home-slider-item :global(.media-link) {
-      height: 86px !important;
-    }
-
-    .home-slider-item :global(.promo-stack) {
-      top: 5px !important;
-      right: 5px !important;
-      gap: 3px !important;
-      max-width: calc(100% - 10px) !important;
-    }
-
-    .home-slider-item :global(.promo-badge) {
-      min-height: 18px !important;
-      padding: 0.16rem 0.34rem !important;
-      font-size: 0.5rem !important;
-      letter-spacing: 0.04em !important;
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14) !important;
-    }
-
-    .home-slider-item :global(.promo-badge::before) {
-      width: 5px !important;
-      height: 5px !important;
-      margin-right: 4px !important;
-      box-shadow: 0 0 0 2px rgba(194, 37, 45, 0.12) !important;
-    }
-
-    .home-slider-item :global(.badges) {
-      left: 5px !important;
-      right: 5px !important;
-      bottom: 5px !important;
-      gap: 3px !important;
-    }
-
-    .home-slider-item :global(.badges .pill:first-child) {
-      display: none !important;
-    }
-
-    .home-slider-item :global(.pill) {
-      padding: 0.16rem 0.34rem !important;
-      font-size: 0.54rem !important;
-      gap: 3px !important;
-    }
-
-    .home-slider-item :global(.body) {
-      padding: 7px 8px 9px !important;
-    }
-
-    .home-slider-item :global(.title) {
-      font-size: 0.76rem !important;
-      line-height: 1.13 !important;
-      letter-spacing: -0.01em !important;
-    }
-
-    .home-slider-item :global(.footer) {
-      margin-top: 7px !important;
-      gap: 6px !important;
-    }
-
-    .home-slider-item :global(.price) {
-      font-size: 0.84rem !important;
-      line-height: 1.05 !important;
-    }
-
-    .home-slider-item :global(.currency),
-    .home-slider-item :global(.unit) {
-      margin-left: 1px !important;
-      font-size: 0.58rem !important;
-    }
-
-    .home-slider-item :global(.btn-add),
-    .home-slider-item :global(.details-link) {
-      min-height: 32px !important;
-      padding: 0.32rem 0.45rem !important;
-      border-radius: 10px !important;
-      font-size: 0.74rem !important;
-      gap: 5px !important;
-    }
-
-    .home-slider-item :global(.step-btn) {
-      width: 32px !important;
-      height: 32px !important;
-    }
-
-    .home-slider-item :global(.qty-wrap) {
-      height: 32px !important;
     }
 
     .actions,

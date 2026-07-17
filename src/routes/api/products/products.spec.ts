@@ -55,7 +55,7 @@ describe('/api/products GET', () => {
 
   it('constrains the query to allowed categories BEFORE applying the range', async () => {
     const { admin, calls } = makeAdmin({
-      product_categories: [{ category_id: 1, name: 'De sezon', slug: 'de-sezon' }],
+      product_categories: [{ category_id: 1, name: 'Legume', slug: 'legume' }],
       products: [],
       product_images: [],
     });
@@ -78,7 +78,7 @@ describe('/api/products GET', () => {
 
   it('hides non-public statuses from anonymous visitors', async () => {
     const { admin, calls } = makeAdmin({
-      product_categories: [{ category_id: 1, name: 'De sezon', slug: 'de-sezon' }],
+      product_categories: [{ category_id: 1, name: 'Legume', slug: 'legume' }],
       products: [],
       product_images: [],
     });
@@ -94,7 +94,7 @@ describe('/api/products GET', () => {
 
   it('does not apply the status filter for admins', async () => {
     const { admin, calls } = makeAdmin({
-      product_categories: [{ category_id: 1, name: 'De sezon', slug: 'de-sezon' }],
+      product_categories: [{ category_id: 1, name: 'Legume', slug: 'legume' }],
       products: [],
       product_images: [],
     });

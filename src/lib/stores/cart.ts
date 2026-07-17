@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { DEFAULT_CATEGORY_SLUG } from '$lib/categories';
 import { MAX_CART_QUANTITY } from '$lib/cart-limits';
 import { normalizeProductMeasureUnit, normalizeProductPromotionLabel, type ProductMeasureUnit, type ProductPromotionLabel } from '$lib/format';
 import { derived, writable } from 'svelte/store';
@@ -35,7 +36,7 @@ function normalizeCartLine(raw: any): CartLine {
     quantity: Number(raw?.quantity ?? 0),
     image_url: images[0]?.url ?? raw?.image_url ?? '',
     images,
-    category: raw?.category ?? 'de-sezon',
+    category: raw?.category ?? DEFAULT_CATEGORY_SLUG,
     measure_unit: normalizeProductMeasureUnit(raw?.measure_unit),
     promotion_label: normalizeProductPromotionLabel(raw?.promotion_label),
     in_stock: Boolean(raw?.in_stock ?? true),
@@ -84,7 +85,7 @@ function createCartStore() {
                   price: Number(product.price ?? 0),
                   image_url: images[0]?.url ?? product.image_url ?? '',
                   images,
-                  category: product.category ?? 'de-sezon',
+                  category: product.category ?? DEFAULT_CATEGORY_SLUG,
                   measure_unit: normalizeProductMeasureUnit(product.measure_unit),
                   promotion_label: normalizeProductPromotionLabel(product.promotion_label),
                   in_stock: Boolean(product.in_stock),
@@ -102,7 +103,7 @@ function createCartStore() {
               quantity: Math.min(MAX_CART_QUANTITY, Math.max(1, Math.floor(quantity))),
               image_url: images[0]?.url ?? product.image_url ?? '',
               images,
-              category: product.category ?? 'de-sezon',
+              category: product.category ?? DEFAULT_CATEGORY_SLUG,
               measure_unit: normalizeProductMeasureUnit(product.measure_unit),
               promotion_label: normalizeProductPromotionLabel(product.promotion_label),
               in_stock: Boolean(product.in_stock),

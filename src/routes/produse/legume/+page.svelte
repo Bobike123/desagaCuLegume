@@ -2,4 +2,4 @@
   import CategoryProductsPage from '$lib/components/CategoryProductsPage.svelte';
 </script>
 
-<CategoryProductsPage slug="la-borcan" />
+<CategoryProductsPage slug="legume" />

@@ -1,6 +1,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { DEFAULT_CATEGORY_SLUG } from '$lib/categories';
   import { computeCartSummary, DEFAULT_SHIPPING_RULES, type ShippingRules } from '$lib/cart-summary';
   import { apiFetch } from '$lib/api-client';
   import { formatMoney } from '$lib/format';
@@ -140,7 +141,7 @@
               quantity: Number(item.quantity ?? 0),
               image_url: item.image_url ?? '',
               images: item.images ?? [],
-              category: item.category ?? 'de-sezon',
+              category: item.category ?? DEFAULT_CATEGORY_SLUG,
               measure_unit: item.measure_unit ?? 'PER_KG',
               promotion_label: item.promotion_label ?? 'NONE',
               in_stock: item.in_stock ?? true,

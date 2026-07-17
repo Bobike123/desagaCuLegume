@@ -3,6 +3,8 @@ import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from '$lib/server/supabase';
 import { getPagination, getPaginationMeta, noStoreHeaders, publicCacheHeaders } from '$lib/server/pagination';
 import {
+  ALLOWED_CATEGORIES_MESSAGE,
+  DEFAULT_CATEGORY_SLUG,
   ensureCategory,
   fetchAllowedCategoryIds,
   fetchCategoryMap,
@@ -112,11 +114,11 @@ export async function POST({ locals, request }) {
     const name = stringField(body, 'name', { required: true, max: 160, fieldLabel: 'Numele produsului' });
     if (!name) return json({ error: 'Numele produsului este obligatoriu.' }, { status: 400 });
 
-    const requestedCategory = stringField(body, 'category', { max: 80, defaultValue: 'de-sezon', fieldLabel: 'Categoria' });
+    const requestedCategory = stringField(body, 'category', { max: 80, defaultValue: DEFAULT_CATEGORY_SLUG, fieldLabel: 'Categoria' });
     const categorySlug = normalizeProductCategorySlug(requestedCategory);
 
     if (!categorySlug) {
-      return json({ error: 'Categoria trebuie să fie De sezon sau La borcan.' }, { status: 400 });
+      return json({ error: ALLOWED_CATEGORIES_MESSAGE }, { status: 400 });
     }
 
     const category = await ensureCategory(categorySlug);

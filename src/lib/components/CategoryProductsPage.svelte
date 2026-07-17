@@ -1,53 +1,53 @@
 <script lang="ts">
-  import Hero from "$lib/components/Hero.svelte";
-  import ProductCard from "$lib/components/ProductCard.svelte";
-  import { getAllProducts, sortProductPriority, type Product } from "$lib/stores/products";
-  import { onMount } from "svelte";
+  import Hero from '$lib/components/Hero.svelte';
+  import ProductCard from '$lib/components/ProductCard.svelte';
+  import { getAllProducts, sortProductPriority, type Product } from '$lib/stores/products';
+  import { categoryMeta } from '$lib/categories';
+  import { onMount } from 'svelte';
 
-  const categorySlug = "de-sezon";
-  const phoneHref = "tel:+40729969822";
+  // Shared layout for every /produse/<slug> category page. All the copy comes
+  // from the category metadata, so the three category pages are thin wrappers.
+  export let slug: string;
+
+  const phoneHref = 'tel:+40729969822';
+
+  $: meta = categoryMeta(slug);
 
   let products: Product[] = [];
   let loading = true;
 
   onMount(async () => {
     loading = true;
-    products = (await getAllProducts(categorySlug)).filter((p: Product) => p.in_stock === true).sort(sortProductPriority);
+    products = (await getAllProducts(slug)).filter((p: Product) => p.in_stock === true).sort(sortProductPriority);
     loading = false;
   });
 </script>
 
 <svelte:head>
-  <title>Produse de sezon - DeSaga cu Legume</title>
+  <title>{meta.page.title} - DeSaga cu Legume</title>
 </svelte:head>
 
-<Hero
-  title="Produse de sezon"
-  subtitle="Legume și fructe locale, disponibile în funcție de recoltă."
-  backgroundImage="/images/produse/de-sezon-hero.jpg"
-  height="300px"
-/>
+<Hero title={meta.page.title} subtitle={meta.page.subtitle} backgroundImage={meta.page.hero} height="300px" />
 
 <section class="category-page py-5">
   <div class="container">
     <div class="intro-card">
-      <div class="intro-icon"><i class="bi "></i></div>
+      <div class="intro-icon"><i class={`bi ${meta.icon}`}></i></div>
       <div>
-        <p class="eyebrow mb-2">Din fermă la rulotă</p>
-        <h2>Sezon real, stoc actualizat</h2>
-        <p class="lead mb-0">Aici apar produsele proaspete disponibile acum. Oferta se schimbă natural, în funcție de recoltă și stoc.</p>
+        <p class="eyebrow mb-2">{meta.page.introEyebrow}</p>
+        <h2>{meta.page.introTitle}</h2>
+        <p class="lead mb-0">{meta.page.introLead}</p>
       </div>
       <div class="intro-actions">
-        <a href="/produse" class="btn btn-outline-primary"><i class="bi "></i> Toate produsele</a>
+        <a href="/produse" class="btn btn-outline-primary"><i class="bi bi-grid-3x3-gap"></i> Toate produsele</a>
         <a href={phoneHref} class="btn btn-primary"><i class="bi bi-telephone"></i> Sună pentru stoc</a>
       </div>
     </div>
 
     <div class="info-grid">
-      <div class="info-card"><strong>Primăvară</strong><span>Salată, ridichi, ceapă verde, spanac, verdețuri, cartofi noi.</span></div>
-      <div class="info-card"><strong>Vară</strong><span>Roșii, castraveți, ardei, vinete, dovlecei, fructe de sezon.</span></div>
-      <div class="info-card"><strong>Toamnă</strong><span>Gogoșari, varză, conopidă, morcovi, dovleac, mere, nuci.</span></div>
-      <div class="info-card"><strong>Iarnă</strong><span>Rădăcinoase, cartofi, sfeclă, dovleac, mere și produse păstrate.</span></div>
+      {#each meta.page.infoCards as card}
+        <div class="info-card"><strong>{card.title}</strong><span>{card.text}</span></div>
+      {/each}
     </div>
 
     <div class="section-head">
@@ -69,7 +69,7 @@
         <div class="empty-icon"><i class="bi bi-info-circle"></i></div>
         <div>
           <h4>Niciun produs disponibil momentan</h4>
-          <p>Nu avem produse de sezon disponibile în acest moment. Stocul se schimbă des; confirmă telefonic ce se găsește azi la rulotă.</p>
+          <p>Stocul se schimbă des; confirmă telefonic ce se găsește azi la rulotă.</p>
           <div class="empty-actions">
             <a href="/produse" class="btn btn-outline-primary">Vezi toate produsele</a>
             <a href={phoneHref} class="btn btn-primary">Sună pentru stocul de azi</a>
@@ -211,13 +211,21 @@
   }
 
   @media (max-width: 767.98px) {
-    .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .products-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
   }
 
   @media (max-width: 576px) {
-    .intro-card { grid-template-columns: 1fr; }
+    .intro-card {
+      grid-template-columns: 1fr;
+    }
+
     .intro-actions .btn,
-    .empty-actions .btn { width: 100%; }
+    .empty-actions .btn {
+      width: 100%;
+    }
   }
 
   .skeleton {

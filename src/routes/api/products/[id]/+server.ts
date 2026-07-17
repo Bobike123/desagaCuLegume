@@ -2,6 +2,8 @@ import { json } from '@sveltejs/kit';
 import { logRouteError } from '$lib/server/log';
 import { createAdminClient } from '$lib/server/supabase';
 import {
+  ALLOWED_CATEGORIES_MESSAGE,
+  DEFAULT_CATEGORY_SLUG,
   ensureCategory,
   fetchCategoryMap,
   fetchProductImageMap,
@@ -76,11 +78,11 @@ export async function PUT({ locals, params, request }) {
     const body = await readJsonBody(request, { maxBytes: LIMITS.largeJson });
     const admin = createAdminClient();
     const categorySlug = normalizeProductCategorySlug(
-      stringField(body, 'category', { defaultValue: 'de-sezon', max: 80, fieldLabel: 'Categoria' })
+      stringField(body, 'category', { defaultValue: DEFAULT_CATEGORY_SLUG, max: 80, fieldLabel: 'Categoria' })
     );
 
     if (!categorySlug) {
-      return json({ error: 'Categoria trebuie să fie De sezon sau La borcan.' }, { status: 400 });
+      return json({ error: ALLOWED_CATEGORIES_MESSAGE }, { status: 400 });
     }
 
     const category = await ensureCategory(categorySlug);

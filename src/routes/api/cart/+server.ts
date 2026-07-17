@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { logRouteError } from '$lib/server/log';
 import { MAX_CART_QUANTITY } from '$lib/cart-limits';
 import { normalizeCartItems } from '$lib/server/cart-validation';
-import { normalizeProductImageRows, type ProductImageRow } from '$lib/server/catalog';
+import { DEFAULT_CATEGORY_SLUG, normalizeProductImageRows, type ProductImageRow } from '$lib/server/catalog';
 import { mapRpcError } from '$lib/server/checkout-errors';
 import type {
   AddCartItemArgs,
@@ -37,7 +37,7 @@ function mapCartItem(row: CartRpcItemRow) {
     quantity: Number(row.quantity ?? 0),
     price: Number(row.unit_price ?? 0),
     currency_code: row.currency_code ?? 'RON',
-    category: row.category_slug ?? 'de-sezon',
+    category: row.category_slug ?? DEFAULT_CATEGORY_SLUG,
     stock_quantity: stockQuantity,
     in_stock: status === 'ACTIVE' && stockQuantity > 0,
   };

@@ -1,5 +1,6 @@
 import { get, writable } from 'svelte/store';
 import { apiFetch } from '$lib/api-client';
+import { DEFAULT_CATEGORY_SLUG } from '$lib/categories';
 import {
   isPromotedProduct,
   normalizeProductMeasureUnit,
@@ -103,7 +104,7 @@ function normalizeProduct(raw: any): Product {
     sku: raw?.sku ?? undefined,
     name: raw?.name ?? '',
     description: raw?.description ?? '',
-    category: raw?.category ?? 'de-sezon',
+    category: raw?.category ?? DEFAULT_CATEGORY_SLUG,
     price: typeof raw?.price === 'number' ? raw.price : Number(raw?.price ?? 0),
     measure_unit: normalizeProductMeasureUnit(raw?.measure_unit),
     promotion_label: normalizeProductPromotionLabel(raw?.promotion_label),

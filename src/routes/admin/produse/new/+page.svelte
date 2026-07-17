@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { flip } from 'svelte/animate';
   import { fallbackImage, PLACEHOLDER_IMAGE } from '$lib/images';
+  import { PRODUCT_CATEGORIES, DEFAULT_CATEGORY_SLUG } from '$lib/categories';
 
   type Option = { value: string; label: string; hint?: string };
   type MediaItem = {
@@ -12,10 +13,7 @@
     source: 'url' | 'upload' | 'existing';
   };
 
-  const categories: Option[] = [
-    { value: 'de-sezon', label: 'De sezon', hint: 'Legume și fructe proaspete' },
-    { value: 'la-borcan', label: 'La borcan', hint: 'Conserve, murături, sosuri' },
-  ];
+  const categories: Option[] = PRODUCT_CATEGORIES.map((c) => ({ value: c.slug, label: c.name, hint: c.hint }));
   const statuses: Option[] = [
     { value: 'ACTIVE', label: 'Activ', hint: 'Apare pe site dacă stocul este peste 0' },
     { value: 'OUT_OF_STOCK', label: 'Stoc epuizat', hint: 'Vizibil public, dar nu poate fi comandat' },
@@ -36,7 +34,7 @@
   let form = {
     sku: '',
     name: '',
-    category: 'de-sezon',
+    category: DEFAULT_CATEGORY_SLUG,
     description: '',
     price: 0,
     measure_unit: 'PER_KG',

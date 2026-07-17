@@ -18,7 +18,8 @@ export const STORE_INFO = {
 export const PUBLIC_SITEMAP_PATHS = [
   '/',
   '/produse',
-  '/produse/de-sezon',
+  '/produse/legume',
+  '/produse/fructe',
   '/produse/la-borcan',
   '/horeca',
   '/despre-noi',

@@ -1,5 +1,19 @@
 import { createAdminClient } from '$lib/server/supabase';
 import { RequestValidationError, safeUrl } from '$lib/server/validation';
+import {
+  PRODUCT_CATEGORIES as CATEGORY_METADATA,
+  PRODUCT_CATEGORY_SLUGS,
+  DEFAULT_CATEGORY_SLUG,
+  categoryMeta,
+  type ProductCategorySlug,
+} from '$lib/categories';
+
+// Re-exported so existing server-side imports keep working unchanged.
+export { PRODUCT_CATEGORY_SLUGS, DEFAULT_CATEGORY_SLUG, type ProductCategorySlug };
+
+// Human-readable message listing the allowed categories, reused across the
+// create/update/ensure paths.
+export const ALLOWED_CATEGORIES_MESSAGE = `Categoria trebuie să fie ${CATEGORY_METADATA.map((c) => c.name).join(', ')}.`;
 
 export const PRODUCT_STATUSES = ['ACTIVE', 'OUT_OF_STOCK', 'DISCONTINUED', 'DRAFT'] as const;
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
@@ -10,14 +24,8 @@ export type ProductMeasureUnit = (typeof PRODUCT_MEASURE_UNITS)[number];
 export const PRODUCT_PROMOTION_LABELS = ['NONE', 'NOU', 'PROMOTIE', 'NOU_PROMOTIE'] as const;
 export type ProductPromotionLabel = (typeof PRODUCT_PROMOTION_LABELS)[number];
 
-export const PRODUCT_CATEGORIES = [
-  { slug: 'de-sezon', name: 'De sezon' },
-  { slug: 'la-borcan', name: 'La borcan' },
-] as const;
+export const PRODUCT_CATEGORIES = CATEGORY_METADATA.map(({ slug, name }) => ({ slug, name }));
 
-export type ProductCategorySlug = (typeof PRODUCT_CATEGORIES)[number]['slug'];
-
-export const PRODUCT_CATEGORY_SLUGS = PRODUCT_CATEGORIES.map((category) => category.slug);
 const PRODUCT_CATEGORY_SLUG_SET = new Set<string>(PRODUCT_CATEGORY_SLUGS);
 const MAX_PRODUCT_IMAGES = 12;
 
@@ -79,18 +87,8 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '') || 'item';
 }
 
-function categoryNameFromSlug(slug: string) {
-  const knownCategory = PRODUCT_CATEGORIES.find((category) => category.slug === slug);
-  if (knownCategory) return knownCategory.name;
-
-  return slug
-    .split('-')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
 export function normalizeProductCategorySlug(value: string | null | undefined): ProductCategorySlug | null {
-  const slug = slugify(value || 'de-sezon');
+  const slug = slugify(value || DEFAULT_CATEGORY_SLUG);
   return PRODUCT_CATEGORY_SLUG_SET.has(slug) ? (slug as ProductCategorySlug) : null;
 }
 
@@ -194,7 +192,7 @@ export async function ensureCategory(value: string): Promise<CategoryRow> {
   const slug = normalizeProductCategorySlug(value);
 
   if (!slug) {
-    throw new Error('Categoria produsului trebuie să fie De sezon sau La borcan.');
+    throw new Error(ALLOWED_CATEGORIES_MESSAGE);
   }
 
   const existing = await admin
@@ -206,11 +204,13 @@ export async function ensureCategory(value: string): Promise<CategoryRow> {
   if (existing.error) throw existing.error;
   if (existing.data) return existing.data as CategoryRow;
 
+  const meta = categoryMeta(slug);
   const created = await admin
     .from('product_categories')
     .insert({
       slug,
-      name: categoryNameFromSlug(slug),
+      name: meta.name,
+      description: meta.description,
     })
     .select('category_id, name, slug, description')
     .single();
@@ -295,7 +295,7 @@ export async function replaceProductImages(productId: number | string, imageUrls
 
 // Category ids for the allowed slugs, used to constrain product queries in
 // SQL. Filtering after .range() skews counts/page sizes and lets NULL-category
-// rows (defaulted to 'de-sezon' at render time) leak into listings.
+// rows (defaulted to 'legume' at render time) leak into listings.
 export async function fetchAllowedCategoryIds() {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -348,7 +348,7 @@ export async function uniqueProductSlug(value: string, exceptProductId?: string 
   }
 }
 
-export function formatProductRow(row: ProductRow, categorySlug = 'de-sezon', productImages?: ProductImageRow[] | ProductImage[]) {
+export function formatProductRow(row: ProductRow, categorySlug: string = DEFAULT_CATEGORY_SLUG, productImages?: ProductImageRow[] | ProductImage[]) {
   const stockQuantity = Number(row.stock_quantity ?? 0);
   const status = String(row.status ?? 'DRAFT');
   const images = normalizeProductImageRows(productImages as ProductImageRow[] | undefined, row.image_url);
@@ -362,7 +362,7 @@ export function formatProductRow(row: ProductRow, categorySlug = 'de-sezon', pro
     slug: row.slug,
     name: row.name,
     description: row.description ?? '',
-    category: categorySlug || 'de-sezon',
+    category: categorySlug || DEFAULT_CATEGORY_SLUG,
     price: Number(row.price ?? 0),
     currency_code: row.currency_code ?? 'RON',
     measure_unit: normalizeProductMeasureUnit(row.measure_unit),

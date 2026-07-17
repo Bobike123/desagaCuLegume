@@ -1,6 +1,7 @@
 <script lang="ts">
   import LocationMapPreview from '$lib/components/LocationMapPreview.svelte';
   import { DESAGA_ADDRESS } from '$lib/location';
+  import { PRODUCT_CATEGORIES } from '$lib/categories';
 
   let openMenu = false;
   let openLocation = false;
@@ -9,8 +10,7 @@
   const menuLinks = [
     { href: '/', label: 'Acasă' },
     { href: '/produse', label: 'Produse' },
-    { href: '/produse/de-sezon', label: 'De sezon' },
-    { href: '/produse/la-borcan', label: 'La borcan' },
+    ...PRODUCT_CATEGORIES.map((category) => ({ href: `/produse/${category.slug}`, label: category.name })),
     { href: '/horeca', label: 'HORECA' },
     { href: '/legume-proaspete-cluj-napoca', label: 'Legume proaspete Cluj' },
     { href: '/contact', label: 'Contact' },

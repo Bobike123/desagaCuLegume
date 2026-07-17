@@ -195,7 +195,7 @@ create table public.product_categories (
   slug varchar(120) not null unique,
   description text,
   created_at timestamptz not null default now(),
-  constraint product_categories_allowed_slug_check check (slug in ('de-sezon', 'la-borcan'))
+  constraint product_categories_allowed_slug_check check (slug in ('legume', 'fructe', 'la-borcan'))
 );
 
 create table public.products (
@@ -1669,7 +1669,8 @@ set description = excluded.description;
 
 insert into public.product_categories(slug, name, description)
 values
-  ('de-sezon', 'De sezon', 'Legume și produse proaspete disponibile sezonier.'),
+  ('legume', 'Legume', 'Legume proaspete, de sezon, de la producători locali.'),
+  ('fructe', 'Fructe', 'Fructe proaspete, de sezon, de la producători locali.'),
   ('la-borcan', 'La borcan', 'Bunătăți conservate și produse pregătite la borcan.')
 on conflict (slug) do update
 set name = excluded.name,

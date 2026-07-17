@@ -9,7 +9,7 @@ const PRODUCT = {
   id: 'p1',
   name: 'Roșii cherry',
   description: 'Roșii mici',
-  category: 'de-sezon',
+  category: 'legume',
   price: 8.5,
   image_url: '',
   in_stock: true,

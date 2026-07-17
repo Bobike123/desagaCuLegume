@@ -23,7 +23,7 @@ const PRODUCT = {
   id: 'p1',
   name: 'Roșii cherry',
   description: '',
-  category: 'de-sezon',
+  category: 'legume',
   price: 8.5,
   image_url: '',
   in_stock: true,
@@ -36,7 +36,7 @@ beforeEach(() => {
 
 describe('cart browser persistence', () => {
   it('replace() persists items to localStorage', () => {
-    const lines = [{ productId: 'p1', name: 'Roșii', price: 8.5, quantity: 2, image_url: '', category: 'de-sezon', in_stock: true }];
+    const lines = [{ productId: 'p1', name: 'Roșii', price: 8.5, quantity: 2, image_url: '', category: 'legume', in_stock: true }];
     cart.replace(lines);
     const stored = storageMock.getItem('desaga-cart-v1');
     expect(stored).toBeTruthy();
@@ -45,7 +45,7 @@ describe('cart browser persistence', () => {
   });
 
   it('hydrate() reads items from localStorage', () => {
-    const lines = [{ productId: 'p2', name: 'Morcovi', price: 5, quantity: 1, image_url: '', category: 'de-sezon', in_stock: true }];
+    const lines = [{ productId: 'p2', name: 'Morcovi', price: 5, quantity: 1, image_url: '', category: 'legume', in_stock: true }];
     storageMock.setItem('desaga-cart-v1', JSON.stringify(lines));
     cart.hydrate();
     const state = get(cart);
