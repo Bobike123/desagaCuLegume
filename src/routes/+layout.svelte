@@ -1,60 +1,42 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import Navigation from '$lib/components/Navigation.svelte';
-  import MobileTabBar from '$lib/components/MobileTabBar.svelte';
-  import Footer from '$lib/components/Footer.svelte';
-  import ScrollToTop from '$lib/components/ScrollToTop.svelte';
-  import CookieConsentBanner from '$lib/components/CookieConsentBanner.svelte';
-  import { auth } from '$lib/stores/auth';
-  import { cart } from '$lib/stores/cart';
+  import MaintenancePage from '$lib/components/MaintenancePage.svelte';
   import 'bootstrap/dist/css/bootstrap.min.css';
   import 'bootstrap-icons/font/bootstrap-icons.css';
   import '$lib/styles/global.css';
 
-  onMount(() => {
-    // Bootstrap's JS bundle is intentionally NOT loaded: the only consumer was
-    // the mobile nav drawer, which is now a self-contained Svelte + CSS drawer
-    // (see Navigation.svelte). Everything else uses Bootstrap CSS only.
-    cart.hydrate();
-    void auth.initAuth();
-  });
-
-  $: isAdminRoute = $page.url.pathname.startsWith('/admin');
+  $: currentPath = $page.url.pathname.replace(/\/+$/, '') || '/';
+  $: isAdminLogin = currentPath === '/admin/login';
 </script>
 
 <svelte:head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DeSaga cu Legume - Din Fermă direct la Rulota DeSaga</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Site în mentenanță | DeSaga cu Legume</title>
   <meta
     name="description"
-    content="DeSaga cu Legume - Legume și fructe proaspete de sezon și produse la borcan. Local, Gustos, Sănătos."
+    content="Site-ul DeSaga cu Legume este momentan în mentenanță. Revenim în curând."
   />
 </svelte:head>
 
-{#if !isAdminRoute}
-  <Navigation />
-{/if}
-
-<main class="min-vh-100 bg-white">
+<!--
+  The route <slot /> is rendered only for /admin/login. Every other page is
+  replaced by the maintenance screen for the lifetime of this branch.
+-->
+{#if isAdminLogin}
   <slot />
-  <ScrollToTop />
-  <CookieConsentBanner />
-</main>
-
-{#if !isAdminRoute}
-  <Footer />
-  <MobileTabBar />
+{:else}
+  <MaintenancePage />
 {/if}
 
 <style>
-  :global(body) {
-    background-color: #ffffff;
-    color: var(--desaga-text);
+  :global(html) {
+    background: #f5f8f3;
   }
 
-  main {
-    min-height: calc(100vh - 200px);
+  :global(body) {
+    background: #f5f8f3;
+    color: var(--desaga-text);
   }
 </style>

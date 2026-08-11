@@ -157,6 +157,13 @@ export const handle: Handle = async ({ event, resolve }) => {
     return response;
   }
 
+  // Maintenance branch: keep only the admin login page reachable. Redirecting
+  // every other admin page before authentication prevents the usual protected
+  // route fallback from exposing the login screen at additional admin URLs.
+  if (event.url.pathname.startsWith('/admin') && event.url.pathname !== '/admin/login') {
+    throw redirect(303, '/');
+  }
+
   if (event.url.pathname.startsWith('/admin')) {
     const adminPageLimit = await rateLimit(event, {
       scope: 'admin-page',
