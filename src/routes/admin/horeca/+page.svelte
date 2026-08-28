@@ -295,7 +295,7 @@
 
   h2 {
     margin: 0;
-    font-weight: 950;
+    font-weight: 700;
     font-size: clamp(1.35rem, 3vw, 2rem);
     letter-spacing: -0.04em;
     color: var(--ink);
@@ -314,11 +314,11 @@
   .statusActions button {
     min-height: 44px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 15px;
     background: var(--surface);
     color: var(--ink);
-    font-weight: 950;
+    font-weight: 700;
     text-decoration: none;
     cursor: pointer;
     display: inline-flex;
@@ -343,7 +343,7 @@
 
   .stats div {
     border: 1px solid var(--line);
-    border-radius: 28px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 253, 247, 0.92);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
     padding: 18px;
@@ -352,13 +352,13 @@
   .stats span {
     display: block;
     color: var(--muted);
-    font-weight: 900;
+    font-weight: 700;
     margin-bottom: 6px;
   }
 
   .stats strong {
     font-size: 2.2rem;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.06em;
     color: var(--ink);
   }
@@ -395,7 +395,7 @@
   .listPanel,
   .detailPanel {
     border: 1px solid var(--line);
-    border-radius: 28px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 253, 247, 0.92);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
     padding: 18px;
@@ -413,7 +413,7 @@
   .requestBtn {
     text-align: left;
     border: 1px solid var(--line);
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     background: #fff;
     padding: 13px;
     cursor: pointer;
@@ -460,10 +460,10 @@
 
   /* Status tags */
   .tag {
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 6px 9px;
     font-size: 0.72rem;
-    font-weight: 950;
+    font-weight: 700;
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -490,7 +490,7 @@
 
   .detailGrid div {
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: var(--radius);
     background: rgba(255, 255, 255, 0.55);
     padding: 12px;
   }
@@ -503,14 +503,14 @@
     display: block;
     color: var(--muted);
     font-size: 0.78rem;
-    font-weight: 950;
+    font-weight: 700;
     margin-bottom: 5px;
   }
 
   .detailGrid a,
   .detailGrid strong {
     color: var(--ink);
-    font-weight: 950;
+    font-weight: 700;
     text-decoration: none;
     overflow-wrap: anywhere;
   }
@@ -529,19 +529,19 @@
   }
 
   .adminBox > label {
-    font-weight: 950;
+    font-weight: 700;
     color: var(--ink);
   }
 
   textarea {
     width: 100%;
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: var(--radius);
     padding: 12px;
     background: #fff;
     color: var(--ink);
     resize: vertical;
-    font-weight: 800;
+    font-weight: 600;
     min-height: 90px;
   }
 

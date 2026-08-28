@@ -904,9 +904,9 @@
 <style>
   .message-thread {
     background: #fff;
-    border-radius: 18px;
+    border-radius: var(--radius);
     border: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.08));
-    box-shadow: var(--desaga-shadow-sm, 0 10px 24px rgba(0, 0, 0, 0.08));
+    box-shadow: none;
     overflow: hidden;
   }
 
@@ -919,8 +919,8 @@
     padding: 16px;
     border: 0;
     background: transparent;
-    color: var(--desaga-blue, #2699d6);
-    font-weight: 800;
+    color: var(--desaga-blue, var(--tomato-ink));
+    font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -943,9 +943,9 @@
 
   .thread-header h3 {
     margin: 0;
-    color: var(--desaga-heading, #14212b);
+    color: var(--desaga-heading, var(--ink));
     font-size: clamp(1rem, 2vw, 1.2rem);
-    font-weight: 950;
+    font-weight: 700;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -972,13 +972,13 @@
     cursor: pointer;
     width: 36px;
     height: 36px;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     display: grid;
     place-items: center;
   }
 
   .icon-btn:hover:not(:disabled) {
-    color: var(--desaga-blue, #2699d6);
+    color: var(--desaga-blue, var(--tomato-ink));
     border-color: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.35);
     background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.07);
   }
@@ -989,26 +989,26 @@
     gap: 0.35rem;
     min-height: 34px;
     padding: 0.3rem 0.65rem;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.1);
     border: 1px solid rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.18);
     color: var(--desaga-muted, rgba(0, 0, 0, 0.62));
-    font-weight: 850;
+    font-weight: 600;
     font-size: 0.85rem;
   }
 
   .counter-pill strong {
-    color: var(--desaga-heading, #14212b);
-    font-weight: 950;
+    color: var(--desaga-heading, var(--ink));
+    font-weight: 700;
   }
 
   .alert {
     margin: 12px;
     padding: 12px;
-    border-radius: 12px;
-    background: #fee2e2;
-    border: 1px solid #fca5a5;
-    color: #7f1d1d;
+    border-radius: var(--radius);
+    background: var(--tomato-wash);
+    border: 1px solid rgba(181, 42, 47, 0.35);
+    color: var(--tomato-deep);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1038,14 +1038,14 @@
   .view-tabs button {
     min-height: 36px;
     border: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.1));
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 0.75rem;
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
     background: #fff;
     color: rgba(20, 33, 43, 0.72);
-    font-weight: 900;
+    font-weight: 700;
     cursor: pointer;
   }
 
@@ -1053,7 +1053,7 @@
     min-width: 22px;
     min-height: 22px;
     padding: 0 0.4rem;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1064,7 +1064,7 @@
   .view-tabs button.active {
     border-color: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.36);
     background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.1);
-    color: var(--desaga-blue, #2699d6);
+    color: var(--desaga-blue, var(--tomato-ink));
   }
 
   .filters-row {
@@ -1077,9 +1077,9 @@
   .client-select {
     height: 36px;
     border: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.08));
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 0.85rem;
-    font-weight: 850;
+    font-weight: 600;
     font-size: 0.9rem;
     color: rgba(20, 33, 43, 0.72);
     background: #fff;
@@ -1089,7 +1089,7 @@
   .client-select.has-filter {
     border-color: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.35);
     background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.1);
-    color: var(--desaga-blue, #2699d6);
+    color: var(--desaga-blue, var(--tomato-ink));
   }
 
   .search-box {
@@ -1119,7 +1119,7 @@
     width: 32px;
     height: 32px;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     background: transparent;
     color: var(--desaga-muted, rgba(0, 0, 0, 0.62));
   }
@@ -1134,17 +1134,17 @@
   .filters button {
     border: 1px solid var(--desaga-border, rgba(0, 0, 0, 0.08));
     background: #fff;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0.42rem 0.65rem;
     color: rgba(20, 33, 43, 0.72);
-    font-weight: 850;
+    font-weight: 600;
     font-size: 0.9rem;
   }
 
   .filters button.active {
     border-color: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.35);
     background: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.1);
-    color: var(--desaga-blue, #2699d6);
+    color: var(--desaga-blue, var(--tomato-ink));
   }
 
   .list-summary {
@@ -1154,7 +1154,7 @@
     padding: 0.85rem 1rem;
     color: var(--desaga-muted, rgba(0, 0, 0, 0.62));
     font-size: 0.9rem;
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .message-grid {
@@ -1184,9 +1184,9 @@
 
   .list-title {
     font-size: 0.75rem;
-    font-weight: 900;
+    font-weight: 700;
     text-transform: uppercase;
-    color: var(--desaga-blue, #2699d6);
+    color: var(--desaga-blue, var(--tomato-ink));
     margin: 12px 0 8px;
     letter-spacing: 0.5px;
   }
@@ -1223,14 +1223,14 @@
 
   .new-btn {
     border-color: rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.3);
-    color: var(--desaga-blue, #2699d6);
-    font-weight: 900;
+    color: var(--desaga-blue, var(--tomato-ink));
+    font-weight: 700;
   }
 
   .conv-title {
     min-width: 0;
     flex: 1;
-    font-weight: 850;
+    font-weight: 600;
     font-size: 0.9rem;
   }
 
@@ -1243,12 +1243,12 @@
 
   .conversation-btn__top strong,
   .conversation-btn__subject {
-    color: var(--desaga-heading, #14212b);
+    color: var(--desaga-heading, var(--ink));
   }
 
   .conversation-btn__subject {
     margin-top: 0.45rem;
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .conversation-btn__meta {
@@ -1275,15 +1275,15 @@
   .unread-badge {
     min-width: 22px;
     height: 22px;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0 0.4rem;
-    background: var(--desaga-red, #dc3545);
+    background: var(--desaga-red, var(--tomato-ink));
     color: #fff;
     font-size: 0.76rem;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .badge-light {
@@ -1291,29 +1291,29 @@
     padding: 4px 8px;
     background: rgba(0, 0, 0, 0.08);
     color: rgba(0, 0, 0, 0.62);
-    border-radius: 999px;
-    font-weight: 850;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
     white-space: nowrap;
   }
 
   .status-dot {
     width: 8px;
     height: 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     display: inline-block;
-    background: var(--desaga-muted, #64748b);
+    background: var(--desaga-muted, var(--ink-3));
   }
 
   .status-open {
-    background: var(--desaga-blue, #2699d6);
+    background: var(--desaga-blue, var(--tomato-ink));
   }
 
   .status-closed {
-    background: var(--desaga-green, #198754);
+    background: var(--desaga-green, var(--leaf));
   }
 
   .status-archived {
-    background: #64748b;
+    background: var(--ink-3);
   }
 
   .status-pill {
@@ -1321,11 +1321,11 @@
     align-items: center;
     min-height: 32px;
     padding: 0.25rem 0.65rem;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     color: #fff;
-    font-weight: 900;
+    font-weight: 700;
     font-size: 0.85rem;
-    background: #64748b;
+    background: var(--ink-3);
   }
 
   .empty-msg {
@@ -1354,9 +1354,9 @@
 
   .detail-header h4 {
     margin: 0;
-    color: var(--desaga-heading, #14212b);
+    color: var(--desaga-heading, var(--ink));
     font-size: clamp(1.05rem, 2vw, 1.35rem);
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .customer-line {
@@ -1365,7 +1365,7 @@
     flex-wrap: wrap;
     gap: 0.5rem;
     color: var(--desaga-muted, rgba(0, 0, 0, 0.62));
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .customer-line a {
@@ -1399,9 +1399,9 @@
   .reply-box label {
     display: block;
     font-size: 0.9rem;
-    font-weight: 900;
+    font-weight: 700;
     margin-bottom: 6px;
-    color: var(--desaga-heading, #14212b);
+    color: var(--desaga-heading, var(--ink));
   }
 
   .form-group .form-control,
@@ -1445,7 +1445,7 @@
     background: rgba(100, 116, 139, 0.08);
     color: rgba(20, 33, 43, 0.72);
     font-size: 0.9rem;
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .reply-actions {
@@ -1475,11 +1475,11 @@
 
   .empty-thread i {
     font-size: 2rem;
-    color: var(--desaga-blue, #2699d6);
+    color: var(--desaga-blue, var(--tomato-ink));
   }
 
   .empty-thread strong {
-    color: var(--desaga-heading, #14212b);
+    color: var(--desaga-heading, var(--ink));
   }
 
   .detail-empty {

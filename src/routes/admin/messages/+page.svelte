@@ -24,7 +24,7 @@
 <style>
   .hero {
     border: 1px solid var(--line);
-    border-radius: 30px;
+    border-radius: var(--radius-lg);
     padding: clamp(20px, 4vw, 34px);
     display: flex;
     align-items: end;
@@ -50,7 +50,7 @@
     width: 82px;
     height: 82px;
     flex: 0 0 auto;
-    border-radius: 26px;
+    border-radius: var(--radius-lg);
     display: grid;
     place-items: center;
     background: rgba(255, 255, 255, 0.12);
@@ -60,7 +60,7 @@
 
   .threadShell {
     border: 1px solid var(--line);
-    border-radius: 30px;
+    border-radius: var(--radius-lg);
     padding: clamp(10px, 2vw, 18px);
     background: rgba(255, 253, 247, 0.88);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.1);
@@ -86,17 +86,17 @@
     .hero {
       align-items: stretch;
       flex-direction: column;
-      border-radius: 24px;
+      border-radius: var(--radius-lg);
     }
 
     .heroIcon {
       width: 100%;
       height: 58px;
-      border-radius: 18px;
+      border-radius: var(--radius);
     }
 
     .threadShell {
-      border-radius: 22px;
+      border-radius: var(--radius-lg);
       padding: 8px;
     }
   }

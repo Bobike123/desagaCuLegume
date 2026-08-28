@@ -32,7 +32,7 @@
 <section class="category-page py-5">
   <div class="container">
     <div class="intro-card">
-      <div class="intro-icon"><i class={`bi ${meta.icon}`}></i></div>
+      {#if meta.icon}<div class="intro-icon"><i class={`bi ${meta.icon}`} aria-hidden="true"></i></div>{/if}
       <div>
         <p class="eyebrow mb-2">{meta.page.introEyebrow}</p>
         <h2>{meta.page.introTitle}</h2>
@@ -88,7 +88,7 @@
 
 <style>
   .category-page {
-    background: linear-gradient(180deg, #fff 0%, rgba(36, 146, 204, 0.05) 100%);
+    background: var(--paper);
   }
 
   .intro-card {
@@ -98,10 +98,9 @@
     align-items: flex-start;
     margin-bottom: 24px;
     padding: 20px;
-    border-radius: 24px;
-    border: 1px solid rgba(36, 146, 204, 0.14);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(181, 42, 47, 0.14);
     background: #fff;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
   }
 
   @media (min-width: 992px) {
@@ -114,17 +113,17 @@
   .intro-icon {
     width: 52px;
     height: 52px;
-    border-radius: 18px;
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     color: var(--desaga-blue);
-    background: rgba(36, 146, 204, 0.12);
+    background: rgba(28, 26, 23, 0.04);
     font-size: 1.35rem;
   }
 
   .eyebrow {
     color: var(--desaga-blue);
-    font-weight: 900;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-size: 0.78rem;
@@ -132,8 +131,8 @@
 
   .intro-card h2 {
     margin: 0 0 0.4rem;
-    color: var(--desaga-brown);
-    font-weight: 950;
+    color: var(--ink);
+    font-weight: 700;
     letter-spacing: -0.04em;
   }
 
@@ -157,15 +156,15 @@
   }
 
   .info-card {
-    border-radius: 18px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
     background: #fff;
     padding: 14px;
   }
 
   .info-card strong {
     display: block;
-    color: var(--desaga-brown);
+    color: var(--ink);
     margin-bottom: 4px;
   }
 
@@ -185,8 +184,8 @@
 
   .section-head h3 {
     margin: 0 0 0.25rem;
-    color: var(--desaga-brown);
-    font-weight: 950;
+    color: var(--ink);
+    font-weight: 700;
   }
 
   .section-head p {
@@ -197,11 +196,11 @@
   .count-pill {
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 7px 12px;
     color: var(--desaga-blue);
-    background: rgba(36, 146, 204, 0.12);
-    font-weight: 900;
+    background: rgba(28, 26, 23, 0.04);
+    font-weight: 700;
   }
 
   .products-grid {
@@ -230,7 +229,7 @@
 
   .skeleton {
     height: 360px;
-    border-radius: 18px;
+    border-radius: var(--radius);
     background: linear-gradient(90deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
     background-size: 200% 100%;
     animation: shimmer 1.2s infinite linear;
@@ -246,26 +245,25 @@
     grid-template-columns: auto 1fr;
     gap: 16px;
     padding: 20px;
-    border-radius: 22px;
+    border-radius: var(--radius-lg);
     background: #fff;
-    border: 1px solid rgba(36, 146, 204, 0.14);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(181, 42, 47, 0.14);
   }
 
   .empty-icon {
     width: 48px;
     height: 48px;
-    border-radius: 16px;
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     color: var(--desaga-blue);
-    background: rgba(36, 146, 204, 0.12);
+    background: rgba(28, 26, 23, 0.04);
   }
 
   .empty-state h4 {
     margin: 0 0 0.4rem;
-    color: var(--desaga-brown);
-    font-weight: 950;
+    color: var(--ink);
+    font-weight: 700;
   }
 
   .empty-state p {

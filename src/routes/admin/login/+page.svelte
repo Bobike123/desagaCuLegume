@@ -102,7 +102,7 @@
   .visualPanel,
   .authCard {
     border: 1px solid var(--line);
-    border-radius: 34px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 28px 80px rgba(35, 51, 30, 0.14);
   }
 
@@ -124,7 +124,7 @@
     inset: -120px -90px auto auto;
     width: 360px;
     height: 360px;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     background: rgba(139, 212, 80, 0.22);
   }
 
@@ -134,7 +134,7 @@
     font-size: 0.75rem;
     letter-spacing: 0.13em;
     text-transform: uppercase;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .visualPanel .eyebrow {
@@ -144,7 +144,7 @@
   h1,
   h2 {
     margin: 0;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.065em;
   }
 
@@ -182,7 +182,7 @@
   .logo {
     width: 58px;
     height: 58px;
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     display: grid;
     place-items: center;
     color: var(--accent);
@@ -199,7 +199,7 @@
     display: block;
     margin-bottom: 7px;
     color: var(--ink);
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .inputWrap {
@@ -218,11 +218,11 @@
     width: 100%;
     min-height: 56px;
     border: 1px solid var(--line);
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     padding: 0 16px 0 46px;
     background: #fff;
     color: var(--ink);
-    font-weight: 850;
+    font-weight: 600;
   }
 
   input:focus {
@@ -233,7 +233,7 @@
   button {
     min-height: 56px;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     margin-top: 6px;
     display: inline-flex;
     align-items: center;
@@ -241,7 +241,7 @@
     gap: 10px;
     color: #fffdf7;
     background: var(--accent);
-    font-weight: 950;
+    font-weight: 700;
     cursor: pointer;
   }
 
@@ -252,7 +252,7 @@
 
   .notice {
     margin-bottom: 16px;
-    border-radius: 18px;
+    border-radius: var(--radius);
     padding: 14px;
     display: flex;
     align-items: center;
@@ -260,13 +260,13 @@
     background: #fff1f1;
     border: 1px solid #facaca;
     color: #842029;
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .spinner {
     width: 18px;
     height: 18px;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     border: 2px solid rgba(255, 255, 255, 0.38);
     border-top-color: #fff;
     animation: spin 0.8s linear infinite;
@@ -283,7 +283,7 @@
     .visualPanel {
       min-height: auto;
       padding: 28px;
-      border-radius: 28px;
+      border-radius: var(--radius-lg);
     }
   }
 
@@ -297,7 +297,7 @@
     }
 
     .authCard {
-      border-radius: 26px;
+      border-radius: var(--radius-lg);
     }
   }
 </style>

@@ -221,373 +221,158 @@
 </section>
 
 <style>
+  /* The slider is a shelf on the market board: a titled band with a hairline
+     frame. The previous version was a shadowed white card whose arrow buttons
+     overlapped and clipped the first and last product. */
   .product-slider-panel {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
     overflow: hidden;
-    border-radius: 22px;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.07);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
   }
 
   .slider-head {
     display: flex;
-    align-items: center;
+    align-items: end;
     justify-content: space-between;
-    gap: 12px;
-    padding: 16px 16px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    background: linear-gradient(135deg, rgba(var(--accent-rgb, 36, 146, 204), 0.08), rgba(255, 255, 255, 0.94));
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-2);
   }
 
   .slider-kicker {
-    display: inline-flex;
-    margin-bottom: 0.28rem;
-    color: var(--accent, #2492cc);
-    font-size: 0.72rem;
-    font-weight: 950;
-    letter-spacing: 0.08em;
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
+    color: var(--tomato-ink);
   }
 
   .slider-head h3 {
-    margin: 0;
-    font-size: 1.08rem;
-    font-weight: 950;
-    letter-spacing: -0.01em;
+    margin: 2px 0 0;
+    font-size: var(--text-lg);
   }
 
   .slider-meta {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
     flex: 0 0 auto;
   }
 
   .slider-count {
-    display: none;
-    color: rgba(0, 0, 0, 0.62);
-    font-size: 0.82rem;
-    font-weight: 850;
+    font-size: var(--text-xs);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
-  }
-
-  .slider-btn {
-    width: 40px;
-    height: 40px;
-    display: grid;
-    place-items: center;
-    border-radius: 999px;
-    border: 1px solid rgba(var(--accent-rgb, 36, 146, 204), 0.26);
-    background: rgba(var(--accent-rgb, 36, 146, 204), 0.1);
-    color: var(--accent, #2492cc);
-    cursor: pointer;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    transition:
-      transform 0.12s ease,
-      background 0.12s ease,
-      border-color 0.12s ease,
-      opacity 0.12s ease;
-  }
-
-  .slider-btn:disabled {
-    opacity: 0.38;
-    cursor: not-allowed;
-  }
-
-  .slider-btn-side {
-    position: absolute;
-    top: 50%;
-    z-index: 4;
-    width: 52px;
-    height: 58px;
-    font-size: 1.45rem;
-    background: rgba(255, 255, 255, 0.96);
-    border-color: rgba(var(--accent-rgb, 36, 146, 204), 0.34);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
-  }
-
-  .slider-btn-prev {
-    left: 8px;
-    transform: translateY(-50%);
-  }
-
-  .slider-btn-next {
-    right: 8px;
-    transform: translateY(-50%);
-  }
-
-  .slider-btn-prev:hover:not(:disabled),
-  .slider-btn-prev:focus-visible:not(:disabled),
-  .slider-btn-next:hover:not(:disabled),
-  .slider-btn-next:focus-visible:not(:disabled) {
-    transform: translateY(-50%) scale(1.03);
-    outline: none;
-  }
-
-  .slider-btn-prev:active:not(:disabled),
-  .slider-btn-next:active:not(:disabled) {
-    transform: translateY(-50%) scale(0.98);
   }
 
   .slider-shell {
     position: relative;
-    padding: 0 58px;
   }
 
   .slider-window {
-    --slider-gap: 14px;
-    --slider-peek-distance: min(140px, 36vw);
-    position: relative;
     overflow-x: auto;
-    overflow-y: hidden;
-    padding: 14px 0;
-    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
-    scroll-padding-inline: 0;
-    scrollbar-width: none;
-    overscroll-behavior-inline: contain;
+    scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y;
-  }
-
-  .slider-window:focus-visible {
-    outline: 3px solid rgba(var(--accent-rgb, 36, 146, 204), 0.28);
-    outline-offset: -3px;
+    scrollbar-width: none;
   }
 
   .slider-window::-webkit-scrollbar {
     display: none;
   }
 
+  /* Flex, not grid: with grid-auto-columns: minmax(0, 50%) and 26 products
+     the free space goes negative and every track collapses to its 0 minimum,
+     which rendered the shelf as a row of hairlines. A flex item's percentage
+     width resolves against the scroll port instead, so each card keeps its
+     size and the track simply overflows. */
   .slider-track {
     display: flex;
-    gap: var(--slider-gap);
+    gap: var(--space-3);
+    padding: var(--space-3);
     align-items: stretch;
   }
 
-  .slider-track-nudge {
-    animation: slider-peek 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  @keyframes slider-peek {
-    0%,
-    100% {
-      transform: translateX(0);
-    }
-
-    42%,
-    62% {
-      transform: translateX(calc(-1 * var(--slider-peek-distance)));
-    }
-  }
-
   .slider-item {
-    flex: 0 0 calc((100% - var(--slider-gap)) / 2);
-    min-width: 0;
+    flex: 0 0 auto;
+    /* Two cards plus a sliver of the third, so the shelf reads as scrollable. */
+    width: calc(50% - var(--space-4));
+    min-width: 148px;
     scroll-snap-align: start;
-    scroll-snap-stop: always;
+    display: flex;
   }
 
-  .slider-item :global(*) {
-    -webkit-tap-highlight-color: transparent;
+  .slider-item > :global(*) {
+    width: 100%;
+  }
+
+  /* Arrows are desktop-only: on touch the shelf is swiped. They sit in the
+     header band rather than on top of the products. */
+  .slider-btn {
+    display: none;
   }
 
   @media (min-width: 576px) {
     .slider-item {
-      flex-basis: calc((100% - var(--slider-gap)) / 2);
-    }
-
-    .slider-count {
-      display: inline-flex;
+      width: calc(33.333% - var(--space-4));
     }
   }
 
   @media (min-width: 992px) {
+    .slider-track {
+      padding: var(--space-4);
+      gap: var(--space-4);
+    }
+
     .slider-item {
-      flex-basis: calc((100% - (var(--slider-gap) * 3)) / 4);
-    }
-  }
-
-  @media (max-width: 575.98px) {
-    .product-slider-panel {
-      border-radius: 20px;
-      border-color: rgba(var(--accent-rgb, 36, 146, 204), 0.14);
-      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-    }
-
-    .slider-head {
-      align-items: center;
-      flex-direction: row;
-      padding: 13px 16px 11px;
-      background: linear-gradient(135deg, rgba(var(--accent-rgb, 36, 146, 204), 0.1), rgba(255, 255, 255, 0.96));
-    }
-
-    .slider-kicker {
-      margin-bottom: 0.16rem;
-      font-size: 0.64rem;
-      letter-spacing: 0.09em;
-    }
-
-    .slider-head h3 {
-      font-size: 1rem;
-      line-height: 1.05;
-    }
-
-    .slider-meta {
-      align-self: center;
-    }
-
-    .slider-count {
-      display: inline-flex;
-      flex: 0 0 auto;
-      align-items: center;
-      min-height: 0;
-      padding: 0.32rem 0.52rem;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.74);
-      border: 1px solid rgba(var(--accent-rgb, 36, 146, 204), 0.16);
-      color: rgba(15, 23, 42, 0.72);
-      font-size: 0.7rem;
-      line-height: 1;
+      width: calc(25% - var(--space-4));
     }
 
     .slider-shell {
-      padding: 0;
+      display: flex;
+      align-items: stretch;
     }
 
-    .slider-window {
-      --slider-gap: 8px;
-      --slider-peek-distance: min(96px, 32vw);
-      padding: 12px 18px 16px;
-      scroll-padding-inline: 18px;
-    }
-
-    .slider-item {
-      flex: 0 0 clamp(132px, 41.5vw, 158px);
-    }
-
-    .slider-btn-side {
-      width: 34px;
-      height: 44px;
-      font-size: 1rem;
-      opacity: 0.92;
-      background: rgba(255, 255, 255, 0.94);
-      border-color: rgba(var(--accent-rgb, 36, 146, 204), 0.3);
-      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
-    }
-
-    .slider-btn-side:disabled {
-      opacity: 0.2;
+    .slider-btn {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 44px;
+      border: 0;
+      border-inline: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink-2);
+      cursor: pointer;
+      transition: background-color var(--motion-fast) var(--ease),
+        color var(--motion-fast) var(--ease);
     }
 
     .slider-btn-prev {
-      left: 4px;
+      border-left: 0;
+      order: -1;
     }
 
     .slider-btn-next {
-      right: 4px;
+      border-right: 0;
     }
 
-    /* Compact, app-style product cards inside the home sliders. */
-    .home-slider-item :global(.card) {
-      min-height: 0 !important;
-      border-radius: 12px !important;
-      box-shadow: none !important;
-      transform: none !important;
+    .slider-btn:hover:not(:disabled),
+    .slider-btn:focus-visible:not(:disabled) {
+      background: var(--tomato-wash);
+      color: var(--tomato-deep);
     }
 
-    .home-slider-item :global(.card[data-promotion='true']) {
-      border-color: rgba(194, 37, 45, 0.28) !important;
-      box-shadow: 0 8px 18px rgba(194, 37, 45, 0.1) !important;
+    .slider-btn:disabled {
+      color: var(--line-strong);
+      cursor: default;
     }
 
-    .home-slider-item :global(.media-link) {
-      height: 86px !important;
-    }
-
-    .home-slider-item :global(.promo-stack) {
-      top: 5px !important;
-      right: 5px !important;
-      gap: 3px !important;
-      max-width: calc(100% - 10px) !important;
-    }
-
-    .home-slider-item :global(.promo-badge) {
-      min-height: 18px !important;
-      padding: 0.16rem 0.34rem !important;
-      font-size: 0.5rem !important;
-      letter-spacing: 0.04em !important;
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14) !important;
-    }
-
-    .home-slider-item :global(.promo-badge::before) {
-      width: 5px !important;
-      height: 5px !important;
-      margin-right: 4px !important;
-      box-shadow: 0 0 0 2px rgba(194, 37, 45, 0.12) !important;
-    }
-
-    .home-slider-item :global(.badges) {
-      left: 5px !important;
-      right: 5px !important;
-      bottom: 5px !important;
-      gap: 3px !important;
-    }
-
-    .home-slider-item :global(.badges .pill:first-child) {
-      display: none !important;
-    }
-
-    .home-slider-item :global(.pill) {
-      padding: 0.16rem 0.34rem !important;
-      font-size: 0.54rem !important;
-      gap: 3px !important;
-    }
-
-    .home-slider-item :global(.body) {
-      padding: 7px 8px 9px !important;
-    }
-
-    .home-slider-item :global(.title) {
-      font-size: 0.76rem !important;
-      line-height: 1.13 !important;
-      letter-spacing: -0.01em !important;
-    }
-
-    .home-slider-item :global(.footer) {
-      margin-top: 7px !important;
-      gap: 6px !important;
-    }
-
-    .home-slider-item :global(.price) {
-      font-size: 0.84rem !important;
-      line-height: 1.05 !important;
-    }
-
-    .home-slider-item :global(.currency),
-    .home-slider-item :global(.unit) {
-      margin-left: 1px !important;
-      font-size: 0.58rem !important;
-    }
-
-    .home-slider-item :global(.btn-add),
-    .home-slider-item :global(.details-link) {
-      min-height: 32px !important;
-      padding: 0.32rem 0.45rem !important;
-      border-radius: 10px !important;
-      font-size: 0.74rem !important;
-      gap: 5px !important;
-    }
-
-    .home-slider-item :global(.step-btn) {
-      width: 32px !important;
-      height: 32px !important;
-    }
-
-    .home-slider-item :global(.qty-wrap) {
-      height: 32px !important;
+    .slider-window {
+      flex: 1;
+      min-width: 0;
     }
   }
 
@@ -598,11 +383,6 @@
 
     .slider-btn {
       transition: none;
-    }
-
-    .slider-track-nudge {
-      animation: none;
-      transform: none;
     }
   }
 </style>

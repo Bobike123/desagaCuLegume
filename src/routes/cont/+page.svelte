@@ -163,9 +163,7 @@
     display: grid;
     align-items: center;
     padding: clamp(2rem, 6vw, 5rem) 0;
-    background:
-      radial-gradient(circle at top left, rgba(var(--desaga-accent-rgb), 0.14), transparent 34rem),
-      linear-gradient(180deg, #fff, var(--desaga-cream));
+    background: var(--paper);
   }
 
   .auth-wrap {
@@ -177,7 +175,7 @@
 
   .eyebrow {
     color: var(--desaga-blue);
-    font-weight: 950;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin: 0 0 0.75rem;
@@ -187,7 +185,7 @@
     max-width: 680px;
     margin: 0;
     font-size: clamp(2rem, 6vw, 4rem);
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.045em;
     line-height: 0.98;
     color: var(--desaga-heading);
@@ -213,11 +211,11 @@
     gap: 0.75rem;
     width: fit-content;
     padding: 0.65rem 0.85rem;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: #fff;
     border: 1px solid var(--desaga-border);
     box-shadow: var(--desaga-shadow-sm);
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .benefits i {
@@ -234,16 +232,16 @@
     gap: 0.5rem;
     margin-bottom: 1rem;
     padding: 0.35rem;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: rgba(15, 23, 42, 0.05);
   }
 
   .auth-tabs button {
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0.7rem 0.9rem;
     background: transparent;
-    font-weight: 900;
+    font-weight: 700;
     color: rgba(20, 33, 43, 0.68);
   }
 
@@ -266,7 +264,7 @@
   label span {
     display: block;
     margin-bottom: 0.35rem;
-    font-weight: 850;
+    font-weight: 600;
     color: rgba(20, 33, 43, 0.78);
   }
 

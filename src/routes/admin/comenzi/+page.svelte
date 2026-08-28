@@ -297,13 +297,13 @@
   .action {
     min-height: 46px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 9px;
-    font-weight: 950;
+    font-weight: 700;
     cursor: pointer;
     background: var(--surface);
     color: var(--ink);
@@ -343,10 +343,10 @@
     width: 100%;
     min-height: 44px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: var(--surface);
     color: var(--ink);
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .searchBox input {
@@ -360,13 +360,13 @@
   .count {
     min-height: 44px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 14px;
     display: inline-flex;
     align-items: center;
     background: rgba(255, 253, 247, 0.9);
     color: var(--muted);
-    font-weight: 950;
+    font-weight: 700;
     white-space: nowrap;
   }
 
@@ -384,7 +384,7 @@
 
   .orderCard {
     border: 1px solid var(--line);
-    border-radius: 28px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 253, 247, 0.9);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
     padding: 18px;
@@ -402,7 +402,7 @@
   .orderNumber {
     display: block;
     font-size: 1.15rem;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.03em;
   }
 
@@ -421,7 +421,7 @@
 
   .total {
     padding: 10px 12px;
-    border-radius: 16px;
+    border-radius: var(--radius);
     background: rgba(139, 212, 80, 0.2);
     color: var(--accent);
     white-space: nowrap;
@@ -429,7 +429,7 @@
 
   .customerBlock {
     border: 1px solid var(--line);
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     padding: 14px;
     background: rgba(255, 255, 255, 0.5);
   }
@@ -454,18 +454,18 @@
     font-size: 0.82rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   select {
     min-height: 46px;
     width: 100%;
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: var(--radius);
     padding: 0 12px;
     background: #fff;
     color: var(--ink);
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .badge {
@@ -473,11 +473,11 @@
     display: inline-flex;
     align-items: center;
     min-height: 28px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 10px;
     font-style: normal;
     font-size: 0.78rem;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .badge-success { background: #e7f7dd; color: #25631c; }
@@ -488,13 +488,13 @@
   .saveBtn {
     min-height: 46px;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 9px;
-    font-weight: 950;
+    font-weight: 700;
     cursor: pointer;
     background: var(--accent);
     color: #fffdf7;

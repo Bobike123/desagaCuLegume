@@ -48,9 +48,9 @@
 
   .orderCard {
     padding: 12px;
-    border-radius: 14px;
+    border-radius: var(--radius);
     background: rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--line);
   }
 
   .orderTop {
@@ -62,11 +62,11 @@
 
   .orderTop span {
     padding: 0.2rem 0.5rem;
-    border-radius: 999px;
-    background: rgba(36, 146, 204, 0.1);
+    border-radius: var(--radius-sm);
+    background: rgba(28, 26, 23, 0.04);
     color: var(--desaga-blue);
     font-size: 0.75rem;
-    font-weight: 900;
+    font-weight: 700;
     white-space: nowrap;
   }
 </style>

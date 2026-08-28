@@ -110,13 +110,9 @@
       <section class:promoted={hasPromotion} class="product-shell">
         <div class="product-media">
           <ProductImageSlideshow images={slideshowImages} alt={product.name} variant="detail" interactive={true} />
-          {#if hasPromotion}
-            <div class="promotion-ribbons" aria-label="Etichete produs">
-              {#each promotionBadges as badge}
-                <span>{badge}</span>
-              {/each}
-            </div>
-          {/if}
+          <!-- The promotion labels used to be repeated here over the photo as
+               well as beside the title. One placement is enough; the pair next
+               to the title sits with the price, where it is legible. -->
 
           <div class={`stock-ribbon ${product.in_stock ? "stock-ribbon--ok" : "stock-ribbon--off"}`}>
             <i class={`bi ${product.in_stock ? "bi-check2-circle" : "bi-exclamation-circle"}`}></i>
@@ -129,7 +125,7 @@
 
           <div class="top-pills">
             <a class={`category-pill ${catMeta.tone}`} href={categoryHref}>
-              <i class={`bi ${catMeta.icon}`}></i>
+              {#if catMeta.icon}<i class={`bi ${catMeta.icon}`} aria-hidden="true"></i>{/if}
               {catMeta.name}
             </a>
             {#if hasPromotion}
@@ -228,18 +224,17 @@
 
 <style>
   .product-detail-page {
-    background: linear-gradient(180deg, #fff 0%, rgba(36, 146, 204, 0.05) 100%);
+    background: var(--paper);
     min-height: 70vh;
   }
 
   .loading-card,
   .not-found {
-    border-radius: 22px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line);
     background: #fff;
     padding: 42px 24px;
     text-align: center;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
   }
 
   .not-found {
@@ -251,7 +246,7 @@
   .not-found-icon {
     width: 58px;
     height: 58px;
-    border-radius: 18px;
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     background: rgba(220, 53, 69, 0.12);
@@ -275,42 +270,29 @@
   .product-media {
     position: relative;
     overflow: hidden;
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--line);
   }
 
   .product-shell.promoted .product-media,
   .product-shell.promoted .purchase-card {
-    border-color: rgba(194, 37, 45, 0.4);
-    box-shadow: 0 18px 44px rgba(194, 37, 45, 0.16), 0 0 0 5px rgba(194, 37, 45, 0.05);
+    border-color: rgba(181, 42, 47, 0.45);
+    box-shadow: inset 0 2px 0 0 var(--tomato);
   }
 
-  .promotion-ribbons {
-    position: absolute;
-    right: 16px;
-    top: 16px;
-    z-index: 2;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .promotion-ribbons span,
   .promo-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     border: 1px solid rgba(255, 255, 255, 0.75);
-    background: #c2252d;
-    color: #fffdf7;
+    background: var(--tomato-ink);
+    color: var(--paper);
     box-shadow: 0 10px 24px rgba(194, 37, 45, 0.28);
     padding: 0.42rem 0.78rem;
     font-size: 0.78rem;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
@@ -322,20 +304,19 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 8px 12px;
-    font-weight: 900;
-    backdrop-filter: blur(8px);
+    font-weight: 700;
   }
 
   .stock-ribbon--ok {
-    color: #12633a;
+    color: var(--leaf-deep);
     background: rgba(255, 255, 255, 0.88);
     border: 1px solid rgba(25, 135, 84, 0.24);
   }
 
   .stock-ribbon--off {
-    color: #8a5a00;
+    color: var(--clay);
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid rgba(255, 193, 7, 0.35);
   }
@@ -350,7 +331,7 @@
     gap: 8px;
     color: rgba(0, 0, 0, 0.65);
     text-decoration: none;
-    font-weight: 800;
+    font-weight: 600;
     margin-bottom: 18px;
   }
 
@@ -367,11 +348,11 @@
     align-items: center;
     gap: 8px;
     color: var(--cat-ink, var(--desaga-blue));
-    background: var(--cat-bg, rgba(36, 146, 204, 0.12));
-    border: 1px solid var(--cat-border, rgba(36, 146, 204, 0.25));
-    border-radius: 999px;
+    background: var(--cat-bg, rgba(28, 26, 23, 0.04));
+    border: 1px solid var(--cat-border, rgba(181, 42, 47, 0.25));
+    border-radius: var(--radius-sm);
     padding: 7px 12px;
-    font-weight: 900;
+    font-weight: 700;
     text-decoration: none;
     transition: filter 0.12s ease;
   }
@@ -381,9 +362,6 @@
     filter: brightness(0.96);
   }
 
-  .category-pill.tone-green { --cat-ink: #146c43; --cat-bg: rgba(25, 135, 84, 0.14); --cat-border: rgba(25, 135, 84, 0.32); }
-  .category-pill.tone-orange { --cat-ink: #c2410c; --cat-bg: rgba(234, 88, 12, 0.14); --cat-border: rgba(234, 88, 12, 0.32); }
-  .category-pill.tone-amber { --cat-ink: #9a6a04; --cat-bg: rgba(202, 138, 4, 0.16); --cat-border: rgba(202, 138, 4, 0.36); }
 
   .promo-pill {
     box-shadow: none;
@@ -392,8 +370,8 @@
 
   h1 {
     margin: 0 0 0.8rem;
-    color: var(--desaga-brown);
-    font-weight: 950;
+    color: var(--ink);
+    font-weight: 700;
     letter-spacing: -0.05em;
   }
 
@@ -410,47 +388,51 @@
 
   .purchase-card {
     display: grid;
-    gap: 16px;
-    border-radius: 22px;
-    border: 1px solid rgba(36, 146, 204, 0.15);
-    background: #fff;
-    padding: 18px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+    gap: var(--space-4);
+    border-radius: var(--radius);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    padding: var(--space-4);
   }
 
   .price-label {
-    color: rgba(0, 0, 0, 0.56);
-    font-weight: 800;
+    color: var(--ink-3);
+    font-size: var(--text-sm);
+    font-weight: 600;
     margin-bottom: 2px;
   }
 
   .price {
-    color: var(--desaga-blue);
-    font-weight: 950;
+    font-family: var(--font-display);
+    color: var(--ink);
+    font-weight: 700;
     font-size: 2rem;
     line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
 
   .product-shell.promoted .price {
-    color: #c2252d;
+    color: var(--tomato-ink);
   }
 
   .price span {
     font-size: 1rem;
-    opacity: 0.72;
+    font-weight: 600;
+    color: var(--ink-3);
   }
 
   .price-unit {
     margin-left: 4px;
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .status-box {
     display: flex;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 16px;
-    background: rgba(36, 146, 204, 0.08);
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--paper-2);
     color: rgba(0, 0, 0, 0.75);
   }
 
@@ -481,9 +463,9 @@
     display: inline-flex;
     align-items: center;
     overflow: hidden;
-    border-radius: 14px;
-    border: 1px solid rgba(36, 146, 204, 0.32);
-    background: rgba(36, 146, 204, 0.08);
+    border-radius: var(--radius);
+    border: 1px solid rgba(181, 42, 47, 0.32);
+    background: rgba(28, 26, 23, 0.04);
   }
 
   .stepper button {
@@ -492,7 +474,7 @@
     border: 0;
     background: transparent;
     color: var(--desaga-blue);
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .stepper span {
@@ -500,10 +482,10 @@
     height: 42px;
     display: grid;
     place-items: center;
-    font-weight: 950;
+    font-weight: 700;
     background: #fff;
-    border-left: 1px solid rgba(36, 146, 204, 0.2);
-    border-right: 1px solid rgba(36, 146, 204, 0.2);
+    border-left: 1px solid rgba(181, 42, 47, 0.2);
+    border-right: 1px solid rgba(181, 42, 47, 0.2);
   }
 
   .help-strip {
@@ -539,8 +521,8 @@
 
   .section-head h2 {
     margin: 0;
-    font-weight: 950;
-    color: var(--desaga-brown);
+    font-weight: 700;
+    color: var(--ink);
   }
 
   .related-grid {

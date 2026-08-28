@@ -9,33 +9,11 @@
   };
 
   const STORAGE_KEY = 'desaga_cookie_preferences';
-  const BANNER_GUTTER = 16;
 
   let visible = false;
   let manageOpen = false;
   let analytics = false;
   let marketing = false;
-  let bannerStyle = '';
-
-  function updateBannerViewport() {
-    const viewport = window.visualViewport;
-    if (!viewport) {
-      bannerStyle = '';
-      return;
-    }
-
-    const width = Math.max(0, Math.min(960, viewport.width - BANNER_GUTTER * 2));
-    const left = viewport.offsetLeft + Math.max(BANNER_GUTTER, (viewport.width - width) / 2);
-    // Below the lg breakpoint the fixed mobile tab bar occupies the bottom edge.
-    const tabBarOffset = window.innerWidth < 992 ? 62 : 0;
-    const bottom = Math.max(
-      BANNER_GUTTER + tabBarOffset,
-      window.innerHeight - viewport.offsetTop - viewport.height + BANNER_GUTTER + tabBarOffset,
-    );
-
-    bannerStyle = `left: ${left}px; right: auto; bottom: ${bottom}px; width: ${width}px;`;
-  }
-
   function savePreferences(preferences: CookiePreferences) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
     window.dispatchEvent(new CustomEvent('desaga:cookie-consent', { detail: preferences }));
@@ -71,16 +49,10 @@
   }
 
   onMount(() => {
-    updateBannerViewport();
-    window.addEventListener('resize', updateBannerViewport);
-    window.visualViewport?.addEventListener('resize', updateBannerViewport);
-    window.visualViewport?.addEventListener('scroll', updateBannerViewport);
-
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) {
         visible = true;
-        requestAnimationFrame(updateBannerViewport);
       } else {
         const parsed = JSON.parse(stored) as Partial<CookiePreferences>;
         analytics = Boolean(parsed.analytics);
@@ -88,19 +60,12 @@
       }
     } catch {
       visible = true;
-      requestAnimationFrame(updateBannerViewport);
     }
-
-    return () => {
-      window.removeEventListener('resize', updateBannerViewport);
-      window.visualViewport?.removeEventListener('resize', updateBannerViewport);
-      window.visualViewport?.removeEventListener('scroll', updateBannerViewport);
-    };
   });
 </script>
 
 {#if visible}
-  <section class="cookie-banner" style={bannerStyle} aria-label="Consimțământ cookie">
+  <section class="cookie-banner" aria-label="Consimțământ cookie">
     <div class="cookie-copy">
       <strong>Folosim cookie-uri?</strong>
       <p>
@@ -154,138 +119,144 @@
 {/if}
 
 <style>
+  /* Anchored to the bottom edge rather than floating mid-screen. The previous
+     version sat over the middle of the page and covered the first products on
+     every route. It clears the mobile tab bar via its own inset. */
   .cookie-banner {
     position: fixed;
-    right: 1rem;
-    bottom: 1rem;
-    left: 1rem;
-    z-index: 1060;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1035;
     display: grid;
-    gap: 1rem;
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 1rem;
-    background: #fff;
-    border: 1px solid rgba(15, 23, 42, 0.12);
-    border-radius: 18px;
-    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);
+    gap: var(--space-3);
+    max-height: 85dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-4);
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+    background: var(--surface);
+    border-top: 2px solid var(--tomato);
+    box-shadow: var(--shadow-pop);
   }
 
-  /* CSS fallback when visualViewport is unavailable: clear the mobile tab bar. */
   @media (max-width: 991.98px) {
     .cookie-banner {
-      bottom: calc(1rem + 62px + env(safe-area-inset-bottom, 0px));
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: var(--space-4);
     }
+  }
+
+  .cookie-copy strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--text-md);
+    color: var(--ink);
+  }
+
+  .cookie-copy p {
+    margin: var(--space-1) 0 var(--space-1);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+    color: var(--ink-2);
+    max-width: 68ch;
+  }
+
+  .cookie-copy a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  .cookie-preferences {
+    display: grid;
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+  }
+
+  .cookie-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    cursor: pointer;
+  }
+
+  .cookie-choice.disabled {
+    opacity: 0.72;
+    cursor: default;
+  }
+
+  .cookie-choice input {
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    flex: 0 0 auto;
+    accent-color: var(--tomato-ink);
+  }
+
+  .cookie-choice span {
+    display: grid;
+    min-width: 0;
+  }
+
+  .cookie-choice strong {
+    font-size: var(--text-sm);
+    color: var(--ink);
+  }
+
+  .cookie-choice small {
+    font-size: var(--text-xs);
+    color: var(--ink-2);
+  }
+
+  .cookie-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .cookie-link-button {
+    min-height: 44px;
+    padding: 0 var(--space-2);
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  .cookie-link-button:hover,
+  .cookie-link-button:focus-visible {
+    color: var(--tomato-deep);
   }
 
   @media (min-width: 768px) {
     .cookie-banner {
       grid-template-columns: minmax(0, 1fr) auto;
       align-items: center;
+      column-gap: var(--space-5);
+      padding-inline: clamp(var(--space-4), 5vw, var(--space-7));
     }
 
     .cookie-preferences {
       grid-column: 1 / -1;
-    }
-  }
-
-  .cookie-copy strong {
-    display: block;
-    color: var(--desaga-heading);
-    font-weight: 950;
-    margin-bottom: 0.25rem;
-  }
-
-  .cookie-copy p {
-    margin: 0;
-    color: rgba(20, 33, 43, 0.72);
-    line-height: 1.45;
-  }
-
-  .cookie-copy a {
-    display: inline-flex;
-    margin-top: 0.45rem;
-    font-weight: 850;
-    text-decoration: none;
-  }
-
-  .cookie-copy a:hover,
-  .cookie-copy a:focus {
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
-  .cookie-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.55rem;
-    flex-wrap: wrap;
-  }
-
-  @media (min-width: 768px) {
-    .cookie-actions {
-      justify-content: flex-end;
-      min-width: 300px;
-    }
-  }
-
-  .cookie-link-button {
-    border: 0;
-    background: transparent;
-    color: var(--desaga-blue);
-    font-weight: 900;
-    padding: 0.35rem 0.25rem;
-  }
-
-  .cookie-link-button:hover,
-  .cookie-link-button:focus {
-    color: var(--desaga-dark-blue);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
-  .cookie-preferences {
-    display: grid;
-    gap: 0.65rem;
-    padding-top: 0.2rem;
-  }
-
-  @media (min-width: 768px) {
-    .cookie-preferences {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
-  }
 
-  .cookie-choice {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.6rem;
-    padding: 0.8rem;
-    border-radius: 14px;
-    background: rgba(var(--desaga-accent-rgb), 0.06);
-    border: 1px solid rgba(var(--desaga-accent-rgb), 0.14);
-  }
-
-  .cookie-choice input {
-    margin-top: 0.2rem;
-  }
-
-  .cookie-choice strong,
-  .cookie-choice small {
-    display: block;
-  }
-
-  .cookie-choice strong {
-    color: var(--desaga-heading);
-  }
-
-  .cookie-choice small {
-    color: rgba(20, 33, 43, 0.66);
-    line-height: 1.35;
-  }
-
-  .cookie-choice.disabled {
-    opacity: 0.78;
+    .cookie-actions {
+      justify-content: flex-end;
+    }
   }
 </style>

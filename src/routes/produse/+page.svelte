@@ -50,82 +50,72 @@
   <title>Produse - DeSaga cu Legume</title>
 </svelte:head>
 
+<!-- The page title and its actions live in the hero. The old layout repeated
+     the title in a bordered panel directly underneath, so the page opened with
+     two competing headings. -->
 <Hero
   title="Produse disponibile"
   subtitle="Stocul se schimbă în funcție de recoltă. Verifică lista sau sună pentru confirmare."
   backgroundImage="/images/produse/hero-produse-la-borcan.jpg"
   height="300px"
+  primaryHref={phoneHref}
+  primaryLabel="Sună pentru stoc"
+  secondaryHref="/contact"
+  secondaryLabel="Unde ne găsești"
+  secondaryIcon="bi-geo-alt"
 />
 
-<section class="products-page py-5">
+<section class="section-y">
   <div class="container">
     <div class="toolbar">
-      <div>
-        <p class="eyebrow mb-2">Stoc de azi</p>
-        <h2 class="toolbar-title">Alege produse disponibile acum</h2>
-        <p class="toolbar-subtitle mb-0">
-          {totalAvailable} produse disponibile din {totalProducts} afișate. Pentru stocul exact de la rulotă, sună la {phoneLabel}.
-        </p>
-      </div>
-
-      <div class="toolbar-actions">
-        <a href={phoneHref} class="btn btn-primary">
-          <i class="bi bi-telephone"></i> Sună pentru stoc
-        </a>
-        <a href="/contact" class="btn btn-outline-primary">
-          <i class="bi bi-geo-alt"></i> Unde ne găsești
-        </a>
-      </div>
-    </div>
-
-    <div class="search-panel">
       <div class="search" role="search">
         <i class="bi bi-search" aria-hidden="true"></i>
+        <label class="visually-hidden" for="product-search">Caută produs</label>
         <input
+          id="product-search"
           class="search__input"
           type="search"
           placeholder="Caută roșii, zacuscă, miere…"
-          aria-label="Caută produs"
           bind:value={q}
         />
         {#if q.trim()}
           <button class="search__clear" type="button" aria-label="Șterge căutarea" on:click={clearSearch}>
-            <i class="bi bi-x-lg"></i>
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
           </button>
         {/if}
       </div>
+
+      <p class="stock-line">
+        {totalAvailable} din {totalProducts} produse sunt în stoc azi. Pentru stocul exact de la rulotă, sună la
+        <a href={phoneHref}>{phoneLabel}</a>.
+      </p>
     </div>
 
     {#if loading}
       <div class="products-grid" aria-label="Se încarcă produsele">
         {#each Array(10) as _}
-          <div class="skeleton"></div>
+          <div class="skeleton skeleton-card"></div>
         {/each}
       </div>
     {:else if filteredProducts.length === 0}
       <div class="empty-state">
-        <div class="empty-icon"><i class="bi bi-basket"></i></div>
-        <div class="empty-copy">
-          <h3>Nu sunt produse disponibile pentru căutarea curentă</h3>
-          <p>
-            Produsele se actualizează în funcție de recoltă și stoc. Caută alt produs sau sună pentru lista disponibilă azi.
-          </p>
-          <div class="empty-actions">
-            <button type="button" class="btn btn-primary" on:click={clearSearch}>
-              <i class="bi bi-arrow-counterclockwise"></i> Șterge căutarea
-            </button>
-            <a href={phoneHref} class="btn btn-outline-primary">
-              <i class="bi bi-telephone"></i> Sună acum
-            </a>
-          </div>
+        <p class="empty-title">Nu sunt produse disponibile pentru căutarea curentă</p>
+        <p class="empty-sub">
+          Produsele se actualizează în funcție de recoltă și stoc. Caută alt produs sau sună pentru lista disponibilă azi.
+        </p>
+        <div class="empty-actions">
+          <button type="button" class="btn btn-accent" on:click={clearSearch}>
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Șterge căutarea
+          </button>
+          <a href={phoneHref} class="btn btn-outline-accent">
+            <i class="bi bi-telephone" aria-hidden="true"></i> Sună acum
+          </a>
         </div>
       </div>
     {:else}
       <div class="results-head">
-        <div>
-          <strong>{filteredProducts.length}</strong> produse disponibile
-        </div>
-        <div class="results-note">Afișăm doar produse disponibile în stoc.</div>
+        <p class="results-count"><strong>{filteredProducts.length}</strong> produse disponibile</p>
+        <p class="results-note">Afișăm doar produse disponibile în stoc.</p>
       </div>
 
       <div class="products-grid">
@@ -138,191 +128,137 @@
 </section>
 
 <style>
-  .products-page {
-    background: linear-gradient(180deg, #fff 0%, rgba(var(--desaga-accent-rgb), 0.05) 100%);
-  }
-
   .toolbar {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 18px;
-    margin-bottom: 18px;
-    padding: 18px;
-    border-radius: 22px;
-    border: 1px solid rgba(var(--desaga-accent-rgb), 0.14);
-    background: #fff;
-    box-shadow: var(--desaga-shadow-sm);
-  }
-
-  @media (min-width: 992px) {
-    .toolbar {
-      grid-template-columns: 1fr auto;
-      align-items: center;
-    }
-  }
-
-  .eyebrow {
-    color: var(--desaga-blue);
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.78rem;
-  }
-
-  .toolbar-title {
-    margin: 0 0 0.4rem;
-    font-weight: 950;
-    color: var(--desaga-brown);
-    letter-spacing: -0.04em;
-  }
-
-  .toolbar-subtitle {
-    color: rgba(0, 0, 0, 0.68);
-    max-width: 680px;
-  }
-
-  .toolbar-actions,
-  .empty-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .search-panel {
-    display: grid;
-    gap: 14px;
-    margin-bottom: 20px;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
   }
 
   .search {
     position: relative;
-    width: 100%;
+    display: flex;
+    align-items: center;
   }
 
   .search > i {
     position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.5;
+    left: var(--space-3);
+    color: var(--ink-3);
+    pointer-events: none;
   }
 
   .search__input {
     width: 100%;
-    padding: 12px 42px;
-    border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: #fff;
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.04);
+    min-height: 48px;
+    padding: 0.5rem 2.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .search__input::placeholder {
+    color: var(--ink-3);
   }
 
   .search__input:focus {
     outline: none;
-    border-color: rgba(var(--desaga-accent-rgb), 0.5);
-    box-shadow: var(--desaga-focus-ring);
+    border-color: var(--tomato-ink);
+    box-shadow: var(--focus-ring);
+  }
+
+  /* Native clear affordance is removed so the styled button is the only one. */
+  .search__input::-webkit-search-cancel-button {
+    appearance: none;
   }
 
   .search__clear {
     position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 34px;
-    height: 34px;
+    right: 4px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
     border: 0;
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.04);
-    opacity: 0.75;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+
+  .search__clear:hover,
+  .search__clear:focus-visible {
+    background: var(--paper-2);
+    color: var(--tomato-deep);
+  }
+
+  .stock-line {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: var(--text-sm);
+  }
+
+  .stock-line a {
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   .results-head {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 14px;
-    color: rgba(0, 0, 0, 0.7);
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding-bottom: var(--space-2);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .results-count,
+  .results-note {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink-2);
+  }
+
+  .results-count strong {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
   }
 
   .results-note {
-    font-size: 0.9rem;
+    color: var(--ink-3);
   }
 
+  /* Two per row on the narrowest phones, filling out to six on a wide
+     monitor, without a breakpoint per step. */
   .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 18px;
+    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fill, minmax(min(158px, 100%), 1fr));
   }
 
-  @media (min-width: 1200px) {
+  .skeleton-card {
+    height: 300px;
+  }
+
+  .empty-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+
+  @media (min-width: 768px) {
+    .toolbar {
+      grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+      align-items: center;
+      gap: var(--space-4);
+    }
+
     .products-grid {
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    }
-  }
-
-  @media (max-width: 767.98px) {
-    .products-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-  }
-
-  .skeleton {
-    height: 360px;
-    border-radius: 18px;
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
-    background-size: 200% 100%;
-    animation: shimmer 1.2s infinite linear;
-  }
-
-  @keyframes shimmer {
-    from { background-position: 200% 0; }
-    to { background-position: -200% 0; }
-  }
-
-  .empty-state {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 16px;
-    align-items: flex-start;
-    padding: 22px;
-    border-radius: 22px;
-    background: #fff;
-    border: 1px solid rgba(var(--desaga-accent-rgb), 0.14);
-    box-shadow: var(--desaga-shadow-sm);
-  }
-
-  .empty-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 16px;
-    display: grid;
-    place-items: center;
-    color: var(--desaga-blue);
-    background: rgba(var(--desaga-accent-rgb), 0.12);
-    font-size: 1.25rem;
-  }
-
-  .empty-copy h3 {
-    margin: 0 0 0.4rem;
-    font-weight: 950;
-    color: var(--desaga-brown);
-  }
-
-  .empty-copy p {
-    margin: 0 0 1rem;
-    color: rgba(0, 0, 0, 0.68);
-  }
-
-  @media (max-width: 576px) {
-    .empty-state {
-      grid-template-columns: 1fr;
-    }
-
-    .toolbar-actions .btn,
-    .empty-actions .btn {
-      width: 100%;
+      gap: var(--space-4);
+      grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
     }
   }
 </style>

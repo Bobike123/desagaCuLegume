@@ -284,7 +284,7 @@
   .cardBtn {
     min-height: 46px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 16px;
     display: inline-flex;
     align-items: center;
@@ -293,7 +293,7 @@
     background: var(--surface);
     color: var(--ink);
     text-decoration: none;
-    font-weight: 950;
+    font-weight: 700;
     cursor: pointer;
   }
 
@@ -320,18 +320,18 @@
 
   .count {
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 12px 16px;
     background: rgba(255, 253, 247, 0.9);
     color: var(--muted);
-    font-weight: 950;
+    font-weight: 700;
     white-space: nowrap;
   }
 
   .bulkBar {
     margin: 0 0 16px;
     border: 1px solid var(--line);
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     padding: 12px;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -343,7 +343,7 @@
 
   .bulkSummary {
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: var(--radius);
     padding: 10px 14px;
     display: flex;
     align-items: baseline;
@@ -354,12 +354,12 @@
 
   .bulkSummary strong {
     font-size: 1.2rem;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .bulkSummary span {
     color: var(--muted);
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .bulkActions {
@@ -372,11 +372,11 @@
   .bulkActions select {
     min-height: 46px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 14px;
     background: rgba(255, 253, 247, 0.9);
     color: var(--ink);
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .productGrid {
@@ -387,7 +387,7 @@
 
   .productCard {
     border: 1px solid var(--line);
-    border-radius: 28px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 253, 247, 0.92);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
     padding: 18px;
@@ -410,7 +410,7 @@
     align-items: center;
     gap: 9px;
     color: var(--muted);
-    font-weight: 950;
+    font-weight: 700;
     cursor: pointer;
     user-select: none;
   }
@@ -436,7 +436,7 @@
   .productCard h2 {
     margin: 0;
     font-size: 1.18rem;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.03em;
     overflow-wrap: anywhere;
   }
@@ -457,12 +457,12 @@
   .stockBadge,
   .promoBadge {
     flex: 0 0 auto;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 7px 10px;
     background: rgba(139, 212, 80, 0.22);
     color: var(--accent);
     font-size: 0.72rem;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .promoBadge {
@@ -484,7 +484,7 @@
 
   .metaGrid div {
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: var(--radius);
     padding: 12px;
     background: rgba(255, 255, 255, 0.48);
   }
@@ -493,7 +493,7 @@
     display: block;
     color: var(--muted);
     font-size: 0.76rem;
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .metaGrid strong {

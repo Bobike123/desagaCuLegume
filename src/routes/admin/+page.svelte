@@ -64,7 +64,7 @@
   .hero {
     min-height: 280px;
     border: 1px solid var(--line);
-    border-radius: 32px;
+    border-radius: var(--radius-lg);
     padding: clamp(22px, 5vw, 46px);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -86,7 +86,7 @@
     inset: auto -80px -140px auto;
     width: 320px;
     height: 320px;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     background: rgba(139, 212, 80, 0.18);
   }
 
@@ -110,13 +110,12 @@
   .hero__badge {
     min-width: 142px;
     border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     padding: 18px;
     display: grid;
     gap: 12px;
     justify-items: start;
     background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(12px);
   }
 
   .hero__badge i {
@@ -124,7 +123,7 @@
   }
 
   .hero__badge span {
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .navGrid {
@@ -140,7 +139,7 @@
     justify-content: space-between;
     gap: 22px;
     padding: 20px;
-    border-radius: 26px;
+    border-radius: var(--radius-lg);
     border: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.92);
     color: var(--ink);
@@ -164,7 +163,7 @@
   .icon {
     width: 52px;
     height: 52px;
-    border-radius: 18px;
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     color: var(--accent);
@@ -175,7 +174,7 @@
   .navCard strong {
     display: block;
     font-size: 1.15rem;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.02em;
   }
 
@@ -196,7 +195,7 @@
     .hero {
       min-height: auto;
       grid-template-columns: 1fr;
-      border-radius: 24px;
+      border-radius: var(--radius-lg);
     }
 
     .hero__badge {

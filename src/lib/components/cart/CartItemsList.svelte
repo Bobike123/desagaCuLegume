@@ -78,56 +78,47 @@
 </div>
 
 <style>
-  .muted,
-  .cart-sub {
-    color: rgba(0, 0, 0, 0.65);
-  }
-
   .cart-list {
     display: grid;
-    gap: 12px;
+    border-top: 1px solid var(--line-strong);
   }
 
+  /* Cart lines read as rows on a receipt, separated by rules. */
   .cart-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 12px;
-    border-radius: 16px;
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    display: grid;
+    gap: var(--space-3);
+    padding-block: var(--space-4);
+    border-bottom: 1px solid var(--line);
   }
 
   .cart-row.promoted {
-    border-color: rgba(194, 37, 45, 0.34);
-    background: linear-gradient(135deg, rgba(194, 37, 45, 0.08), rgba(255, 255, 255, 0.96));
-    box-shadow: 0 14px 34px rgba(194, 37, 45, 0.12), 0 0 0 4px rgba(194, 37, 45, 0.04);
+    box-shadow: inset 3px 0 0 0 var(--tomato);
+    padding-left: var(--space-3);
   }
 
   .cart-main {
-    display: flex;
-    gap: 12px;
-    min-width: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-3);
+    align-items: start;
   }
 
   .thumb {
-    width: 78px;
-    height: 78px;
-    border-radius: 16px;
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.05);
-    display: grid;
-    place-items: center;
-    color: rgba(0, 0, 0, 0.45);
+    display: block;
+    width: 72px;
     flex: 0 0 auto;
-    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--paper-2);
   }
 
   .thumb img {
-    width: 100%;
-    height: 100%;
     display: block;
+    width: 100%;
+    aspect-ratio: 1;
     object-fit: cover;
+    outline: none;
   }
 
   .cart-info {
@@ -136,107 +127,166 @@
 
   .cart-title-line {
     display: flex;
-    gap: 8px;
     flex-wrap: wrap;
     align-items: center;
+    gap: var(--space-2);
   }
 
   .cart-title {
-    display: inline-block;
-    font-weight: 900;
-    color: inherit;
+    font-family: var(--font-display);
+    font-size: var(--text-md);
+    font-weight: 700;
+    line-height: var(--leading-snug);
+    color: var(--ink);
     text-decoration: none;
   }
 
+  .cart-title:hover,
+  .cart-title:focus-visible {
+    color: var(--tomato-ink);
+    text-decoration: underline;
+  }
+
   .promo-badges {
-    display: inline-flex;
-    gap: 6px;
+    display: flex;
     flex-wrap: wrap;
+    gap: 4px;
   }
 
   .promo-badges span {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    border-radius: 999px;
-    padding: 0.24rem 0.52rem;
-    background: #c2252d;
-    color: #fffdf7;
-    font-size: 0.7rem;
-    font-weight: 950;
-    letter-spacing: 0.05em;
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--radius-sm);
+    background: var(--tomato-ink);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
   }
 
-  .cart-title:hover {
-    color: var(--desaga-blue);
+  .cart-sub {
+    margin-top: 2px;
+    font-size: var(--text-sm);
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
   }
 
   .cart-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
-    margin-top: 10px;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
   }
 
+  /* 44px controls: at 36px these were below the touch-target floor and
+     awkward to hit while holding a phone one-handed. */
   .qty {
     display: inline-flex;
-    align-items: center;
+    align-items: stretch;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
     overflow: hidden;
-    border-radius: 12px;
-    border: 1px solid rgba(36, 146, 204, 0.35);
-    background: #fff;
+    background: var(--surface);
   }
 
   .qty-btn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    min-height: 44px;
     border: 0;
-    background: rgba(36, 146, 204, 0.1);
-    width: 36px;
-    height: 36px;
-    color: var(--desaga-blue);
-    font-weight: 900;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .qty-btn:hover,
+  .qty-btn:focus-visible {
+    background: var(--tomato-wash);
+    color: var(--tomato-deep);
   }
 
   .qty-input {
-    width: 56px;
+    width: 52px;
+    min-height: 44px;
+    padding: 0 var(--space-1);
     border: 0;
+    border-inline: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
     text-align: center;
-    height: 36px;
-    font-weight: 900;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .qty-input:focus {
+    outline: 2px solid var(--tomato-ink);
+    outline-offset: -2px;
   }
 
   .remove-btn {
-    border: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: 0 var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
     background: transparent;
-    color: #dc3545;
-    font-weight: 800;
+    color: var(--ink-3);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .remove-btn:hover,
+  .remove-btn:focus-visible {
+    border-color: rgba(181, 42, 47, 0.35);
+    background: var(--tomato-wash);
+    color: var(--tomato-deep);
   }
 
   .cart-price {
-    text-align: right;
-    min-width: 120px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--line);
   }
 
   .price {
-    font-weight: 900;
-    font-size: 1.05rem;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
   }
 
-  .cart-row.promoted .price,
-  .cart-row.promoted .cart-title {
-    color: #c2252d;
+  .muted {
+    color: var(--ink-3);
+    font-size: var(--text-xs);
   }
 
-  @media (max-width: 767.98px) {
+  @media (min-width: 768px) {
     .cart-row {
-      flex-direction: column;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .thumb {
+      width: 88px;
     }
 
     .cart-price {
-      width: 100%;
-      text-align: left;
-      min-width: 0;
+      display: block;
+      padding-top: 0;
+      border-top: 0;
+      text-align: right;
+      white-space: nowrap;
     }
   }
 </style>

@@ -303,7 +303,7 @@
   }
 
   .bg-soft {
-    background: var(--desaga-surface-soft);
+    background: var(--paper-2);
   }
 
   .section-kicker {
@@ -312,7 +312,7 @@
     gap: 0.45rem;
     margin-bottom: 0.75rem;
     color: var(--accent);
-    font-weight: 950;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.055em;
     font-size: 0.78rem;
@@ -324,7 +324,7 @@
 
   h2 {
     margin: 0;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.035em;
     color: var(--desaga-heading);
   }
@@ -362,7 +362,7 @@
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    border-radius: 18px;
+    border-radius: var(--radius);
     background: var(--desaga-surface);
     border: 1px solid var(--desaga-border);
     box-shadow: var(--desaga-shadow-sm);
@@ -379,7 +379,7 @@
     padding: 0.7rem;
     color: rgba(20, 33, 43, 0.74);
     font-size: 0.86rem;
-    font-weight: 850;
+    font-weight: 600;
     line-height: 1.35;
   }
 
@@ -419,7 +419,7 @@
     bottom: 40px;
     left: calc(var(--rail) / 2 - 2px);
     width: 4px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: rgba(var(--accent-rgb), 0.16);
     overflow: hidden;
   }
@@ -428,7 +428,7 @@
     width: 100%;
     height: 0;
     border-radius: inherit;
-    background: linear-gradient(180deg, var(--desaga-blue), var(--desaga-dark-blue));
+    background: var(--tomato);
   }
 
   .tl-item {
@@ -448,11 +448,11 @@
   .tl-badge {
     display: inline-block;
     padding: 0.42rem 0.85rem;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: var(--desaga-surface);
     border: 2px solid rgba(var(--accent-rgb), 0.35);
     color: var(--desaga-heading);
-    font-weight: 950;
+    font-weight: 700;
     font-size: 0.88rem;
     white-space: nowrap;
     box-shadow: var(--desaga-shadow-sm);
@@ -466,7 +466,7 @@
 
   .tl-card {
     overflow: hidden;
-    border-radius: 22px;
+    border-radius: var(--radius-lg);
     background: var(--desaga-surface);
     border: 2px solid var(--desaga-border);
     box-shadow: var(--desaga-shadow-sm);
@@ -501,7 +501,7 @@
   .tl-body h3 {
     margin: 0 0 0.4rem;
     font-size: 1.15rem;
-    font-weight: 950;
+    font-weight: 700;
     color: var(--desaga-heading);
   }
 
@@ -561,7 +561,7 @@
     display: grid;
     gap: 0.45rem;
     padding: 0.9rem;
-    border-radius: 18px;
+    border-radius: var(--radius);
     background: var(--desaga-surface);
     border: 1px solid rgba(var(--accent-rgb), 0.14);
     box-shadow: var(--desaga-shadow-sm);
@@ -576,7 +576,7 @@
 
   .stat-card span:last-child {
     color: rgba(0, 0, 0, 0.62);
-    font-weight: 850;
+    font-weight: 600;
     line-height: 1.2;
     font-size: 0.9rem;
   }
@@ -587,7 +587,7 @@
     height: 44px;
     display: grid;
     place-items: center;
-    border-radius: 16px;
+    border-radius: var(--radius);
     color: var(--accent);
     background: rgba(var(--accent-rgb), 0.13);
   }
@@ -604,7 +604,7 @@
   .section-link {
     color: var(--accent);
     text-decoration: none;
-    font-weight: 900;
+    font-weight: 700;
     white-space: nowrap;
   }
 
@@ -628,7 +628,7 @@
   .principle-card {
     min-height: 100%;
     padding: 1rem;
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     background: var(--desaga-surface);
     border: 1px solid var(--desaga-border);
     box-shadow: var(--desaga-shadow-sm);
@@ -637,7 +637,7 @@
   .principle-card h3 {
     margin: 0.85rem 0 0.35rem;
     font-size: 1rem;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .principle-card p {
@@ -657,12 +657,13 @@
     justify-content: space-between;
     gap: 1.25rem;
     padding: 1.5rem;
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     color: #fff;
+    /* Ink scrim, not the old blue wash: it keeps the white copy legible
+       without recolouring the photograph. */
     background:
-      linear-gradient(90deg, rgba(18, 91, 130, 0.94), rgba(18, 91, 130, 0.78)),
+      linear-gradient(90deg, rgba(28, 26, 23, 0.9), rgba(28, 26, 23, 0.66)),
       url('/images/despre-noi/ceapa-rosie-la-borcan.jpg') center/cover;
-    box-shadow: 0 18px 42px rgba(38, 153, 214, 0.24);
   }
 
   .cta-card h2 {
@@ -679,8 +680,8 @@
   }
 
   .cta-actions .btn {
-    border-radius: 999px;
-    font-weight: 950;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
   }
 
   /* --- Mobile ------------------------------------------------------------------ */

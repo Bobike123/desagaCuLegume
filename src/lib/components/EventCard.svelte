@@ -96,7 +96,7 @@
 
   <div class="card-body">
     <div class="top">
-      <h5 class="event-title">{title}</h5>
+      <h3 class="event-title">{title}</h3>
       <p class="event-description">{description}</p>
     </div>
 
@@ -121,110 +121,108 @@
 
 <style>
   .event-card {
-    width: 100%;
-    min-height: 390px;
     display: flex;
     flex-direction: column;
-    border-radius: 20px;
-    overflow: hidden;
-    background: #fff;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    text-decoration: none;
+    height: 100%;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
     color: inherit;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-    transition:
-      transform 0.16s ease,
-      box-shadow 0.16s ease,
-      border-color 0.16s ease;
+    text-decoration: none;
+    overflow: hidden;
+    transition: border-color var(--motion-fast) var(--ease);
   }
 
-  .event-card:hover,
-  .event-card:focus {
-    transform: translateY(-3px);
-    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
-    border-color: rgba(var(--accent-rgb, 36, 146, 204), 0.25);
-    color: inherit;
+  @media (hover: hover) and (pointer: fine) {
+    .event-card:hover {
+      border-color: var(--line-strong);
+    }
+
+    .event-card:hover .cta {
+      color: var(--tomato-deep);
+      text-decoration: underline;
+    }
+  }
+
+  .event-card:focus-visible {
+    outline: 2px solid var(--tomato-ink);
+    outline-offset: 2px;
   }
 
   .media {
     position: relative;
-    height: 180px;
-    background: rgba(15, 23, 42, 0.04);
-    overflow: hidden;
+    background: var(--paper-2);
   }
 
   .event-image {
-    height: 100%;
-    width: 100%;
-    object-fit: cover;
     display: block;
-    transition: transform 0.18s ease;
-  }
-
-  .event-card:hover .event-image,
-  .event-card:focus .event-image {
-    transform: scale(1.03);
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    outline: none;
   }
 
   .badges {
     position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
+    left: var(--space-2);
+    bottom: var(--space-2);
     display: flex;
-    gap: 8px;
     flex-wrap: wrap;
+    gap: 4px;
+    max-width: calc(100% - var(--space-4));
   }
 
   .badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    border-radius: 999px;
-    padding: 0.32rem 0.62rem;
-    font-size: 0.76rem;
-    font-weight: 900;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    backdrop-filter: blur(6px);
+    gap: 0.3rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--ink-2);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
   }
 
   .badge-type {
-    color: var(--accent, #2492cc);
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
   }
 
+  /* Upcoming events are the ones worth acting on, so only that state gets
+     colour. Past events stay neutral. */
   .badge-active {
-    color: #146c43;
-    background: rgba(209, 231, 221, 0.94);
-    border-color: rgba(25, 135, 84, 0.18);
+    background: var(--leaf-wash);
+    border-color: rgba(47, 107, 58, 0.3);
+    color: var(--leaf);
   }
 
   .badge-muted {
-    color: rgba(15, 23, 42, 0.65);
-    background: rgba(255, 255, 255, 0.88);
+    color: var(--ink-3);
   }
 
   .card-body {
-    flex: 1;
-    padding: 15px;
     display: flex;
     flex-direction: column;
+    flex: 1;
+    gap: var(--space-3);
+    padding: var(--space-3);
   }
 
   .top {
-    flex: 1;
-  }
-
-  .bottom {
-    margin-top: 12px;
+    min-height: 0;
   }
 
   .event-title {
-    font-size: 1.08rem;
-    font-weight: 950;
-    margin: 0 0 8px;
-    line-height: 1.25;
-    color: var(--desaga-brown, #5c4033);
+    margin: 0;
+    font-size: var(--text-md);
+    font-weight: 700;
+    line-height: var(--leading-snug);
+    color: var(--ink);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -233,10 +231,10 @@
   }
 
   .event-description {
-    margin: 0;
-    font-size: 0.92rem;
-    color: rgba(15, 23, 42, 0.68);
-    line-height: 1.45;
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+    color: var(--ink-2);
     display: -webkit-box;
     -webkit-line-clamp: 3;
     line-clamp: 3;
@@ -244,102 +242,39 @@
     overflow: hidden;
   }
 
+  .bottom {
+    margin-top: auto;
+  }
+
   .meta {
     display: grid;
-    gap: 6px;
-    font-size: 0.88rem;
-    color: rgba(15, 23, 42, 0.68);
+    gap: var(--space-1);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+    font-size: var(--text-xs);
+    color: var(--ink-2);
   }
 
   .meta span {
     display: flex;
     align-items: flex-start;
-    gap: 7px;
+    gap: var(--space-2);
     min-width: 0;
   }
 
   .meta i {
-    color: var(--accent, #2492cc);
-    margin-top: 2px;
+    color: var(--ink-3);
     flex: 0 0 auto;
+    margin-top: 2px;
   }
 
   .cta {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 12px;
-    font-size: 0.9rem;
-    font-weight: 950;
-    color: var(--accent, #2492cc);
-  }
-
-  /* Compact app-style list row on phones: image left, content right. */
-  @media (max-width: 767.98px) {
-    .event-card {
-      min-height: 0;
-      flex-direction: row;
-      align-items: stretch;
-      border-radius: 16px;
-    }
-
-    .media {
-      flex: 0 0 122px;
-      width: 122px;
-      height: auto;
-      min-height: 132px;
-    }
-
-    .badges {
-      left: 6px;
-      right: 6px;
-      bottom: 6px;
-      gap: 4px;
-    }
-
-    .badge {
-      padding: 0.2rem 0.42rem;
-      font-size: 0.6rem;
-      gap: 4px;
-    }
-
-    .badge-type {
-      display: none;
-    }
-
-    .card-body {
-      padding: 10px 12px;
-      min-width: 0;
-    }
-
-    .event-title {
-      font-size: 0.94rem;
-      margin-bottom: 5px;
-    }
-
-    .event-description {
-      font-size: 0.8rem;
-      line-height: 1.35;
-      -webkit-line-clamp: 2;
-      line-clamp: 2;
-    }
-
-    .bottom {
-      margin-top: 8px;
-    }
-
-    .meta {
-      gap: 4px;
-      font-size: 0.78rem;
-    }
-
-    .meta span {
-      overflow: hidden;
-    }
-
-    .cta {
-      margin-top: 7px;
-      font-size: 0.8rem;
-    }
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--tomato-ink);
   }
 </style>

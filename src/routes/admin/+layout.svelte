@@ -42,7 +42,7 @@
     font-size: clamp(2.2rem, 7vw, 4.6rem);
     line-height: 0.94;
     letter-spacing: -0.07em;
-    font-weight: 950;
+    font-weight: 700;
     color: var(--ink);
   }
 
@@ -53,7 +53,7 @@
     text-transform: uppercase;
     letter-spacing: 0.13em;
     font-size: 0.75rem;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   /* Page top bar: title left, action buttons right */
@@ -74,12 +74,12 @@
   /* Notification banners */
   :global(.admin-page .notice) {
     margin-bottom: 16px;
-    border-radius: 18px;
+    border-radius: var(--radius);
     padding: 14px 16px;
     display: flex;
     gap: 10px;
     align-items: center;
-    font-weight: 850;
+    font-weight: 600;
   }
 
   :global(.admin-page .notice.danger) {
@@ -111,7 +111,7 @@
     display: inline-block;
     width: 28px;
     height: 28px;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     border: 3px solid rgba(39, 79, 42, 0.18);
     border-top-color: var(--accent);
     animation: admin-spin 0.8s linear infinite;
@@ -125,7 +125,7 @@
   /* Full-width loading card */
   :global(.admin-page .stateCard) {
     border: 1px solid var(--line);
-    border-radius: 28px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 253, 247, 0.92);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
     padding: 36px 20px;
@@ -134,13 +134,13 @@
     justify-content: center;
     gap: 14px;
     color: var(--muted);
-    font-weight: 800;
+    font-weight: 600;
   }
 
   /* Full-width empty state card */
   :global(.admin-page .emptyCard) {
     border: 1px solid var(--line);
-    border-radius: 28px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 253, 247, 0.92);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
     padding: 36px 20px;
@@ -159,7 +159,7 @@
   :global(.admin-page .emptyCard > h2) {
     margin: 0;
     color: var(--ink);
-    font-weight: 950;
+    font-weight: 700;
   }
 
   /* Search toolbar (icon + input) */
@@ -181,11 +181,11 @@
     width: 100%;
     min-height: 54px;
     border: 1px solid var(--line);
-    border-radius: 22px;
+    border-radius: var(--radius-lg);
     padding: 0 18px 0 46px;
     background: rgba(255, 253, 247, 0.9);
     color: var(--ink);
-    font-weight: 800;
+    font-weight: 600;
     box-shadow: 0 12px 30px rgba(35, 51, 30, 0.07);
   }
 
@@ -205,7 +205,7 @@
   /* Shared panel card */
   :global(.admin-page .panel) {
     border: 1px solid var(--line);
-    border-radius: 28px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 253, 247, 0.92);
     box-shadow: 0 20px 56px rgba(35, 51, 30, 0.09);
     padding: 18px;
@@ -221,16 +221,16 @@
 
   :global(.admin-page .panelHead h2) {
     margin: 0;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.04em;
   }
 
   :global(.admin-page .panelHead > span) {
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: rgba(139, 212, 80, 0.22);
     color: var(--accent);
     padding: 7px 11px;
-    font-weight: 950;
+    font-weight: 700;
     flex-shrink: 0;
   }
 
@@ -250,7 +250,7 @@
   :global(.admin-page .panel label > span:first-child) {
     display: block;
     margin-bottom: 7px;
-    font-weight: 950;
+    font-weight: 700;
     color: var(--ink);
   }
 
@@ -262,12 +262,12 @@
   :global(.admin-page .panel textarea) {
     width: 100%;
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: var(--radius);
     min-height: 48px;
     padding: 0 12px;
     background: #fff;
     color: var(--ink);
-    font-weight: 800;
+    font-weight: 600;
   }
 
   :global(.admin-page .formGrid textarea),
@@ -286,7 +286,7 @@
   :global(.admin-page .preview) {
     margin-top: 14px;
     aspect-ratio: 4/3;
-    border-radius: 22px;
+    border-radius: var(--radius-lg);
     border: 1px solid var(--line);
     overflow: hidden;
     background: #f3eee2;
@@ -338,7 +338,7 @@
     }
 
     :global(.admin-page .panel) {
-      border-radius: 22px;
+      border-radius: var(--radius-lg);
     }
   }
 </style>

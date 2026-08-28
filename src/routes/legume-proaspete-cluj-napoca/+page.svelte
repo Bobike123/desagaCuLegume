@@ -116,10 +116,12 @@
 <style>
   .hero {
     padding: clamp(3rem, 8vw, 6rem) 0 2.4rem;
+    /* Ink scrim so the hero belongs to the same palette as the rest of the
+       site; green is reserved for stock/freshness signals. */
     background:
-      linear-gradient(135deg, rgba(39, 79, 42, 0.94), rgba(25, 44, 27, 0.92)),
+      linear-gradient(135deg, rgba(28, 26, 23, 0.9), rgba(28, 26, 23, 0.74)),
       url('/images/legume-proaspete-cluj-napoca/hero-produse-locale.jpg') center/cover;
-    color: #fffdf7;
+    color: #fff;
   }
 
   .heroGrid,
@@ -127,23 +129,25 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(320px, 0.55fr);
     gap: clamp(1.5rem, 4vw, 3rem);
-    align-items: center;
+    /* start, not center: the columns have very different heights, and
+       centering the short one left large dead bands above and below it. */
+    align-items: start;
   }
 
   .eyebrow {
     margin: 0 0 0.7rem;
-    color: #bdf48a;
+    color: var(--leaf-wash);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     font-size: 0.78rem;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   h1,
   h2,
   h3 {
     margin: 0;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: 0;
   }
 
@@ -154,13 +158,13 @@
   }
 
   h2 {
-    color: #1d241b;
+    color: var(--ink);
     font-size: clamp(1.8rem, 4vw, 3rem);
     line-height: 1;
   }
 
   h3 {
-    color: #1d241b;
+    color: var(--ink);
     font-size: 1.1rem;
   }
 
@@ -181,24 +185,34 @@
 
   .btn {
     min-height: 48px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0.75rem 1.1rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.55rem;
-    font-weight: 950;
+    font-weight: 700;
     text-decoration: none;
   }
 
+  /* Was a bright green fill carrying dark ink text - off-palette and far
+     under AA. It is the same primary action as everywhere else on the site. */
   .btn.primary {
-    background: #8bd450;
-    color: #172015;
+    background: var(--tomato-ink);
+    border: 1px solid var(--tomato-ink);
+    color: #fff;
+  }
+
+  .btn.primary:hover,
+  .btn.primary:focus-visible {
+    background: var(--tomato-deep);
+    border-color: var(--tomato-deep);
+    color: #fff;
   }
 
   .btn.secondary {
     border: 1px solid rgba(255, 255, 255, 0.28);
-    color: #fffdf7;
+    color: var(--paper);
     background: rgba(255, 255, 255, 0.12);
   }
 
@@ -209,7 +223,6 @@
     display: grid;
     gap: 0.9rem;
     background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(10px);
   }
 
   .storeInfo div {
@@ -219,7 +232,7 @@
 
   .storeInfo span {
     color: rgba(255, 253, 247, 0.68);
-    font-weight: 900;
+    font-weight: 700;
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -227,8 +240,8 @@
 
   .storeInfo strong,
   .storeInfo a {
-    color: #fffdf7;
-    font-weight: 900;
+    color: var(--paper);
+    font-weight: 700;
     text-decoration: none;
   }
 
@@ -237,16 +250,16 @@
   }
 
   .section.soft {
-    background: #f6f1e7;
+    background: var(--paper);
   }
 
   .section .eyebrow {
-    color: #274f2a;
+    color: var(--tomato-ink);
   }
 
   .section p {
     margin: 1rem 0 0;
-    color: #5f6959;
+    color: var(--ink-2);
     line-height: 1.65;
   }
 
@@ -266,7 +279,7 @@
   .faqGrid article {
     border: 1px solid rgba(31, 42, 28, 0.12);
     border-radius: 8px;
-    background: #fffdf7;
+    background: var(--paper);
   }
 
   .category {
@@ -274,8 +287,8 @@
     padding: 0.9rem 1rem;
     display: flex;
     align-items: center;
-    color: #1d241b;
-    font-weight: 950;
+    color: var(--ink);
+    font-weight: 700;
     text-decoration: none;
     text-transform: capitalize;
   }
@@ -286,8 +299,8 @@
 
   .neighborhoods span {
     padding: 0.8rem 1rem;
-    color: #1d241b;
-    font-weight: 900;
+    color: var(--ink);
+    font-weight: 700;
   }
 
   .sectionHead {

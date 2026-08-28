@@ -198,7 +198,7 @@
   .submitBtn {
     min-height: 46px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 16px;
     display: inline-flex;
     align-items: center;
@@ -207,13 +207,13 @@
     background: var(--surface);
     color: var(--ink);
     text-decoration: none;
-    font-weight: 950;
+    font-weight: 700;
     cursor: pointer;
   }
 
   h2 {
     margin: 0;
-    font-weight: 950;
+    font-weight: 700;
     font-size: clamp(1.35rem, 3vw, 2rem);
     letter-spacing: -0.04em;
     color: var(--ink);
@@ -233,7 +233,7 @@
   }
 
   .switch span {
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .submitBtn {

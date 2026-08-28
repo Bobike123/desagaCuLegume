@@ -485,7 +485,7 @@
 
 <style>
   .cart-page {
-    background: linear-gradient(180deg, rgba(36, 146, 204, 0.05), rgba(255, 255, 255, 0));
+    background: var(--paper);
   }
 
   .page-head {
@@ -500,7 +500,7 @@
   .eyebrow {
     color: var(--desaga-blue);
     font-size: 0.78rem;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -513,9 +513,8 @@
 
   .panel {
     background: #fff;
-    border-radius: 18px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
     padding: 16px;
   }
 
@@ -527,17 +526,17 @@
     gap: 0.4rem;
     min-height: 38px;
     padding: 0.4rem 0.7rem;
-    border-radius: 999px;
-    border: 1px solid rgba(36, 146, 204, 0.18);
-    background: rgba(36, 146, 204, 0.08);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(181, 42, 47, 0.18);
+    background: rgba(28, 26, 23, 0.04);
     color: rgba(0, 0, 0, 0.66);
     font-size: 0.86rem;
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .head-pill strong {
     color: var(--desaga-heading);
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .panel-messages {
@@ -564,7 +563,7 @@
 
   .muted a {
     color: var(--desaga-blue);
-    font-weight: 800;
+    font-weight: 600;
     text-decoration: none;
   }
 
@@ -574,12 +573,12 @@
     gap: 6px;
     font-size: 0.78rem;
     padding: 0.28rem 0.6rem;
-    border-radius: 999px;
-    background: rgba(36, 146, 204, 0.14);
-    border: 1px solid rgba(36, 146, 204, 0.25);
-    color: #2492cc;
+    border-radius: var(--radius-sm);
+    background: rgba(181, 42, 47, 0.14);
+    border: 1px solid rgba(181, 42, 47, 0.25);
+    color: var(--tomato-ink);
     white-space: nowrap;
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .checkout-steps {
@@ -594,8 +593,8 @@
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border-radius: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.78);
     color: rgba(0, 0, 0, 0.62);
   }
@@ -605,15 +604,15 @@
     height: 26px;
     display: grid;
     place-items: center;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     background: rgba(0, 0, 0, 0.08);
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .step.done {
     color: var(--desaga-blue);
-    border-color: rgba(36, 146, 204, 0.24);
-    background: rgba(36, 146, 204, 0.08);
+    border-color: rgba(181, 42, 47, 0.24);
+    background: rgba(28, 26, 23, 0.04);
   }
 
   .step.done span {
@@ -629,7 +628,7 @@
   }
 
   .summary-row--total {
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    border-top: 1px solid var(--line);
     margin-top: 6px;
     padding-top: 12px;
     font-size: 1.08rem;
@@ -641,9 +640,9 @@
   .summary-empty {
     margin-top: 10px;
     padding: 10px 12px;
-    border-radius: 14px;
-    background: rgba(36, 146, 204, 0.08);
-    border: 1px solid rgba(36, 146, 204, 0.16);
+    border-radius: var(--radius);
+    background: rgba(28, 26, 23, 0.04);
+    border: 1px solid rgba(181, 42, 47, 0.16);
     color: rgba(0, 0, 0, 0.72);
     font-size: 0.9rem;
   }
@@ -662,7 +661,7 @@
     display: grid;
     gap: 5px;
     font-size: 0.9rem;
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .phone-fallback {
@@ -671,7 +670,7 @@
     justify-content: center;
     gap: 8px;
     color: var(--desaga-blue);
-    font-weight: 900;
+    font-weight: 700;
     text-decoration: none;
     margin-top: 2px;
   }
@@ -682,8 +681,8 @@
     display: flex;
     gap: 14px;
     align-items: flex-start;
-    border-radius: 18px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
     background: rgba(0, 0, 0, 0.02);
     padding: 18px;
   }
@@ -691,17 +690,17 @@
   .empty-icon {
     width: 46px;
     height: 46px;
-    border-radius: 16px;
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
-    background: rgba(36, 146, 204, 0.12);
+    background: rgba(28, 26, 23, 0.04);
     color: var(--desaga-blue);
     flex: 0 0 auto;
     font-size: 1.25rem;
   }
 
   .empty-title {
-    font-weight: 900;
+    font-weight: 700;
     font-size: 1.08rem;
   }
 

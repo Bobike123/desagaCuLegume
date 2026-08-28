@@ -250,7 +250,7 @@
   .adminNav__brandIcon {
     width: 42px;
     height: 42px;
-    border-radius: 14px;
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     color: #fff;
@@ -265,12 +265,12 @@
   }
 
   .adminNav__brandText strong {
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .adminNav__brandText small {
     color: var(--admin-muted);
-    font-weight: 800;
+    font-weight: 600;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -295,9 +295,9 @@
     width: 100%;
     min-height: 44px;
     padding: 10px 12px;
-    border-radius: 16px;
+    border-radius: var(--radius);
     text-decoration: none;
-    font-weight: 850;
+    font-weight: 600;
     color: var(--admin-muted);
     background: transparent;
     border: 1px solid transparent;
@@ -368,8 +368,6 @@
       background: rgba(255, 253, 247, 0.96);
       border-bottom: 1px solid var(--admin-line);
       box-shadow: 0 10px 26px rgba(35, 51, 30, 0.08);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
     }
 
     .adminMobileBar__brand {
@@ -384,7 +382,7 @@
     .adminMobileBar__brandIcon {
       width: 40px;
       height: 40px;
-      border-radius: 14px;
+      border-radius: var(--radius);
       display: grid;
       place-items: center;
       color: #fff;
@@ -400,13 +398,13 @@
 
     .adminMobileBar__brandText strong {
       color: var(--admin-ink);
-      font-weight: 950;
+      font-weight: 700;
     }
 
     .adminMobileBar__brandText small {
       color: var(--admin-muted);
       font-size: 0.72rem;
-      font-weight: 850;
+      font-weight: 600;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
@@ -414,7 +412,7 @@
     .adminMobileBar__toggle {
       width: 42px;
       height: 42px;
-      border-radius: 13px;
+      border-radius: var(--radius);
       display: grid;
       place-items: center;
       padding: 9px;
@@ -446,7 +444,7 @@
     .adminMobileBar__bars span {
       height: 2px;
       width: 100%;
-      border-radius: 999px;
+      border-radius: var(--radius-sm);
       background: currentColor;
       transform-origin: center;
       transition:
@@ -538,7 +536,7 @@
     .adminMobileDrawer__brandIcon {
       width: 42px;
       height: 42px;
-      border-radius: 14px;
+      border-radius: var(--radius);
       display: grid;
       place-items: center;
       flex: 0 0 auto;
@@ -554,14 +552,14 @@
     }
 
     .adminMobileDrawer__brand strong {
-      font-weight: 950;
+      font-weight: 700;
       color: var(--admin-ink);
     }
 
     .adminMobileDrawer__brand small {
       color: var(--admin-muted);
       font-size: 0.72rem;
-      font-weight: 850;
+      font-weight: 600;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
@@ -569,7 +567,7 @@
     .adminMobileDrawer__close {
       width: 40px;
       height: 40px;
-      border-radius: 13px;
+      border-radius: var(--radius);
       display: grid;
       place-items: center;
       border: 0;
@@ -601,7 +599,7 @@
     .adminMobileDrawer__store,
     .adminMobileDrawer__logout {
       min-height: 48px;
-      border-radius: 16px;
+      border-radius: var(--radius);
       display: flex;
       align-items: center;
       gap: 12px;
@@ -611,7 +609,7 @@
       background: rgba(39, 79, 42, 0.05);
       border: 1px solid rgba(39, 79, 42, 0.08);
       text-decoration: none;
-      font-weight: 900;
+      font-weight: 700;
       text-align: left;
       transition:
         background 0.15s ease,

@@ -111,9 +111,7 @@
 
 <style>
   .legal-hero {
-    background:
-      radial-gradient(circle at top left, rgba(var(--desaga-accent-rgb), 0.16), transparent 28rem),
-      linear-gradient(135deg, #ffffff 0%, var(--desaga-light-blue) 100%);
+    background: var(--paper);
     border-bottom: 1px solid rgba(var(--desaga-accent-rgb), 0.16);
     padding: clamp(2.6rem, 6vw, 4.6rem) 0;
   }
@@ -126,7 +124,7 @@
   .legal-updated,
   .legal-index__title {
     color: var(--desaga-blue);
-    font-weight: 900;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-size: 0.76rem;
@@ -135,7 +133,7 @@
   .legal-hero h1 {
     margin: 0.55rem 0 0.75rem;
     color: var(--desaga-heading);
-    font-weight: 950;
+    font-weight: 700;
     line-height: 1.05;
     font-size: clamp(2rem, 5vw, 3.5rem);
   }
@@ -151,13 +149,13 @@
   .legal-updated {
     display: inline-flex;
     padding: 0.42rem 0.7rem;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: rgba(var(--desaga-accent-rgb), 0.1);
     border: 1px solid rgba(var(--desaga-accent-rgb), 0.18);
   }
 
   .legal-page {
-    background: linear-gradient(180deg, #ffffff 0%, var(--desaga-cream) 100%);
+    background: var(--paper);
     padding: clamp(2rem, 5vw, 3.8rem) 0;
   }
 
@@ -177,8 +175,8 @@
   .legal-document {
     background: #fff;
     border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 20px;
-    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+    border-radius: var(--radius-lg);
+    box-shadow: none;
   }
 
   .legal-index {
@@ -204,7 +202,7 @@
     font-weight: 750;
     line-height: 1.35;
     padding: 0.42rem 0.5rem;
-    border-radius: 12px;
+    border-radius: var(--radius);
   }
 
   .legal-index a:hover,
@@ -233,7 +231,7 @@
   .legal-section h2 {
     margin: 0 0 0.85rem;
     color: var(--desaga-heading);
-    font-weight: 950;
+    font-weight: 700;
     font-size: clamp(1.25rem, 2.2vw, 1.65rem);
   }
 
@@ -260,7 +258,7 @@
     overflow-x: auto;
     margin: 1rem 0;
     border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 16px;
+    border-radius: var(--radius);
   }
 
   table {
@@ -281,7 +279,7 @@
   th {
     color: var(--desaga-heading);
     background: rgba(var(--desaga-accent-rgb), 0.08);
-    font-weight: 900;
+    font-weight: 700;
   }
 
   tr:last-child td {
@@ -294,7 +292,7 @@
     align-items: flex-start;
     margin-top: 1rem;
     padding: 0.9rem 1rem;
-    border-radius: 16px;
+    border-radius: var(--radius);
     color: var(--desaga-heading);
     background: rgba(var(--desaga-green-rgb), 0.08);
     border: 1px solid rgba(var(--desaga-green-rgb), 0.18);

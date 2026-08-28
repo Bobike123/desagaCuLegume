@@ -491,9 +491,7 @@
 <style>
   .user-page {
     padding: clamp(1.5rem, 4vw, 3rem) 0 clamp(3rem, 6vw, 5rem);
-    background:
-      radial-gradient(circle at top left, rgba(var(--desaga-accent-rgb), 0.1), transparent 30rem),
-      var(--desaga-cream);
+    background: var(--paper);
   }
 
   .page-head {
@@ -507,14 +505,14 @@
   .eyebrow {
     margin: 0 0 0.35rem;
     color: var(--desaga-blue);
-    font-weight: 950;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
 
   h1 {
     margin: 0;
-    font-weight: 950;
+    font-weight: 700;
     color: var(--desaga-heading);
     letter-spacing: -0.035em;
   }
@@ -552,7 +550,7 @@
   .stat-card span {
     display: block;
     color: var(--desaga-muted);
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .stat-card strong {
@@ -592,7 +590,7 @@
     gap: 0.5rem;
     align-items: center;
     font-size: 1.1rem;
-    font-weight: 950;
+    font-weight: 700;
     color: var(--desaga-heading);
   }
 
@@ -609,7 +607,7 @@
   }
 
   .danger-panel .panel-head h2 {
-    color: #842029;
+    color: var(--tomato-deep);
   }
 
   .orders-list,
@@ -689,7 +687,7 @@
   .items-head h3 {
     margin: 0;
     font-size: 1rem;
-    font-weight: 850;
+    font-weight: 600;
     color: var(--desaga-heading);
   }
 
@@ -728,7 +726,7 @@
   }
 
   .item-header {
-    font-weight: 850;
+    font-weight: 600;
     color: var(--desaga-muted);
   }
 
@@ -811,7 +809,7 @@
   label span {
     display: block;
     margin-bottom: 0.35rem;
-    font-weight: 850;
+    font-weight: 600;
     color: rgba(20, 33, 43, 0.78);
   }
 
@@ -855,7 +853,7 @@
     .item-row span::before {
       content: attr(data-label);
       display: block;
-      font-weight: 850;
+      font-weight: 600;
       font-size: 0.85rem;
       color: var(--desaga-muted);
       margin-bottom: 0.25rem;

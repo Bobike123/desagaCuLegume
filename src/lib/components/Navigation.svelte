@@ -220,7 +220,7 @@
                   href={item.href}
                   on:click={closeProductsMenuNow}
                 >
-                  <i class={'bi ' + item.icon}></i>
+                  {#if item.icon}<i class={'bi ' + item.icon} aria-hidden="true"></i>{/if}
                   <span>{item.label}</span>
                 </a>
               </li>
@@ -311,6 +311,7 @@
   class:show={isOpen}
   aria-label="Navigare mobilă"
   aria-hidden={!isOpen}
+  inert={!isOpen || undefined}
 >
   <div class="offcanvas-header">
     <a class="mobile-brand" href="/" on:click={closeMenu}>
@@ -355,7 +356,7 @@
         </div>
         {#each productLinks.slice(1) as item}
           <a class={`mobile-sublink ${navActive(currentPath, item.href)}`} href={item.href} on:click={closeMenu}>
-            <span><i class={'bi ' + item.icon}></i> {item.label}</span>
+            <span>{#if item.icon}<i class={'bi ' + item.icon} aria-hidden="true"></i>{/if} {item.label}</span>
             <i class="bi bi-chevron-right"></i>
           </a>
         {/each}
@@ -415,96 +416,103 @@
 </div>
 
 <style>
+  /* ---- Utility bar (desktop only) --------------------------------------
+     Practical details, set quietly. It is not a coloured banner competing
+     with the brand. */
   .topbar {
-    background: var(--desaga-blue);
-    color: #fff;
-    font-size: 0.86rem;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--text-xs);
   }
 
   .topbar-wrap {
-    min-height: 38px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: var(--space-4);
+    min-height: 34px;
   }
 
   .topbar-info,
   .topbar-social {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: var(--space-4);
     min-width: 0;
   }
 
   .topbar-link,
   .social-link {
-    color: #fff;
-    text-decoration: none;
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    min-width: 0;
-    line-height: 1.2;
-    opacity: 0.95;
+    gap: 0.35rem;
+    color: var(--ink-2);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .topbar-link i,
+  .social-link i {
+    color: var(--tomato-ink);
   }
 
   .topbar-link:hover,
-  .topbar-link:focus,
   .social-link:hover,
-  .social-link:focus {
-    color: #fff;
-    opacity: 1;
+  .topbar-link:focus-visible,
+  .social-link:focus-visible {
+    color: var(--tomato-deep);
     text-decoration: underline;
-    text-underline-offset: 3px;
   }
 
-  .topbar-location span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .social-fluture {
+    padding-left: var(--space-4);
+    border-left: 1px solid var(--line-strong);
   }
 
-  .social-fluture span {
-    white-space: nowrap;
-  }
-
+  /* ---- Main bar --------------------------------------------------------- */
   .mainnav {
-    box-shadow: var(--desaga-shadow-sm);
-    z-index: 1020;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 0;
+    box-shadow: none;
   }
 
   .mainnav-wrap {
-    min-width: 0;
-    min-height: 72px;
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: var(--space-3);
+    min-height: 68px;
   }
 
   .brand {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 10px;
-    min-width: 0;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: 0;
     text-decoration: none;
+    min-width: 0;
   }
 
   .brand-logo {
+    width: auto;
+    outline: none;
     flex: 0 0 auto;
-    object-fit: contain;
   }
 
   .brand-text {
     display: grid;
-    line-height: 1.1;
     min-width: 0;
   }
 
   .brand-name {
-    display: inline-flex;
-    align-items: baseline;
-    font-weight: 950;
-    font-size: 1.08rem;
-    color: var(--desaga-heading);
-    white-space: nowrap;
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
   }
 
   .brand-line + .brand-line::before {
@@ -512,374 +520,269 @@
   }
 
   .brand-subtitle {
-    color: var(--desaga-muted);
-    font-size: 0.76rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
+    color: var(--tomato-ink);
   }
 
   .desktop-nav {
-    gap: 18px;
+    gap: var(--space-4);
   }
 
   .navbar-nav {
-    gap: 2px;
+    gap: 0;
   }
 
+  /* Active state is a tomato rule under the label, like a tab on a market
+     board. It reads instantly and needs no pill or filled background. */
   .nav-link {
-    border-radius: 999px;
-    color: rgba(20, 33, 43, 0.76) !important;
-    font-weight: 850;
-    padding: 0.54rem 0.82rem !important;
-    transition:
-      background 0.15s ease,
-      color 0.15s ease;
+    position: relative;
+    padding: 0.5rem 0.7rem;
+    color: var(--ink-2);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   .nav-link:hover,
-  .nav-link:focus {
-    background: rgba(var(--desaga-accent-rgb), 0.08);
-    color: var(--desaga-blue) !important;
+  .nav-link:focus-visible {
+    color: var(--ink);
   }
 
   .nav-link.active {
-    color: var(--desaga-blue) !important;
-    background: rgba(var(--desaga-accent-rgb), 0.11);
+    color: var(--ink);
   }
 
-  .desktop-dropdown {
-    position: relative;
-  }
-
-  .desktop-dropdown::after {
+  .nav-link.active::after {
     content: '';
     position: absolute;
-    left: 0;
-    right: 0;
-    top: 100%;
-    height: 14px;
+    left: 0.7rem;
+    right: 0.7rem;
+    bottom: -2px;
+    height: 2px;
+    background: var(--tomato);
   }
 
-  .products-dropdown {
-    display: block;
-    margin-top: 10px;
-    border: 1px solid var(--desaga-border);
-    border-radius: 18px;
-    padding: 0.55rem;
-    min-width: 230px;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(14px);
-    box-shadow:
-      0 18px 45px rgba(15, 23, 42, 0.14),
-      0 4px 14px rgba(15, 23, 42, 0.08);
-
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transform: translateY(10px) scale(0.98);
-    transform-origin: top center;
-    clip-path: inset(0 0 100% 0 round 18px);
-
-    /* Exit animation - applied when the .open class is removed. */
-    transition:
-      opacity 160ms ease,
-      transform 220ms cubic-bezier(0.7, 0, 0.84, 0),
-      clip-path 220ms cubic-bezier(0.7, 0, 0.84, 0),
-      visibility 0s linear 220ms;
-  }
-
-  .products-dropdown.open {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translateY(0) scale(1);
-    clip-path: inset(0 0 0 0 round 18px);
-
-    /* Enter animation - applied when the .open class is added. */
-    transition:
-      opacity 180ms ease,
-      transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
-      clip-path 260ms cubic-bezier(0.16, 1, 0.3, 1),
-      visibility 0s linear 0s;
-  }
-
-  .products-dropdown .dropdown-item {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  .products-dropdown.open .dropdown-item {
-    opacity: 1;
-    transform: translateY(0);
-    transition:
-      opacity 180ms ease,
-      transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .products-dropdown.open li:nth-child(1) .dropdown-item {
-    transition-delay: 40ms;
-  }
-
-  .products-dropdown.open li:nth-child(2) .dropdown-item {
-    transition-delay: 75ms;
-  }
-
-  .products-dropdown.open li:nth-child(3) .dropdown-item {
-    transition-delay: 110ms;
-  }
-
-  .products-dropdown.open li:nth-child(4) .dropdown-item {
-    transition-delay: 145ms;
-  }
-
-  .dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-radius: 12px;
-    padding: 0.62rem 0.72rem;
-    font-weight: 800;
-    color: rgba(20, 33, 43, 0.78);
-  }
-
-  .dropdown-item:hover,
-  .dropdown-item:focus,
-  .dropdown-item.active {
-    color: var(--desaga-blue);
-    background: rgba(var(--desaga-accent-rgb), 0.1);
+  .dropdown-toggle::after {
+    margin-left: 0.35rem;
+    vertical-align: 0.12em;
   }
 
   .nav-actions {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding-left: 10px;
-    margin-left: 10px;
-    border-left: 1px solid var(--desaga-border);
+    gap: var(--space-2);
   }
 
   .call-action,
   .cart-action,
-  .account-action,
-  .admin-link,
-  .mobile-call,
-  .mobile-cart,
-  .mobile-account {
-    text-decoration: none;
+  .account-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 0;
+    gap: 0.4rem;
+    min-height: 40px;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition-property: background-color, border-color, color;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: var(--ease);
   }
 
+  /* Calling is how this business actually confirms stock, so the phone is
+     the one solid button in the header. */
   .call-action {
-    gap: 8px;
-    min-height: 42px;
-    padding: 0 14px;
-    border-radius: 999px;
-    background: var(--desaga-blue);
+    background: var(--tomato-ink);
+    border-color: var(--tomato-ink);
     color: #fff;
-    font-weight: 900;
-    box-shadow: 0 10px 22px rgba(var(--desaga-accent-rgb), 0.22);
   }
 
   .call-action:hover,
-  .call-action:focus {
+  .call-action:focus-visible {
+    background: var(--tomato-deep);
+    border-color: var(--tomato-deep);
     color: #fff;
-    background: var(--desaga-dark-blue);
-  }
-
-  .cart-action,
-  .account-action {
-    position: relative;
-    gap: 8px;
-    min-height: 42px;
-    padding: 0 14px;
-    border-radius: 999px;
-    color: rgba(20, 33, 43, 0.78);
-    background: rgba(15, 23, 42, 0.05);
-    font-weight: 900;
   }
 
   .cart-action:hover,
-  .cart-action:focus,
-  .cart-action.active,
   .account-action:hover,
-  .account-action:focus,
+  .cart-action:focus-visible,
+  .account-action:focus-visible {
+    border-color: var(--tomato-ink);
+    color: var(--tomato-deep);
+    background: var(--tomato-wash);
+  }
+
+  .cart-action.active,
   .account-action.active {
-    color: var(--desaga-blue);
-    background: rgba(var(--desaga-accent-rgb), 0.11);
+    border-color: var(--tomato-ink);
+    color: var(--tomato-deep);
+  }
+
+  .cart-action {
+    position: relative;
+  }
+
+  /* The only pill on the site: a numeric count badge. */
+  .cart-badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: var(--radius-full);
+    background: var(--tomato-ink);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
   }
 
   .admin-link {
-    width: 42px;
-    height: 42px;
-    border-radius: 999px;
-    color: rgba(20, 33, 43, 0.58);
-    background: rgba(15, 23, 42, 0.04);
-  }
-
-  button.admin-link {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--ink-2);
     cursor: pointer;
   }
 
   .admin-link:hover,
-  .admin-link:focus {
-    color: var(--desaga-blue);
-    background: rgba(var(--desaga-accent-rgb), 0.1);
+  .admin-link:focus-visible {
+    border-color: var(--tomato-ink);
+    color: var(--tomato-deep);
   }
 
-  .cart-badge {
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: var(--desaga-blue);
-    color: #fff;
-    font-size: 0.72rem;
-    font-weight: 950;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  /* ---- Products dropdown ------------------------------------------------ */
+  .products-dropdown {
+    display: block;
+    margin-top: 0;
+    padding: var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-pop);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition-property: opacity, transform, visibility;
+    transition-duration: var(--motion);
+    transition-timing-function: var(--ease);
   }
 
-  .cart-action .cart-badge,
-  .mobile-cart .cart-badge {
-    position: absolute;
-    right: -5px;
-    top: -5px;
+  .products-dropdown.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
   }
 
-  .mobile-actions {
-    margin-left: auto;
+  .dropdown-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
+    min-height: 40px;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  .dropdown-item i {
+    color: var(--ink-3);
+  }
+
+  .dropdown-item:hover,
+  .dropdown-item:focus-visible {
+    background: var(--tomato-wash);
+    color: var(--tomato-deep);
+  }
+
+  .dropdown-item.active {
+    color: var(--tomato-deep);
+    background: var(--tomato-wash);
+  }
+
+  /* ---- Mobile header controls ------------------------------------------ */
+  .mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
   }
 
   .mobile-call,
-  .mobile-cart,
   .mobile-account,
   .burger {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 1.05rem;
+    text-decoration: none;
+    cursor: pointer;
   }
 
   .mobile-call {
+    background: var(--tomato-ink);
+    border-color: var(--tomato-ink);
     color: #fff;
-    background: var(--desaga-blue);
   }
 
-  .mobile-cart,
-  .mobile-account {
-    position: relative;
-    color: rgba(20, 33, 43, 0.76);
-    background: rgba(15, 23, 42, 0.05);
-  }
-
-  .mobile-cart.active,
   .mobile-account.active {
-    color: var(--desaga-blue);
-    background: rgba(var(--desaga-accent-rgb), 0.11);
+    border-color: var(--tomato-ink);
+    color: var(--tomato-deep);
   }
 
-  .burger {
-    border: 0;
-    padding: 8px;
-    background: rgba(15, 23, 42, 0.05);
-    transition:
-      background 0.15s ease,
-      box-shadow 0.15s ease;
-  }
-
-  .burger:hover,
-  .burger:focus,
-  .burger[aria-expanded='true'] {
-    background: var(--desaga-blue);
-  }
-
-  .burger:focus {
-    box-shadow: var(--desaga-focus-ring);
+  .burger:focus-visible,
+  .mobile-call:focus-visible,
+  .mobile-account:focus-visible {
+    outline: 2px solid var(--tomato-ink);
+    outline-offset: 2px;
   }
 
   .burger__bars {
-    width: 24px;
-    height: 18px;
     display: grid;
-    align-content: space-between;
+    gap: 4px;
+    width: 18px;
   }
 
   .burger__bar {
     height: 2px;
-    width: 100%;
-    background: rgba(20, 33, 43, 0.8);
-    border-radius: 999px;
-    transform-origin: center;
-    transition:
-      transform 220ms ease,
-      opacity 180ms ease;
+    background: var(--ink);
+    border-radius: 1px;
   }
 
-  .burger:hover .burger__bar,
-  .burger:focus .burger__bar,
-  .burger[aria-expanded='true'] .burger__bar {
-    background: #fff;
-  }
-
-  .burger[aria-expanded='true'] .burger__bar:nth-child(1) {
-    transform: translateY(8px) rotate(45deg);
-  }
-
-  .burger[aria-expanded='true'] .burger__bar:nth-child(2) {
-    opacity: 0;
-    transform: scaleX(0.6);
-  }
-
-  .burger[aria-expanded='true'] .burger__bar:nth-child(3) {
-    transform: translateY(-8px) rotate(-45deg);
-  }
-
-  /* Self-contained slide-in drawer (no Bootstrap offcanvas JS/CSS). Uses
-     top/bottom:0 instead of height:100vh so the Android URL bar can't clip it. */
-  .mobile-offcanvas {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1050;
-    width: min(92vw, 390px);
-    max-width: 100%;
-    display: flex;
-    flex-direction: column;
-    background: var(--desaga-surface);
-    border-left: 1px solid var(--desaga-border);
-    box-shadow: -14px 0 44px rgba(15, 23, 42, 0.18);
-    transform: translateX(100%);
-    visibility: hidden;
-    transition: transform 0.28s ease-in-out, visibility 0.28s ease-in-out;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .mobile-offcanvas.show {
-    transform: translateX(0);
-    visibility: visible;
-  }
-
+  /* ---- Mobile drawer ---------------------------------------------------- */
   .mobile-backdrop {
     position: fixed;
     inset: 0;
     z-index: 1040;
-    margin: 0;
-    padding: 0;
     border: 0;
-    background: rgba(15, 23, 42, 0.5);
+    padding: 0;
+    background: rgba(28, 26, 23, 0.42);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.28s ease-in-out, visibility 0.28s ease-in-out;
+    transition-property: opacity, visibility;
+    transition-duration: var(--motion);
+    transition-timing-function: var(--ease);
   }
 
   .mobile-backdrop.show {
@@ -887,116 +790,130 @@
     visibility: visible;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .mobile-offcanvas,
-    .mobile-backdrop {
-      transition: none;
-    }
+  /* top/bottom:0 rather than height:100vh, so the Android URL bar cannot
+     clip the end of the drawer. */
+  .mobile-offcanvas {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 1045;
+    display: flex;
+    flex-direction: column;
+    width: min(340px, 88vw);
+    background: var(--paper);
+    border-left: 1px solid var(--line);
+    transform: translateX(100%);
+    visibility: hidden;
+    overscroll-behavior: contain;
+    transition-property: transform, visibility;
+    transition-duration: var(--motion);
+    transition-timing-function: var(--ease);
   }
 
-  /* The drawer only exists below the lg breakpoint; keep it out of the way on
-     desktop where the inline navbar is used. */
-  @media (min-width: 992px) {
-    .mobile-offcanvas,
-    .mobile-backdrop {
-      display: none;
-    }
+  .mobile-offcanvas.show {
+    transform: translateX(0);
+    visibility: visible;
   }
 
   .offcanvas-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 1rem;
-    border-bottom: 1px solid var(--desaga-border);
-    background:
-      linear-gradient(180deg, rgba(var(--desaga-accent-rgb), 0.08), rgba(255, 255, 255, 0));
-  }
-
-  .offcanvas-body {
-    flex: 1 1 auto;
-    padding: 1rem;
-    overflow-y: auto;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    padding-top: max(var(--space-3), env(safe-area-inset-top));
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
   }
 
   .mobile-brand {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 10px;
-    color: var(--desaga-heading);
-    font-weight: 950;
+    gap: var(--space-2);
     text-decoration: none;
+    min-width: 0;
   }
 
   .mobile-brand img {
+    outline: none;
     flex: 0 0 auto;
   }
 
   .mobile-brand__text {
     display: grid;
-    line-height: 1.05;
+    min-width: 0;
   }
 
   .mobile-brand__text strong {
-    font-weight: 950;
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    color: var(--ink);
+    line-height: 1.1;
   }
 
   .mobile-brand__text small {
-    color: var(--desaga-muted);
-    font-size: 0.72rem;
-    font-weight: 850;
-    letter-spacing: 0.04em;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
+    color: var(--tomato-ink);
   }
 
   .close-menu {
-    width: 40px;
-    height: 40px;
-    border: 0;
-    border-radius: 14px;
     display: grid;
     place-items: center;
-    color: rgba(20, 33, 43, 0.72);
-    background: rgba(15, 23, 42, 0.05);
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
     cursor: pointer;
-    transition:
-      background 0.15s ease,
-      color 0.15s ease;
   }
 
-  .close-menu:hover,
-  .close-menu:focus {
-    color: var(--desaga-blue);
-    background: rgba(var(--desaga-accent-rgb), 0.12);
+  .offcanvas-body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--space-4);
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
   }
 
   .mobile-contact-card {
     display: grid;
-    gap: 8px;
-    padding: 12px;
-    border-radius: 18px;
-    background: rgba(var(--desaga-accent-rgb), 0.08);
-    border: 1px solid rgba(38, 153, 214, 0.16);
-    margin-bottom: 14px;
+    margin-bottom: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    overflow: hidden;
   }
 
   .mobile-contact-card a {
-    color: rgba(20, 33, 43, 0.82);
-    text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 9px;
-    font-weight: 800;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .mobile-contact-card a + a {
+    border-top: 1px solid var(--line);
   }
 
   .mobile-contact-card i {
-    color: var(--desaga-blue);
+    color: var(--tomato-ink);
+    flex: 0 0 auto;
   }
 
   .mobile-nav {
     display: grid;
-    gap: 8px;
   }
 
   .mobile-link,
@@ -1004,120 +921,129 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-2);
+    min-height: 48px;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    font-size: var(--text-base);
+    font-weight: 600;
     text-decoration: none;
-    gap: 12px;
-    border-radius: 15px;
-    color: rgba(20, 33, 43, 0.85);
-    font-weight: 900;
   }
 
-  .mobile-link > span,
-  .mobile-sublink > span {
+  .mobile-link span,
+  .mobile-sublink span {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-2);
     min-width: 0;
   }
 
-  .mobile-link > span > i,
-  .mobile-sublink > span > i {
-    width: 20px;
+  .mobile-link i:first-child,
+  .mobile-sublink i:first-child {
+    color: var(--ink-3);
+    width: 1.25rem;
     text-align: center;
     flex: 0 0 auto;
   }
 
-  .mobile-link {
-    padding: 13px 14px;
-    background: rgba(15, 23, 42, 0.025);
-    border: 1px solid rgba(15, 23, 42, 0.075);
+  .mobile-link .bi-chevron-right,
+  .mobile-sublink .bi-chevron-right {
+    color: var(--line-strong);
+    font-size: 0.75rem;
+    flex: 0 0 auto;
   }
 
-  .mobile-link-primary {
-    background: var(--desaga-blue);
-    color: #fff;
-    border-color: var(--desaga-blue);
-  }
-
-  .mobile-link.active:not(.mobile-link-primary),
+  .mobile-link.active,
   .mobile-sublink.active {
-    border-color: rgba(var(--desaga-accent-rgb), 0.32);
-    background: rgba(38, 153, 214, 0.09);
-    color: var(--desaga-blue);
+    color: var(--tomato-deep);
+  }
+
+  .mobile-link.active i:first-child,
+  .mobile-sublink.active i:first-child {
+    color: var(--tomato-ink);
+  }
+
+  .mobile-link:active,
+  .mobile-sublink:active {
+    background: var(--tomato-wash);
   }
 
   .mobile-section {
-    padding: 11px;
-    border-radius: 18px;
-    background: rgba(15, 23, 42, 0.02);
-    border: 1px solid rgba(15, 23, 42, 0.075);
+    padding-left: var(--space-4);
+    border-left: 2px solid var(--line);
+    margin-block: var(--space-2);
   }
 
   .mobile-section__title {
-    font-weight: 950;
-    color: rgba(20, 33, 43, 0.68);
-    margin-bottom: 8px;
-    padding: 0 2px;
-    font-size: 0.82rem;
+    padding: var(--space-2) 0;
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    color: var(--ink-3);
   }
 
   .mobile-sublink {
-    padding: 10px;
+    min-height: 44px;
+    font-size: var(--text-sm);
   }
 
-  .mobile-sublink:hover,
-  .mobile-sublink:focus {
-    background: rgba(var(--desaga-accent-rgb), 0.08);
-    color: var(--desaga-blue);
+  .mobile-sublink:last-child {
+    border-bottom: 0;
   }
 
   .mobile-admin {
-    margin-top: 10px;
-    padding-top: 12px;
-    border-top: 1px solid var(--desaga-border);
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
   }
 
   .admin-mobile-link {
-    width: 100%;
-    border: 0;
-    background: transparent;
-    color: rgba(20, 33, 43, 0.58);
-    text-decoration: none;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 2px;
-    font-weight: 800;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-2) 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink-3);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .products-dropdown,
-    .products-dropdown.opening,
-    .products-dropdown.open,
-    .products-dropdown.closing,
-    .products-dropdown .dropdown-item {
-      transition: none !important;
-      transform: none !important;
-      clip-path: none !important;
-    }
+  .admin-mobile-link:hover,
+  .admin-mobile-link:focus-visible {
+    color: var(--tomato-deep);
   }
 
+  /* ---- Responsive ------------------------------------------------------- */
   @media (max-width: 1199.98px) {
     .brand-subtitle {
       display: none;
     }
 
     .nav-link {
-      padding-inline: 0.62rem !important;
+      padding-inline: 0.5rem;
     }
 
-    .call-action span {
+    .nav-link.active::after {
+      left: 0.5rem;
+      right: 0.5rem;
+    }
+
+    .call-action span,
+    .account-action span {
       display: none;
     }
 
-    .call-action {
-      width: 42px;
+    .call-action,
+    .account-action {
+      width: 40px;
       padding: 0;
     }
   }
@@ -1128,41 +1054,49 @@
     }
 
     .mainnav-wrap {
-      min-height: 64px;
+      min-height: 60px;
     }
 
+    /* Stack the wordmark onto two lines below the desktop breakpoint. On one
+       line it is wide enough to push the header controls onto a second row at
+       320px. */
     .brand-name {
       display: grid;
-      max-width: none;
-      overflow: visible;
-      text-overflow: clip;
-      white-space: normal;
-      line-height: 0.96;
-      font-size: 1rem;
-      letter-spacing: -0.02em;
+      font-size: 0.9375rem;
+      line-height: 1.05;
     }
 
     .brand-line + .brand-line::before {
-      content: '';
+      content: none;
     }
   }
 
-  @media (max-width: 420px) {
+  @media (max-width: 400px) {
     .brand-name {
-      font-size: 0.94rem;
+      font-size: 0.875rem;
     }
 
     .brand-logo {
-      height: 32px;
+      height: 30px;
+    }
+
+    .mobile-actions {
+      gap: 6px;
     }
 
     .mobile-call,
-    .mobile-cart,
     .mobile-account,
     .burger {
-      width: 39px;
-      height: 39px;
-      border-radius: 13px;
+      width: 42px;
+      height: 42px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .products-dropdown,
+    .mobile-offcanvas,
+    .mobile-backdrop {
+      transition: none;
     }
   }
 </style>

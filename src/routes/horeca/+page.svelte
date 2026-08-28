@@ -296,14 +296,14 @@
 
 <style>
   .horeca-page {
-    background: linear-gradient(180deg, #fff 0%, rgba(var(--desaga-accent-rgb), 0.05) 100%);
+    background: var(--paper);
   }
 
   .intro-card,
   .request-card,
   .side-card,
   .feature-card {
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     border: 1px solid rgba(var(--desaga-accent-rgb), 0.14);
     background: #fff;
     box-shadow: var(--desaga-shadow-sm);
@@ -326,7 +326,7 @@
 
   .eyebrow {
     color: var(--desaga-blue);
-    font-weight: 900;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-size: 0.78rem;
@@ -334,8 +334,8 @@
 
   h2,
   h3 {
-    color: var(--desaga-brown);
-    font-weight: 950;
+    color: var(--ink);
+    font-weight: 700;
     letter-spacing: -0.035em;
   }
 
@@ -377,7 +377,7 @@
     height: 44px;
     display: grid;
     place-items: center;
-    border-radius: 15px;
+    border-radius: var(--radius);
     color: var(--desaga-blue);
     background: rgba(var(--desaga-accent-rgb), 0.12);
     font-size: 1.2rem;
@@ -425,7 +425,7 @@
   label span,
   .choice-title {
     display: block;
-    font-weight: 850;
+    font-weight: 600;
     color: rgba(20, 33, 43, 0.78);
     margin-bottom: 6px;
   }
@@ -437,11 +437,11 @@
   .contact-choice {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 16px;
-    padding: 12px;
-    border-radius: 16px;
-    background: rgba(var(--desaga-accent-rgb), 0.06);
-    border: 1px solid rgba(var(--desaga-accent-rgb), 0.14);
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius);
+    background: var(--paper-2);
+    border: 1px solid var(--line);
   }
 
   .contact-choice .choice-title {
@@ -449,11 +449,36 @@
     margin: 0;
   }
 
+  /* The radio glyph itself is only 13px, so the label carries the tap
+     target: a full-height row the thumb can actually hit. */
   .contact-choice label {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    font-weight: 800;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding-inline: var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .contact-choice label:has(input:checked) {
+    border-color: var(--tomato-ink);
+    background: var(--tomato-wash);
+    color: var(--tomato-deep);
+  }
+
+  .contact-choice label:focus-within {
+    outline: 2px solid var(--tomato-ink);
+    outline-offset: 2px;
+  }
+
+  .contact-choice input[type='radio'] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--tomato-ink);
   }
 
   .contact-choice label span {
@@ -479,7 +504,7 @@
     gap: 10px;
     align-items: start;
     padding: 12px;
-    border-radius: 16px;
+    border-radius: var(--radius);
     background: rgba(var(--desaga-accent-rgb), 0.06);
   }
 
@@ -488,16 +513,16 @@
     height: 32px;
     display: grid;
     place-items: center;
-    border-radius: 12px;
+    border-radius: var(--radius);
     color: #fff;
     background: var(--desaga-blue);
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .contact-box {
     margin-top: 18px;
     padding: 14px;
-    border-radius: 16px;
+    border-radius: var(--radius);
     background: var(--desaga-slate);
     color: #fff;
     display: grid;
@@ -506,8 +531,17 @@
 
   .contact-box a,
   .contact-box span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     color: #fff;
     text-decoration: none;
+  }
+
+  .contact-box a:hover,
+  .contact-box a:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   @media (max-width: 576px) {

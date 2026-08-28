@@ -78,68 +78,68 @@
 </script>
 
 <article class="card" data-available={isAvailable} data-promotion={hasPromotion}>
-  <a class="media-link" href={href} aria-label={name || 'Produs'}>
+  <a class="media-link" href={href} tabindex="-1" aria-hidden="true">
     <img
       class="media-img"
       src={cardImageSrc}
-      alt={name || 'Produs'}
+      alt=""
       loading="lazy"
       decoding="async"
       on:error={fallbackImage}
     />
 
     {#if hasPromotion}
-      <div class="promo-stack" aria-label="Etichete produs">
+      <!-- A printed label pinned to the photo, not a glowing badge. -->
+      <div class="flags">
         {#each promotionBadges as badge}
-          <span class="promo-badge">{badge}</span>
+          <span class="flag">{badge}</span>
         {/each}
       </div>
     {/if}
-
-    <div class="badges">
-      <span class={'pill cat ' + catMeta.tone}>
-        {catMeta.name}
-      </span>
-
-      <span class={`pill ${isAvailable ? 'tone-stock' : 'tone-warning'}`}>
-        <i class={`bi ${isAvailable ? 'bi-check2-circle' : 'bi-exclamation-triangle'}`}></i>
-        {stockLabel}
-      </span>
-    </div>
   </a>
 
   <div class="body">
-    <a class="content-link" href={href}>
-      <h5 class="title">{name || 'Produs'}</h5>
-      <p class="desc">{description || 'Descrierea produsului va fi actualizată în curând.'}</p>
-    </a>
+    <div class="meta">
+      <span class="cat">{catMeta.name}</span>
+      <span class="stock" data-in={isAvailable}>
+        <i class={`bi ${isAvailable ? 'bi-check2' : 'bi-slash-circle'}`} aria-hidden="true"></i>
+        {stockLabel}
+      </span>
+    </div>
+
+    <h3 class="title">
+      <a class="title-link" href={href}>{name || 'Produs'}</a>
+    </h3>
+
+    <p class="desc">{description || 'Descrierea produsului va fi actualizată în curând.'}</p>
 
     <div class="footer">
-      <div class="price">
-        {price.toFixed(2)} <span class="currency">RON</span> <span class="unit">/ {measureUnitSuffix}</span>
-      </div>
+      <p class="price">
+        <span class="amount">{price.toFixed(2)}</span>
+        <span class="unit">RON / {measureUnitSuffix}</span>
+      </p>
 
       {#if !isAvailable}
-        <a class="details-link" href={href}>Detalii</a>
+        <a class="act act-ghost" href={href}>Detalii</a>
       {:else if currentQty === 0}
-        <button class="btn-add" type="button" on:click={addToBasket}>
-          <i class="bi bi-basket"></i>
-          Adaugă
+        <button class="act act-add" type="button" on:click={addToBasket}>
+          <i class="bi bi-plus-lg" aria-hidden="true"></i>
+          <span>Adaugă</span>
         </button>
       {:else}
-        <div class="stepper" role="group" aria-label="Cantitate în coș">
-          <button class="step-btn" type="button" on:click={dec} aria-label="Scade cantitatea">
-            <i class="bi bi-dash"></i>
+        <div class="stepper" role="group" aria-label={`Cantitate pentru ${name || 'produs'}`}>
+          <button class="step" type="button" on:click={dec} aria-label="Scade cantitatea">
+            <i class="bi bi-dash-lg" aria-hidden="true"></i>
           </button>
-          <div class="qty-wrap" aria-label="Cantitate">
+          <span class="qty-wrap">
             {#key `${currentQty}-${bumpTick}`}
-              <div class={lastDelta === 1 ? 'step-qty qty-up' : 'step-qty qty-down'} in:fly={{ y: flyY, duration: 120 }} out:fly={{ y: -flyY, duration: 120 }}>
+              <span class="qty" in:fly={{ y: flyY, duration: 120 }} out:fly={{ y: -flyY, duration: 120 }}>
                 {currentQty}
-              </div>
+              </span>
             {/key}
-          </div>
-          <button class="step-btn" type="button" on:click={inc} aria-label="Crește cantitatea">
-            <i class="bi bi-plus"></i>
+          </span>
+          <button class="step" type="button" on:click={inc} aria-label="Crește cantitatea">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
           </button>
         </div>
       {/if}
@@ -148,197 +148,132 @@
 </article>
 
 <style>
+  /* A produce card is a printed price card: paper, a hairline border, a
+     photograph and a number. No elevation, no glow, no pill. */
   .card {
-    width: 100%;
-    height: 100%;
-    min-height: 340px;
+    position: relative;
     display: flex;
     flex-direction: column;
-    border-radius: 18px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    width: 100%;
+    height: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
     overflow: hidden;
-    background: #fff;
-    color: inherit;
-    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+    transition: border-color var(--motion-fast) var(--ease);
   }
 
-  .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
-    border-color: rgba(0, 0, 0, 0.12);
+  @media (hover: hover) and (pointer: fine) {
+    .card:hover {
+      border-color: var(--line-strong);
+    }
   }
 
+  .card[data-available='false'] .media-img {
+    filter: saturate(0.45);
+  }
+
+  /* Promotion reads as a red rule along the top edge plus the label. That is
+     enough signal; it does not need a coloured shadow and a scale transform. */
   .card[data-promotion='true'] {
-    border-color: rgba(194, 37, 45, 0.42);
-    box-shadow: 0 18px 42px rgba(194, 37, 45, 0.16), 0 0 0 4px rgba(194, 37, 45, 0.05);
-    transform: translateY(-1px);
-  }
-
-  .card[data-promotion='true']:hover {
-    box-shadow: 0 22px 54px rgba(194, 37, 45, 0.22), 0 0 0 5px rgba(194, 37, 45, 0.08);
-    border-color: rgba(194, 37, 45, 0.58);
-  }
-
-  .card[data-available='false'] {
-    opacity: 0.78;
-  }
-
-  .card[data-promotion='true'][data-available='false'] {
-    opacity: 0.9;
-  }
-
-  .media-link,
-  .content-link {
-    color: inherit;
-    text-decoration: none;
+    border-color: rgba(181, 42, 47, 0.45);
+    box-shadow: inset 0 2px 0 0 var(--tomato);
   }
 
   .media-link {
-    position: relative;
     display: block;
-    height: 160px;
-    flex: 0 0 auto;
-    background: rgba(0, 0, 0, 0.03);
-    overflow: hidden;
+    position: relative;
+    background: var(--paper-2);
+    text-decoration: none;
   }
 
   .media-img {
-    width: 100%;
-    height: 100%;
     display: block;
+    width: 100%;
+    /* Ratio, not a fixed pixel height: photos arrive at any proportion and
+       the grid must not jump while they load. */
+    aspect-ratio: 4 / 3;
     object-fit: cover;
-    transition: transform 0.18s ease;
+    outline: none;
   }
 
-  .card:hover .media-img,
-  .card[data-promotion='true'] .media-img {
-    transform: scale(1.03);
-  }
-
-  .promo-stack {
+  .flags {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 2;
+    top: var(--space-2);
+    left: var(--space-2);
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 6px;
-    max-width: calc(100% - 20px);
+    gap: 4px;
+    max-width: calc(100% - var(--space-4));
   }
 
-  .promo-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 30px;
-    padding: 0.34rem 0.68rem;
-    border-radius: 999px;
-    border: 1px solid rgba(194, 37, 45, 0.38);
-    background: rgba(255, 255, 255, 0.94);
-    color: #9f1f27;
-    box-shadow:
-      0 12px 26px rgba(0, 0, 0, 0.18),
-      0 0 0 4px rgba(255, 255, 255, 0.28);
-    backdrop-filter: blur(8px);
-    font-size: 0.75rem;
-    line-height: 1;
-    font-weight: 950;
-    letter-spacing: 0.055em;
+  .flag {
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    background: var(--tomato-ink);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
+    line-height: 1.4;
   }
 
-  .promo-badge::before {
-    content: '';
-    width: 7px;
-    height: 7px;
-    margin-right: 6px;
-    border-radius: 999px;
-    background: #c2252d;
-    box-shadow: 0 0 0 3px rgba(194, 37, 45, 0.12);
-  }
-
-  .badges {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
+  .body {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    align-items: center;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-3);
   }
 
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0.28rem 0.6rem;
-    border-radius: 7px;
-    font-size: 0.76rem;
-    font-weight: 850;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(6px);
+  .meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xs);
+  }
+
+  .cat {
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  /* Category pill: a solid coloured chip with a white dot, one tone per
-     category. Solid (not translucent) so it stays readable over any product
-     photo. */
-  .pill.cat {
-    gap: 5px;
-    font-weight: 900;
-    color: #fff;
-    border-color: transparent;
-    background: var(--cat-solid, #157347);
-    backdrop-filter: none;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
-  }
-
-  .pill.cat::before {
-    content: '';
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.9);
+  /* Stock is the one thing a market customer actually needs, so it carries
+     the only colour in the metadata row. */
+  .stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     flex: 0 0 auto;
+    font-weight: 600;
+    color: var(--leaf);
   }
 
-  .tone-green { --cat-solid: #157347; }
-  .tone-orange { --cat-solid: #c2410c; }
-  .tone-amber { --cat-solid: #9a6a04; }
-  .tone-blue { border-color: rgba(13, 110, 253, 0.22); background: rgba(13, 110, 253, 0.12); }
-  .tone-purple { border-color: rgba(111, 66, 193, 0.22); background: rgba(111, 66, 193, 0.12); }
-  .tone-warning { border-color: rgba(255, 193, 7, 0.35); background: rgba(255, 193, 7, 0.24); }
-  .tone-stock { border-color: rgba(25, 135, 84, 0.22); background: rgba(255, 255, 255, 0.92); }
-
-  .body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 12px 12px 14px;
-  }
-
-  .content-link {
-    flex: 1;
-    min-height: 0;
-  }
-
-  .content-link:hover .title {
-    color: var(--desaga-blue);
-  }
-
-  .card[data-promotion='true'] .title {
-    color: #8f1d22;
+  .stock[data-in='false'] {
+    color: var(--clay);
   }
 
   .title {
     margin: 0;
-    font-weight: 950;
-    font-size: 1rem;
-    line-height: 1.2;
-    color: #222;
+    font-size: var(--text-md);
+    font-weight: 700;
+    line-height: var(--leading-snug);
+    letter-spacing: -0.01em;
+  }
+
+  .title-link {
+    color: var(--ink);
+    text-decoration: none;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -346,214 +281,204 @@
     overflow: hidden;
   }
 
+  .title-link:hover,
+  .title-link:focus-visible {
+    color: var(--tomato-ink);
+    text-decoration: underline;
+  }
+
+  /* The whole card opens the product, so the single accessible link gets a
+     card-sized tap target instead of a 22px line of text. */
+  .title-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .card:focus-within {
+    border-color: var(--tomato-ink);
+  }
+
+  /* Basket controls stay above the stretched link so they remain clickable. */
+  .footer {
+    position: relative;
+    z-index: 1;
+  }
+
   .desc {
-    margin: 8px 0 0;
-    font-size: 0.88rem;
-    color: rgba(0, 0, 0, 0.68);
-    line-height: 1.35;
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+    color: var(--ink-2);
     display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
   .footer {
-    margin-top: 12px;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: var(--space-2);
+    margin-top: auto;
+    padding-top: var(--space-3);
   }
+
 
   .price {
-    font-weight: 950;
-    font-size: 1.05rem;
-    color: var(--accent, #2492cc);
-    line-height: 1;
+    margin: 0;
+    min-width: 0;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
   }
 
-  .card[data-promotion='true'] .price {
-    color: #c2252d;
+  .amount {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ink);
   }
 
-  .currency,
+  .card[data-promotion='true'] .amount {
+    color: var(--tomato-ink);
+  }
+
   .unit {
-    font-size: 0.78rem;
-    font-weight: 800;
-    opacity: 0.75;
-    margin-left: 3px;
+    display: block;
+    margin-top: 1px;
+    font-size: var(--text-xs);
+    color: var(--ink-3);
   }
 
-  .btn-add,
-  .details-link {
+  /* Outline by default so a grid of 25 cards stays calm; the accent is spent
+     on the page's own primary action instead. */
+  .act {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    border: 1px solid rgba(var(--accent-rgb, 36, 146, 204), 0.35);
-    background: rgba(var(--accent-rgb, 36, 146, 204), 0.12);
-    color: var(--accent, #2492cc);
-    font-weight: 900;
-    padding: 0.5rem 0.75rem;
-    border-radius: 12px;
-    cursor: pointer;
-    white-space: nowrap;
+    justify-content: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 600;
     text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition-property: background-color, border-color, color;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: var(--ease);
   }
 
-  .card[data-promotion='true'] .btn-add {
-    border-color: rgba(194, 37, 45, 0.32);
-    background: rgba(194, 37, 45, 0.1);
-    color: #c2252d;
+  .act-add {
+    border-color: rgba(181, 42, 47, 0.4);
+    color: var(--tomato-ink);
   }
 
-  .details-link {
-    color: rgba(0, 0, 0, 0.65);
-    background: rgba(0, 0, 0, 0.04);
-    border-color: rgba(0, 0, 0, 0.08);
+  @media (hover: hover) and (pointer: fine) {
+    .act-add:hover {
+      background: var(--tomato-ink);
+      border-color: var(--tomato-ink);
+      color: #fff;
+    }
+
+    .act-ghost:hover {
+      border-color: var(--line-strong);
+      background: var(--paper-2);
+    }
   }
 
+  .act-add:focus-visible {
+    background: var(--tomato-ink);
+    border-color: var(--tomato-ink);
+    color: #fff;
+  }
+
+  .act-ghost {
+    color: var(--ink-2);
+  }
+
+  /* Once the product is in the basket the control becomes solid: the filled
+     state is what tells you the item is already in there. */
   .stepper {
     display: inline-flex;
-    align-items: center;
-    border-radius: 12px;
-    border: 1px solid rgba(var(--accent-rgb, 36, 146, 204), 0.35);
-    background: rgba(var(--accent-rgb, 36, 146, 204), 0.1);
+    align-items: stretch;
+    flex: 0 0 auto;
+    border: 1px solid var(--tomato-ink);
+    border-radius: var(--radius);
+    background: var(--tomato-ink);
     overflow: hidden;
   }
 
-  .card[data-promotion='true'] .stepper {
-    border-color: rgba(194, 37, 45, 0.32);
-    background: rgba(194, 37, 45, 0.08);
-  }
-
-  .step-btn {
-    width: 30px;
-    height: 30px;
+  .step {
     display: grid;
     place-items: center;
+    width: 40px;
+    min-height: 40px;
     border: 0;
     background: transparent;
-    color: var(--accent, #2492cc);
+    color: #fff;
     cursor: pointer;
   }
 
-  .card[data-promotion='true'] .step-btn {
-    color: #c2252d;
+  .step:hover,
+  .step:focus-visible {
+    background: var(--tomato-deep);
   }
 
   .qty-wrap {
-    width: 25px;
-    height: 25px;
     display: grid;
     place-items: center;
     position: relative;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.6);
-    border-left: 1px solid rgba(var(--accent-rgb, 36, 146, 204), 0.22);
-    border-right: 1px solid rgba(var(--accent-rgb, 36, 146, 204), 0.22);
+    min-width: 34px;
+    padding-inline: 2px;
+    background: #fff;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
 
-  .step-qty {
-    font-weight: 950;
-    color: #1f2a33;
-    line-height: 1;
-    will-change: transform, opacity;
-    animation: bump 150ms ease-out;
+  .qty {
+    grid-area: 1 / 1;
   }
 
-  @keyframes bump {
-    0% { transform: scale(0.9); opacity: 0.85; }
-    60% { transform: scale(1.12); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  /* Compact app-style card: two per row on phones. */
-  @media (max-width: 767.98px) {
-    .card {
-      min-height: 0;
-      border-radius: 14px;
-    }
-
-    .media-link {
-      height: 110px;
-    }
-
-    .promo-stack {
-      top: 6px;
-      right: 6px;
-      gap: 4px;
-    }
-
-    .promo-badge {
-      min-height: 22px;
-      padding: 0.22rem 0.5rem;
-      font-size: 0.6rem;
-    }
-
-    .badges {
-      left: 6px;
-      right: 6px;
-      bottom: 6px;
-      gap: 4px;
-    }
-
-    .pill {
-      padding: 0.2rem 0.45rem;
-      font-size: 0.62rem;
-      gap: 4px;
-    }
-
-    .body {
-      padding: 9px 9px 10px;
-    }
-
-    .title {
-      font-size: 0.86rem;
-    }
-
+  /* Phones: two per row, so the action goes full width under the price. */
+  @media (max-width: 575.98px) {
     .desc {
       display: none;
     }
 
     .footer {
-      margin-top: 8px;
       flex-direction: column;
       align-items: stretch;
-      gap: 7px;
+      gap: var(--space-2);
     }
 
-    .price {
-      font-size: 0.95rem;
-    }
-
-    .currency,
-    .unit {
-      font-size: 0.7rem;
-    }
-
-    .btn-add,
-    .details-link {
-      justify-content: center;
-      min-height: 38px;
-      padding: 0.4rem 0.6rem;
-      font-size: 0.85rem;
+    .act,
+    .stepper {
+      width: 100%;
     }
 
     .stepper {
       justify-content: space-between;
-      width: 100%;
-    }
-
-    .step-btn {
-      width: 38px;
-      height: 36px;
     }
 
     .qty-wrap {
       flex: 1;
-      width: auto;
-      height: 36px;
+    }
+
+    .amount {
+      font-size: 1.125rem;
     }
   }
 </style>

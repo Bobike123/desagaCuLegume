@@ -106,7 +106,7 @@ function animateScrollToTop(duration = SCROLL_DURATION): void {
         position: fixed;
         right: max(1rem, env(safe-area-inset-right));
         bottom: max(1.25rem, env(safe-area-inset-bottom));
-        z-index: 9999;
+        z-index: 1020;
 
         opacity: 0;
         visibility: hidden;
@@ -140,13 +140,13 @@ function animateScrollToTop(duration = SCROLL_DURATION): void {
         place-items: center;
 
         border: 0;
-        border-radius: 9999px;
+        border-radius: var(--radius-lg);
         cursor: pointer;
 
         color: #fff;
-        background: #334155;
+        background: var(--ink);
 
-        box-shadow: 0 0.625rem 1.375rem rgb(0 0 0 / 28%);
+        box-shadow: var(--shadow-pop);
 
         transition:
             transform 0.18s ease,
@@ -155,9 +155,9 @@ function animateScrollToTop(duration = SCROLL_DURATION): void {
     }
 
     .scrolltop-btn:hover {
-        background: #263449;
+        background: #000;
         transform: translateY(-0.1875rem);
-        box-shadow: 0 0.875rem 1.875rem rgb(0 0 0 / 32%);
+        box-shadow: var(--shadow-pop);
     }
 
     .scrolltop-btn:active {
@@ -165,7 +165,7 @@ function animateScrollToTop(duration = SCROLL_DURATION): void {
     }
 
     .scrolltop-btn:focus-visible {
-        outline: 3px solid #93c5fd;
+        outline: 3px solid var(--paper-2);
         outline-offset: 4px;
     }
 

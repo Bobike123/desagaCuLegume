@@ -29,7 +29,7 @@
     display: grid;
     place-items: center;
     padding: clamp(2rem, 7vw, 5rem) 0;
-    background: #f6f1e7;
+    background: var(--paper);
   }
 
   .panel {
@@ -37,14 +37,14 @@
     border: 1px solid rgba(31, 42, 28, 0.14);
     border-radius: 8px;
     padding: clamp(1.5rem, 4vw, 2.4rem);
-    background: #fffdf7;
+    background: var(--paper);
     box-shadow: 0 22px 60px rgba(35, 51, 30, 0.1);
   }
 
   .eyebrow {
     margin: 0 0 0.6rem;
-    color: #274f2a;
-    font-weight: 950;
+    color: var(--tomato-ink);
+    font-weight: 700;
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -52,17 +52,17 @@
 
   h1 {
     margin: 0;
-    color: #1d241b;
+    color: var(--ink);
     font-size: clamp(2rem, 6vw, 3.6rem);
     line-height: 0.98;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .lead {
     margin: 1rem 0 0;
-    color: #4f5f49;
+    color: var(--ink-2);
     font-size: 1.05rem;
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .records {
@@ -81,15 +81,15 @@
   }
 
   .records span {
-    color: #6b7165;
+    color: var(--ink-2);
     font-size: 0.74rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .records strong {
-    color: #1d241b;
+    color: var(--ink);
     overflow-wrap: anywhere;
   }
 </style>

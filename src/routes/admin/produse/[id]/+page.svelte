@@ -431,7 +431,7 @@
   .miniBtn {
     min-height: 46px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 16px;
     display: inline-flex;
     align-items: center;
@@ -440,7 +440,7 @@
     background: var(--surface);
     color: var(--ink);
     text-decoration: none;
-    font-weight: 950;
+    font-weight: 700;
     cursor: pointer;
   }
 
@@ -452,7 +452,7 @@
 
   h2 {
     margin: 0;
-    font-weight: 950;
+    font-weight: 700;
     font-size: clamp(1.35rem, 3vw, 2rem);
     letter-spacing: -0.04em;
     color: var(--ink);
@@ -475,7 +475,7 @@
     border-radius: 0 16px 16px 0;
     background: #f5f0e5;
     font-style: normal;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .media-panel {
@@ -486,7 +486,7 @@
   .preview {
     position: relative;
     overflow: hidden;
-    border-radius: 18px;
+    border-radius: var(--radius);
     border: 1px solid var(--line);
     background: rgba(0, 0, 0, 0.04);
   }
@@ -502,10 +502,10 @@
     position: absolute;
     left: 10px;
     bottom: 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0.25rem 0.6rem;
     background: rgba(255, 255, 255, 0.9);
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .urlRow {
@@ -521,7 +521,7 @@
   .miniBtn {
     min-height: 42px;
     background: rgba(var(--accent-rgb, 36, 146, 204), 0.1);
-    color: var(--accent, #2492cc);
+    color: var(--accent, var(--tomato-ink));
   }
 
   .media-list {
@@ -535,7 +535,7 @@
     gap: 10px;
     align-items: center;
     padding: 9px;
-    border-radius: 16px;
+    border-radius: var(--radius);
     border: 1px solid var(--line);
     background: rgba(0, 0, 0, 0.02);
     will-change: transform;
@@ -544,7 +544,7 @@
   .media-item img {
     width: 76px;
     height: 76px;
-    border-radius: 12px;
+    border-radius: var(--radius);
     object-fit: cover;
     background: rgba(0, 0, 0, 0.04);
   }
@@ -570,10 +570,10 @@
 
   .media-actions button {
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: #fff;
     padding: 0.25rem 0.55rem;
-    font-weight: 900;
+    font-weight: 700;
     font-size: 0.78rem;
   }
 

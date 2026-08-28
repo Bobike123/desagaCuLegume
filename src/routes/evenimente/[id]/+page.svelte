@@ -129,7 +129,7 @@
 
 <style>
   .text-brown {
-    color: var(--desaga-brown) !important;
+    color: var(--ink) !important;
   }
 
   @media (max-width: 767.98px) {

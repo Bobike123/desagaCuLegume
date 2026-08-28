@@ -24,8 +24,9 @@
 </script>
 
 <svelte:head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- charset and viewport live in app.html; re-declaring the viewport here
+       shipped a second tag without viewport-fit=cover, which silently zeroed
+       every env(safe-area-inset-*) the mobile tab bar depends on. -->
   <title>DeSaga cu Legume - Din Fermă direct la Rulota DeSaga</title>
   <meta
     name="description"
@@ -37,7 +38,7 @@
   <Navigation />
 {/if}
 
-<main class="min-vh-100 bg-white">
+<main class="app-main">
   <slot />
   <ScrollToTop />
   <CookieConsentBanner />
@@ -49,12 +50,10 @@
 {/if}
 
 <style>
-  :global(body) {
-    background-color: #ffffff;
-    color: var(--desaga-text);
-  }
-
-  main {
-    min-height: calc(100vh - 200px);
+  /* dvh, not vh: mobile browser chrome makes 100vh taller than the visible
+     area, which pushed the footer below the fold on every phone. */
+  main.app-main {
+    min-height: calc(100dvh - 200px);
+    background: var(--paper);
   }
 </style>

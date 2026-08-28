@@ -1,247 +1,257 @@
 <script lang="ts">
+  // Prop API is unchanged - seven pages call this component. Only the
+  // composition changed: instead of laying white text over a photo behind a
+  // heavy green scrim (unreadable, and the scrim fought the red brand), the
+  // copy now sits on paper beside the photo. The photograph gets to be a
+  // photograph, and the text gets real contrast instead of a text-shadow.
   export let title = 'DeSaga cu Legume';
-  export let subtitle = 'Local • Gustos • Sănătos';
+  export let subtitle = 'Local, Gustos, Sănătos';
   export let backgroundImage = '';
+  /** Minimum height of the photo panel on desktop. */
   export let height = '400px';
   export let eyebrow = '';
   export let primaryHref = '';
   export let primaryLabel = '';
   export let secondaryHref = '';
   export let secondaryLabel = '';
+  /** Icon for the secondary action. Defaults to the phone, which is what
+      most pages use it for. */
+  export let secondaryIcon = 'bi-telephone';
   export let facts: ReadonlyArray<{ icon: string; label: string; href?: string }> = [];
 
-  $: backgroundStyle = backgroundImage
-    ? `background-image: url("${backgroundImage}");`
-    : '';
+  $: hasMedia = Boolean(backgroundImage);
 </script>
 
-<section
-  class:hero--plain={!backgroundImage}
-  class="hero"
-  style={`--hero-min-height: ${height}; ${backgroundStyle}`}
-  aria-label={title}
->
-  <div class="hero-overlay" aria-hidden="true"></div>
-
-  <div class="container hero-inner">
+<section class="hero" class:hero--plain={!hasMedia} style={`--media-min-height: ${height};`}>
+  <div class="container hero-grid">
     <div class="hero-copy">
       {#if eyebrow}
-        <div class="hero-eyebrow">{eyebrow}</div>
+        <p class="hero-eyebrow">{eyebrow}</p>
       {/if}
 
-      <h1>{title}</h1>
-      <p>{subtitle}</p>
+      <h1 class="hero-title">{title}</h1>
+      <p class="hero-sub">{subtitle}</p>
 
-      {#if primaryHref || secondaryHref}
+      {#if (primaryHref && primaryLabel) || (secondaryHref && secondaryLabel)}
         <div class="hero-actions">
           {#if primaryHref && primaryLabel}
-            <a class="btn btn-light btn-lg hero-primary" href={primaryHref}>
-              {primaryLabel} <i class="bi bi-arrow-right"></i>
-            </a>
+            <a class="btn btn-accent" href={primaryHref}>{primaryLabel}</a>
           {/if}
 
           {#if secondaryHref && secondaryLabel}
-            <a class="btn btn-outline-light btn-lg hero-secondary" href={secondaryHref}>
-              <i class="bi bi-telephone"></i> {secondaryLabel}
+            <a class="btn btn-outline-accent" href={secondaryHref}>
+              <i class={'bi ' + secondaryIcon} aria-hidden="true"></i>
+              {secondaryLabel}
             </a>
           {/if}
         </div>
       {/if}
-
-      {#if facts.length > 0}
-        <div class="hero-facts" aria-label="Informații rapide">
-          {#each facts as fact}
-            {#if fact.href}
-              <a class="hero-fact" href={fact.href}>
-                <i class={'bi ' + fact.icon}></i>
-                <span>{fact.label}</span>
-              </a>
-            {:else}
-              <span class="hero-fact">
-                <i class={'bi ' + fact.icon}></i>
-                <span>{fact.label}</span>
-              </span>
-            {/if}
-          {/each}
-        </div>
-      {/if}
     </div>
+
+    {#if hasMedia}
+      <div class="hero-media">
+        <img src={backgroundImage} alt="" loading="eager" fetchpriority="high" decoding="async" />
+      </div>
+    {/if}
   </div>
+
+  {#if facts.length > 0}
+    <!-- Practical details read like a market board: hairline-divided rows,
+         not frosted-glass pills floating over a photo. -->
+    <div class="hero-facts">
+      <div class="container hero-facts-inner">
+        {#each facts as fact}
+          <svelte:element
+            this={fact.href ? 'a' : 'span'}
+            class="hero-fact"
+            href={fact.href}
+          >
+            <i class={'bi ' + fact.icon} aria-hidden="true"></i>
+            <span>{fact.label}</span>
+          </svelte:element>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </section>
 
 <style>
   .hero {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    min-height: var(--hero-min-height, 400px);
-    background-size: cover;
-    background-position: center;
-    background-color: var(--desaga-green, #1f6f45);
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
   }
 
-  .hero--plain {
-    background:
-      radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.16), transparent 28rem),
-      linear-gradient(135deg, var(--desaga-green, #1f6f45), var(--desaga-dark-green, #17452d));
-  }
-
-  .hero-overlay {
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(
-        90deg,
-        rgba(7, 52, 31, 0.92),
-        rgba(7, 52, 31, 0.64),
-        rgba(7, 52, 31, 0.2)
-      ),
-      radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.22), transparent 32%);
-  }
-
-  .hero--plain .hero-overlay {
-    background:
-      linear-gradient(90deg, rgba(7, 52, 31, 0.72), rgba(7, 52, 31, 0.38)),
-      radial-gradient(circle at 18% 80%, rgba(var(--desaga-accent-rgb, 38, 153, 214), 0.2), transparent 28rem);
-  }
-
-  .hero-inner {
-    position: relative;
-    z-index: 1;
-    padding-top: clamp(2.4rem, 6vw, 4rem);
-    padding-bottom: clamp(2.4rem, 6vw, 4rem);
+  .hero-grid {
+    display: grid;
+    gap: var(--space-5);
+    padding-block: var(--space-6);
   }
 
   .hero-copy {
-    max-width: 760px;
-    color: #fff;
+    min-width: 0;
+    align-self: center;
+  }
+
+  /* The short tomato rule is the one recurring graphic mark on the site. It
+     echoes the vine stroke running through the logo. */
+  .hero-copy::before {
+    content: '';
+    display: block;
+    width: 30px;
+    height: 2px;
+    margin-bottom: var(--space-4);
+    background: var(--tomato);
   }
 
   .hero-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    width: fit-content;
-    margin-bottom: 0.9rem;
-    padding: 0.35rem 0.75rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    font-weight: 900;
-    letter-spacing: 0.02em;
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--tomato-ink);
   }
 
-  h1 {
+  .hero-title {
     margin: 0;
-    font-size: clamp(2.2rem, 6vw, 4.4rem);
-    line-height: 0.96;
-    font-weight: 950;
-    letter-spacing: -0.045em;
-    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.26);
+    font-size: var(--text-hero);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--ink);
   }
 
-  p {
-    max-width: 620px;
-    margin: 1rem 0 0;
-    font-size: clamp(1.05rem, 2vw, 1.35rem);
-    line-height: 1.45;
-    color: rgba(255, 255, 255, 0.92);
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.22);
+  .hero-sub {
+    max-width: 46ch;
+    margin: var(--space-3) 0 0;
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    color: var(--ink-2);
   }
 
   .hero-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
   }
 
-  .hero-primary,
-  .hero-secondary {
-    border-radius: 999px;
-    font-weight: 900;
-    padding-inline: 1.15rem;
+  .hero-media {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--paper-2);
   }
 
-  .hero-primary {
-    color: var(--desaga-dark-green, #17452d);
-  }
-
-  .hero-secondary {
-    border-color: rgba(255, 255, 255, 0.78);
+  .hero-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* Fixed ratio on phones so the photo never eats the fold and never
+       causes layout shift while it loads. */
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    outline: none;
   }
 
   .hero-facts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.65rem;
-    margin-top: 1.4rem;
+    border-top: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .hero-facts-inner {
+    display: grid;
+    gap: 0;
   }
 
   .hero-fact {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0.5rem 0.7rem;
-    border-radius: 999px;
-    color: #fff;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding-block: var(--space-2);
+    color: var(--ink-2);
+    font-size: var(--text-sm);
     text-decoration: none;
-    background: rgba(255, 255, 255, 0.13);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(8px);
-    font-weight: 800;
-    font-size: 0.92rem;
+  }
+
+  .hero-fact + .hero-fact {
+    border-top: 1px solid var(--line);
+  }
+
+  .hero-fact i {
+    color: var(--tomato-ink);
+    flex: 0 0 auto;
   }
 
   a.hero-fact:hover,
-  a.hero-fact:focus {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.2);
+  a.hero-fact:focus-visible {
+    color: var(--tomato-deep);
   }
 
-  /* Compact hero on phones so the page content starts sooner. */
-  @media (max-width: 575.98px) {
-    .hero {
-      min-height: 0;
-    }
+  /* Plain variant (no photograph): the copy simply sits on paper. No
+     gradient stand-in for a missing image. */
+  .hero--plain {
+    background: var(--paper-2);
+  }
 
-    .hero-inner {
-      padding-top: 1.6rem;
-      padding-bottom: 1.6rem;
+  /* Between phone and the two-column breakpoint the 16:10 photo ate most of
+     the fold, so it becomes a banner strip instead. */
+  @media (min-width: 640px) and (max-width: 899.98px) {
+    .hero-media img {
+      aspect-ratio: 21 / 9;
     }
+  }
 
-    h1 {
-      font-size: clamp(1.9rem, 8vw, 2.2rem);
-    }
-
-    p {
-      margin-top: 0.75rem;
-      font-size: 1rem;
-    }
-
-    .hero-eyebrow {
-      margin-bottom: 0.65rem;
-      font-size: 0.8rem;
-    }
-
-    .hero-actions {
-      margin-top: 1rem;
-      gap: 0.5rem;
-    }
-
-    .hero-actions a {
-      width: 100%;
-      justify-content: center;
-    }
-
-    .hero-facts {
-      margin-top: 0.9rem;
-      gap: 0.4rem;
+  @media (min-width: 768px) {
+    .hero-facts-inner {
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+      align-items: center;
     }
 
     .hero-fact {
-      padding: 0.34rem 0.55rem;
-      font-size: 0.78rem;
+      padding-inline: var(--space-4);
+    }
+
+    .hero-fact:first-child {
+      padding-inline-start: 0;
+    }
+
+    .hero-fact + .hero-fact {
+      border-top: 0;
+      border-left: 1px solid var(--line);
+    }
+  }
+
+  @media (min-width: 900px) {
+    .hero-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+      gap: var(--space-7);
+      align-items: stretch;
+      padding-block: var(--space-7);
+    }
+
+    /* The media box owns the height and the image fills it absolutely.
+       With height:100% on the image alone its intrinsic 3:2 ratio won, so a
+       hero asking for 320px rendered ~430px and left the short copy column
+       stranded in dead space. */
+    .hero-media {
+      min-height: var(--media-min-height, 400px);
+    }
+
+    .hero-media img {
+      position: absolute;
+      inset: 0;
+      aspect-ratio: auto;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .hero-grid {
+      gap: var(--space-8);
     }
   }
 </style>

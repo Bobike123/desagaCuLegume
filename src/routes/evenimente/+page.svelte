@@ -122,35 +122,23 @@
   />
 </svelte:head>
 
+<!-- The intro panel used to repeat the page title in a second <h1>, so the
+     page shipped two level-one headings. Title, lead and actions now live in
+     the hero, exactly like the products listing. -->
 <Hero
-  title="Evenimente"
-  subtitle="Târguri, degustări și întâlniri locale"
+  eyebrow="Comunitatea DeSaga"
+  title="Evenimente și activități"
+  subtitle="Târguri, degustări și întâlniri locale. Aici apar târgurile, degustările și întâlnirile unde poți descoperi produsele DeSaga și oamenii din spatele lor."
   backgroundImage="/images/evenimente/hero-degustare.jpg"
   height="320px"
+  primaryHref="/contact"
+  primaryLabel="Întreabă despre următorul eveniment"
+  secondaryHref="tel:+40729969822"
+  secondaryLabel="Sună"
 />
 
 <section class="events-page">
   <div class="container">
-    <div class="intro-card">
-      <div>
-        <span class="eyebrow"><i class="bi bi-calendar-event"></i> Comunitatea DeSaga</span>
-        <h1>Evenimente și activități</h1>
-        <p>
-          Aici apar târgurile, degustările și întâlnirile unde poți descoperi produsele
-          DeSaga și oamenii din spatele lor.
-        </p>
-      </div>
-
-      <div class="intro-actions">
-        <a class="btn btn-accent" href="/contact">
-          <i class="bi bi-chat-dots"></i> Întreabă despre următorul eveniment
-        </a>
-        <a class="btn btn-outline-accent" href="tel:+40729969822">
-          <i class="bi bi-telephone"></i> Sună
-        </a>
-      </div>
-    </div>
-
     <div class="toolbar">
       <div class="filter-group" aria-label="Filtru evenimente">
         <button
@@ -223,7 +211,8 @@
         </div>
       </div>
     {:else}
-      <div class="events-grid" aria-label="Lista evenimentelor">
+      <h2 class="visually-hidden" id="events-list-title">Lista evenimentelor</h2>
+      <div class="events-grid" aria-labelledby="events-list-title">
         {#each paginatedEvents as event (event.id)}
           <EventCard {event} />
         {/each}
@@ -272,58 +261,15 @@
 
 <style>
   :global(:root) {
-    --accent: var(--desaga-blue, #2492cc);
+    --accent: var(--desaga-blue, var(--tomato-ink));
     --accent-rgb: 36, 146, 204;
   }
 
   .events-page {
     padding: 2.5rem 0 3.5rem;
-    background:
-      radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.08), transparent 28rem),
-      #f8fafc;
+    background: var(--paper);
   }
 
-  .intro-card {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    padding: 1.35rem;
-    border-radius: 24px;
-    background: #fff;
-    border: 1px solid rgba(15, 23, 42, 0.07);
-    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
-    margin-bottom: 1rem;
-  }
-
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--accent);
-    font-weight: 900;
-    font-size: 0.84rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.45rem;
-  }
-
-  .intro-card h1 {
-    margin: 0;
-    color: var(--desaga-brown);
-    font-weight: 950;
-    letter-spacing: -0.035em;
-  }
-
-  .intro-card p {
-    max-width: 46rem;
-    margin: 0.45rem 0 0;
-    color: rgba(15, 23, 42, 0.68);
-    line-height: 1.55;
-  }
-
-  .intro-actions,
   .empty-actions {
     display: flex;
     gap: 0.65rem;
@@ -349,12 +295,12 @@
     border: 1px solid rgba(15, 23, 42, 0.09);
     background: #fff;
     color: rgba(15, 23, 42, 0.76);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0.58rem 0.85rem;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .filter-chip.active,
@@ -370,14 +316,14 @@
     gap: 0.65rem;
     flex-wrap: wrap;
     color: rgba(15, 23, 42, 0.65);
-    font-weight: 800;
+    font-weight: 600;
     font-size: 0.92rem;
   }
 
   .counts span {
     background: #fff;
     border: 1px solid rgba(15, 23, 42, 0.07);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0.45rem 0.7rem;
   }
 
@@ -399,7 +345,7 @@
     align-items: flex-start;
     gap: 1rem;
     padding: 1.25rem;
-    border-radius: 22px;
+    border-radius: var(--radius-lg);
     background: #fff;
     border: 1px solid rgba(15, 23, 42, 0.07);
     box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
@@ -408,7 +354,7 @@
   .empty-icon {
     width: 48px;
     height: 48px;
-    border-radius: 16px;
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     flex: 0 0 auto;
@@ -418,9 +364,9 @@
 
   .empty-state h2 {
     margin: 0;
-    color: var(--desaga-brown);
+    color: var(--ink);
     font-size: 1.15rem;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .empty-state p {
@@ -446,11 +392,11 @@
   .page-button,
   .page-number {
     min-height: 40px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     border: 1px solid rgba(15, 23, 42, 0.1);
     background: #fff;
     color: rgba(15, 23, 42, 0.76);
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .page-button {
@@ -483,7 +429,7 @@
     background: var(--accent) !important;
     border-color: var(--accent) !important;
     color: #fff !important;
-    font-weight: 900;
+    font-weight: 700;
     box-shadow: 0 10px 22px rgba(var(--accent-rgb), 0.2);
   }
 
@@ -495,7 +441,7 @@
   :global(.btn-outline-accent) {
     border-color: rgba(var(--accent-rgb), 0.45) !important;
     color: var(--accent) !important;
-    font-weight: 900;
+    font-weight: 700;
   }
 
   :global(.btn-outline-accent:hover),
@@ -510,9 +456,8 @@
       padding-top: 1.5rem;
     }
 
-    .intro-card,
     .empty-state {
-      border-radius: 18px;
+      border-radius: var(--radius);
       padding: 1rem;
     }
 
@@ -524,9 +469,7 @@
       margin-bottom: 0.75rem;
     }
 
-    .intro-actions,
     .empty-actions,
-    .intro-actions :global(.btn),
     .empty-actions :global(.btn) {
       width: 100%;
     }

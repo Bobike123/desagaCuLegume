@@ -39,9 +39,7 @@
 <style>
   .legal-index-page {
     min-height: 72vh;
-    background:
-      radial-gradient(circle at top left, rgba(var(--desaga-accent-rgb), 0.14), transparent 28rem),
-      linear-gradient(180deg, #ffffff 0%, var(--desaga-cream) 100%);
+    background: var(--paper);
     padding: clamp(2.6rem, 6vw, 4.8rem) 0;
   }
 
@@ -54,7 +52,7 @@
     display: inline-flex;
     color: var(--desaga-blue);
     font-size: 0.78rem;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 0.6rem;
@@ -63,7 +61,7 @@
   .legal-head h1 {
     margin: 0;
     color: var(--desaga-heading);
-    font-weight: 950;
+    font-weight: 700;
     line-height: 1.05;
     font-size: clamp(2rem, 5vw, 3.4rem);
   }
@@ -96,7 +94,7 @@
     text-decoration: none;
     background: #fff;
     border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
     transition:
       transform 0.2s ease,
@@ -115,7 +113,7 @@
     height: 44px;
     display: grid;
     place-items: center;
-    border-radius: 14px;
+    border-radius: var(--radius);
     color: var(--desaga-blue);
     background: rgba(var(--desaga-accent-rgb), 0.1);
   }

@@ -314,7 +314,7 @@
   }
 
   .slideshow--detail .stage {
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     aspect-ratio: 1 / 0.86;
     min-height: 360px;
   }
@@ -338,13 +338,12 @@
     align-items: center;
     min-height: 26px;
     padding: 0.18rem 0.52rem;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--line);
     color: rgba(0, 0, 0, 0.68);
     font-size: 0.72rem;
-    font-weight: 900;
-    backdrop-filter: blur(8px);
+    font-weight: 700;
   }
 
   .slideshow--card .counter,
@@ -360,19 +359,17 @@
     width: 42px;
     height: 42px;
     border: 1px solid rgba(255, 255, 255, 0.72);
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 255, 255, 0.88);
     color: rgba(0, 0, 0, 0.72);
     display: grid;
     place-items: center;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
-    backdrop-filter: blur(8px);
     cursor: pointer;
   }
 
   .nav:hover,
   .nav:focus-visible {
-    color: var(--desaga-blue, #2492cc);
+    color: var(--desaga-blue, var(--tomato-ink));
     background: #fff;
     outline: none;
   }
@@ -398,7 +395,7 @@
     height: 72px;
     padding: 0;
     border: 2px solid transparent;
-    border-radius: 14px;
+    border-radius: var(--radius);
     overflow: hidden;
     background: rgba(0, 0, 0, 0.04);
     cursor: pointer;
@@ -415,8 +412,8 @@
   }
 
   .thumbs button.active {
-    border-color: var(--desaga-blue, #2492cc);
-    box-shadow: 0 0 0 4px rgba(36, 146, 204, 0.12);
+    border-color: var(--desaga-blue, var(--tomato-ink));
+    box-shadow: 0 0 0 3px rgba(181, 42, 47, 0.22);
   }
 
   .thumbs img {
@@ -441,7 +438,7 @@
   .dots span {
     width: 7px;
     height: 7px;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 255, 255, 0.75);
     border: 1px solid rgba(0, 0, 0, 0.16);
     transition:

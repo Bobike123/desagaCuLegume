@@ -170,7 +170,7 @@
 
   h2 {
     margin: 0;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.055em;
     color: var(--ink);
     font-size: clamp(1.5rem, 3vw, 2.35rem);
@@ -188,7 +188,7 @@
   .quick {
     min-height: 46px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 18px;
     display: inline-flex;
     align-items: center;
@@ -197,7 +197,7 @@
     background: var(--surface);
     color: var(--ink);
     text-decoration: none;
-    font-weight: 900;
+    font-weight: 700;
     box-shadow: 0 12px 30px rgba(35, 51, 30, 0.08);
     cursor: pointer;
     border: 1px solid var(--line);
@@ -215,7 +215,7 @@
   .securityNotice {
     margin: 0 0 16px;
     border: 1px solid var(--line);
-    border-radius: 30px;
+    border-radius: var(--radius-lg);
     padding: 18px;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -234,7 +234,7 @@
   .securityNotice__icon {
     width: 54px;
     height: 54px;
-    border-radius: 18px;
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     color: #842029;
@@ -259,7 +259,7 @@
   .metric {
     min-height: 220px;
     border: 1px solid var(--line);
-    border-radius: 30px;
+    border-radius: var(--radius-lg);
     padding: 20px;
     display: grid;
     align-content: space-between;
@@ -286,7 +286,7 @@
   .metric__icon {
     width: 50px;
     height: 50px;
-    border-radius: 18px;
+    border-radius: var(--radius);
     display: grid;
     place-items: center;
     background: var(--accent-soft);
@@ -301,7 +301,7 @@
 
   .metric__label {
     color: var(--muted);
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .featured .metric__label,
@@ -314,7 +314,7 @@
     font-size: clamp(2.4rem, 6vw, 4.8rem);
     line-height: 0.9;
     letter-spacing: -0.08em;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .metric small {
@@ -324,7 +324,7 @@
 
   .commandPanel {
     border: 1px solid var(--line);
-    border-radius: 30px;
+    border-radius: var(--radius-lg);
     padding: clamp(18px, 3vw, 28px);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

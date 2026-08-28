@@ -962,7 +962,7 @@
   h2 {
     margin: 0;
     color: var(--ink);
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: -0.045em;
     font-size: clamp(1.35rem, 2.5vw, 2rem);
   }
@@ -980,7 +980,7 @@
   .smallAction {
     min-height: 46px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 18px;
     display: inline-flex;
     align-items: center;
@@ -988,7 +988,7 @@
     gap: 9px;
     background: var(--surface);
     color: var(--ink);
-    font-weight: 900;
+    font-weight: 700;
     box-shadow: 0 12px 30px rgba(35, 51, 30, 0.08);
     cursor: pointer;
   }
@@ -1032,7 +1032,7 @@
   .metric,
   .panel {
     border: 1px solid var(--line);
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 253, 247, 0.9);
     box-shadow: 0 18px 50px rgba(35, 51, 30, 0.08);
   }
@@ -1057,14 +1057,14 @@
   .metric__label,
   .metric small {
     color: var(--muted);
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .metric strong {
     display: block;
     font-size: clamp(2rem, 5vw, 3.5rem);
     line-height: 0.95;
-    font-weight: 950;
+    font-weight: 700;
     color: var(--ink);
   }
 
@@ -1083,23 +1083,22 @@
     margin: 0 0 16px;
     padding: 10px;
     border: 1px solid var(--line);
-    border-radius: 22px;
+    border-radius: var(--radius-lg);
     background: rgba(255, 253, 247, 0.94);
-    backdrop-filter: blur(14px);
     box-shadow: 0 18px 50px rgba(35, 51, 30, 0.08);
   }
 
   .securityTabs button {
     min-height: 42px;
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 0 15px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     background: transparent;
     color: var(--muted);
-    font-weight: 950;
+    font-weight: 700;
     cursor: pointer;
   }
 
@@ -1113,7 +1112,7 @@
   .securityTabs span {
     min-width: 22px;
     min-height: 22px;
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1138,7 +1137,7 @@
   .panelHint {
     margin: 0;
     color: var(--muted);
-    font-weight: 850;
+    font-weight: 600;
     line-height: 1.55;
   }
 
@@ -1150,12 +1149,12 @@
   }
 
   .miniStats span {
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 7px 10px;
     background: rgba(39, 79, 42, 0.08);
     color: var(--accent);
     font-size: 0.82rem;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .quickList {
@@ -1166,7 +1165,7 @@
   .quickList button {
     width: 100%;
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: var(--radius);
     padding: 10px;
     display: flex;
     justify-content: space-between;
@@ -1202,12 +1201,12 @@
   .panelMetric {
     min-height: 36px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     display: inline-flex;
     align-items: center;
-    background: rgba(38, 153, 214, 0.1);
+    background: rgba(28, 26, 23, 0.04);
     color: var(--accent);
-    font-weight: 950;
+    font-weight: 700;
     white-space: nowrap;
   }
 
@@ -1243,10 +1242,10 @@
     width: 100%;
     min-height: 44px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: #fff;
     color: var(--ink);
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .searchBox input {
@@ -1266,7 +1265,7 @@
   .trendItem {
     min-height: 82px;
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: var(--radius);
     padding: 12px;
     display: grid;
     align-content: space-between;
@@ -1277,12 +1276,12 @@
   small {
     color: var(--muted);
     font-size: 0.8rem;
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .trendItem strong {
     font-size: 1.7rem;
-    font-weight: 950;
+    font-weight: 700;
     color: var(--ink);
   }
 
@@ -1293,7 +1292,7 @@
   .cappedTable {
     max-height: min(620px, 70vh);
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: var(--radius);
   }
 
   .tallTable {
@@ -1350,7 +1349,7 @@
   }
 
   tr.adminRow td {
-    background: rgba(38, 153, 214, 0.055);
+    background: rgba(28, 26, 23, 0.04);
   }
 
   .usersTable tr[role='button'] {
@@ -1359,7 +1358,7 @@
 
   .usersTable tr[role='button']:hover td,
   .usersTable tr.selected td {
-    background: rgba(38, 153, 214, 0.08);
+    background: rgba(28, 26, 23, 0.04);
   }
 
   .usersTable small,
@@ -1383,7 +1382,7 @@
 
   .linkButton strong {
     color: var(--ink);
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .linkButton:hover strong {
@@ -1393,11 +1392,11 @@
   .badge,
   .riskPill {
     display: inline-flex;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 5px 9px;
     color: #fff;
     background: #274f2a;
-    font-weight: 900;
+    font-weight: 700;
     white-space: nowrap;
     line-height: 1;
   }
@@ -1433,7 +1432,7 @@
   .riskUser,
   .auditList article {
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: var(--radius);
     background: #fff;
     padding: 12px;
   }
@@ -1464,12 +1463,12 @@
   }
 
   .reasonList span {
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 5px 9px;
     background: rgba(39, 79, 42, 0.08);
     color: var(--accent);
     font-size: 0.78rem;
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .groupUsers {
@@ -1480,7 +1479,7 @@
 
   .groupUsers article {
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: var(--radius);
     padding: 10px;
     background: rgba(255, 253, 247, 0.76);
   }
@@ -1488,7 +1487,7 @@
   .groupUsers p {
     margin: 6px 0 0;
     color: var(--muted);
-    font-weight: 800;
+    font-weight: 600;
     font-size: 0.85rem;
   }
 
@@ -1508,14 +1507,14 @@
   .userDetail {
     margin-top: 16px;
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: var(--radius);
     background: #fff;
     padding: 16px;
   }
 
   .loadingDetail {
     color: var(--muted);
-    font-weight: 900;
+    font-weight: 700;
   }
 
   .detailHead {
@@ -1529,14 +1528,14 @@
   .detailHead h3 {
     margin: 0;
     color: var(--ink);
-    font-weight: 950;
+    font-weight: 700;
     font-size: 1.25rem;
   }
 
   .detailHead p {
     margin: 4px 0 0;
     color: var(--muted);
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .detailGrid {
@@ -1549,7 +1548,7 @@
   .detailGrid div,
   .detailLine {
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: var(--radius);
     padding: 10px;
     background: rgba(255, 253, 247, 0.72);
   }
@@ -1560,7 +1559,7 @@
     color: var(--muted);
     font-size: 0.75rem;
     text-transform: uppercase;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .detailGrid strong {
@@ -1581,13 +1580,13 @@
   .detailColumns h4 {
     margin: 0 0 8px;
     color: var(--ink);
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .detailLine {
     margin: 0 0 8px;
     color: var(--muted);
-    font-weight: 800;
+    font-weight: 600;
     overflow-wrap: anywhere;
   }
 
@@ -1598,12 +1597,12 @@
   }
 
   .eventType {
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .empty {
     color: var(--muted);
-    font-weight: 850;
+    font-weight: 600;
   }
 
   @media (max-width: 1320px) {

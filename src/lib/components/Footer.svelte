@@ -38,7 +38,7 @@
       <div class="footer-grid">
         <section class="footer-brand" aria-label="DeSaga cu Legume">
           <h2 class="footer-logo">
-            <i class="bi "></i>
+            <img src="/images/shared/logo.png" alt="" width="34" height="34" class="footer-mark" />
             <span>DeSaga cu Legume</span>
           </h2>
           <p>
@@ -149,109 +149,122 @@
 </footer>
 
 <style>
+  /* Ink-dark footer, so the paper page ends on a firm edge. No radial glow
+     behind it - the previous version tinted the whole slab with the accent. */
   .footer {
     color: #fff;
   }
 
   .footer-main {
-    background:
-      radial-gradient(circle at top left, rgba(var(--desaga-accent-rgb), 0.22), transparent 32rem),
-      var(--desaga-slate);
-    padding: clamp(2rem, 5vw, 3rem) 0;
+    background: #26231f;
+    border-top: 3px solid var(--tomato);
+    padding-block: var(--space-6);
   }
 
   .footer-grid {
     display: grid;
-    gap: 2rem;
+    gap: var(--space-5);
   }
 
-  @media (min-width: 768px) {
-    .footer-grid {
-      grid-template-columns: minmax(0, 1.15fr) minmax(150px, 0.6fr) minmax(230px, 0.85fr) minmax(210px, 0.85fr);
-      align-items: start;
-    }
+  .footer-mark {
+    width: 34px;
+    height: auto;
+    outline: none;
+    flex: 0 0 auto;
   }
 
   .footer-logo {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 1.2rem;
-    font-weight: 950;
-    margin: 0 0 0.75rem;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: #fff;
   }
 
   .footer-brand p {
     max-width: 34rem;
     margin: 0;
-    color: rgba(255, 255, 255, 0.78);
-    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.72);
+    line-height: var(--leading-normal);
   }
 
   .footer-cta {
-    margin-top: 1rem;
+    margin-top: var(--space-4);
   }
 
   .footer-call {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: 0.55rem 1rem;
+    border: 1px solid var(--tomato-ink);
+    border-radius: var(--radius);
+    background: var(--tomato-ink);
     color: #fff;
-    background: var(--desaga-blue);
-    border-radius: 999px;
-    padding: 0.72rem 1rem;
-    font-weight: 900;
+    font-weight: 600;
     text-decoration: none;
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
   }
 
   .footer-call:hover,
-  .footer-call:focus {
+  .footer-call:focus-visible {
+    background: var(--tomato-deep);
+    border-color: var(--tomato-deep);
     color: #fff;
-    background: var(--desaga-dark-blue);
   }
 
   .footer-social {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-top: 1rem;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
   }
 
   .footer-social a {
-    width: 38px;
-    height: 38px;
-    border-radius: 999px;
     display: grid;
     place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius);
     color: #fff;
-    background: rgba(255, 255, 255, 0.09);
     text-decoration: none;
   }
 
   .footer-social a:hover,
-  .footer-social a:focus {
-    background: rgba(255, 255, 255, 0.16);
+  .footer-social a:focus-visible {
+    border-color: var(--tomato);
+    background: rgba(228, 60, 64, 0.16);
+    color: #fff;
   }
 
   .footer-title {
-    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    background: transparent;
-    border: 0;
-    color: #fff;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: 44px;
     padding: 0;
-    margin-bottom: 0.85rem;
+    margin-bottom: var(--space-3);
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     text-align: left;
-    font-weight: 950;
   }
 
   .footer-caret {
     display: none;
-    transition: transform 0.2s ease;
+    transition: transform var(--motion) var(--ease);
   }
 
   .footer-caret.rotated {
@@ -264,96 +277,108 @@
 
   .footer-panel nav {
     display: grid;
-    gap: 0.55rem;
   }
 
   .footer-panel a,
   .footer-address > span {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.76);
     text-decoration: none;
   }
 
+  .footer-panel nav a {
+    padding-block: 0.3rem;
+    font-size: var(--text-sm);
+  }
+
   .footer-panel a:hover,
-  .footer-panel a:focus {
+  .footer-panel a:focus-visible {
     color: #fff;
     text-decoration: underline;
     text-underline-offset: 3px;
   }
 
   .footer-muted-link {
-    opacity: 0.76;
+    opacity: 0.78;
   }
 
   .footer-address {
     display: grid;
-    gap: 0.68rem;
-    margin: 0 0 1rem;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-4);
     font-style: normal;
+    font-size: var(--text-sm);
   }
 
   .footer-address a,
   .footer-address > span {
     display: flex;
     align-items: flex-start;
-    gap: 9px;
-    line-height: 1.35;
+    gap: var(--space-2);
+    /* Tappable rows: these were 20-22px tall, under the touch-target floor. */
+    min-height: 44px;
+    padding-block: var(--space-1);
+    line-height: var(--leading-snug);
   }
 
   .footer-address i {
-    color: #a8dff8;
+    color: var(--tomato);
     margin-top: 2px;
+    flex: 0 0 auto;
   }
 
   .footer-bottom {
-    background: var(--desaga-dark-blue);
-    padding: 0.78rem 0;
+    background: #1a1815;
+    padding-block: var(--space-3);
   }
 
   .footer-bottom-wrap {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-4);
     flex-wrap: wrap;
   }
 
   .footer-bottom p {
     margin: 0;
-    font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.86);
+    font-size: var(--text-xs);
+    color: rgba(255, 255, 255, 0.66);
   }
 
   .footer-bottom a {
-    color: rgba(255, 255, 255, 0.72);
-    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: rgba(255, 255, 255, 0.66);
+    font-size: var(--text-xs);
     text-decoration: none;
   }
 
   .footer-bottom a:hover,
-  .footer-bottom a:focus {
+  .footer-bottom a:focus-visible {
     color: #fff;
     text-decoration: underline;
     text-underline-offset: 3px;
   }
 
-  @media (max-width: 767.98px) {
+  @media (min-width: 768px) {
+    .footer-grid {
+      grid-template-columns: minmax(0, 1.2fr) minmax(140px, 0.6fr) minmax(210px, 0.85fr) minmax(200px, 0.8fr);
+      gap: var(--space-6);
+      align-items: start;
+    }
+
     .footer-main {
-      padding: 2rem 0;
+      padding-block: var(--space-7);
     }
+  }
 
-    .footer-brand {
-      text-align: center;
-    }
-
-    .footer-logo,
-    .footer-social,
-    .footer-cta {
-      justify-content: center;
-    }
-
+  @media (max-width: 767.98px) {
+    /* Collapsed sections on phones: four link lists stacked open is a wall
+       of text nobody scrolls past. */
     .footer-group {
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      padding-top: var(--space-2);
     }
 
     .footer-caret {
@@ -363,16 +388,23 @@
     .footer-panel {
       max-height: 0;
       overflow: hidden;
-      transition: max-height 0.25s ease;
+      transition: max-height var(--motion) var(--ease);
     }
 
     .footer-panel.open {
-      max-height: 720px;
+      max-height: 900px;
+    }
+
+    .footer-panel nav a {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
     }
 
     .footer-bottom-wrap {
       justify-content: center;
       text-align: center;
+      gap: var(--space-2);
     }
   }
 </style>

@@ -69,7 +69,7 @@
     <section class="contact-intro" aria-labelledby="contact-title">
       <div class="intro-copy">
         <span class="eyebrow">Contact direct</span>
-        <h1 id="contact-title">Comenzi, ridicare și informații despre stoc</h1>
+        <h2 id="contact-title">Comenzi, ridicare și informații despre stoc</h2>
         <p>
           Pentru produse disponibile azi, sună direct. Pentru colaborări, întrebări generale sau detalii care nu sunt urgente,
           trimite email la <a href={emailHref}>{email}</a>.
@@ -98,7 +98,6 @@
       <div class="contact-main">
         <section class="section-card" aria-labelledby="contact-methods-title">
           <div class="section-heading">
-            <span class="eyebrow">Date de contact</span>
             <h2 id="contact-methods-title">Alege canalul potrivit</h2>
           </div>
 
@@ -119,7 +118,6 @@
 
         <section class="section-card social-card" aria-labelledby="social-title">
           <div>
-            <span class="eyebrow">Noutăți</span>
             <h2 id="social-title">Urmărește stocul și evenimentele</h2>
             <p>Produsele se schimbă în funcție de recoltă. Social media este util pentru anunțuri rapide și noutăți.</p>
           </div>
@@ -169,7 +167,6 @@
     <section class="messages-shell" aria-labelledby="messages-title">
       <div class="messages-head">
         <div>
-          <span class="eyebrow">Mesaje</span>
           <h2 id="messages-title">Conversații despre comenzi</h2>
           <p>Autentificarea este necesară ca mesajele să fie legate de comenzile tale.</p>
         </div>
@@ -212,15 +209,13 @@
 
 <style>
   :global(:root) {
-    --accent: var(--desaga-blue, #2699d6);
+    --accent: var(--desaga-blue, var(--tomato-ink));
     --accent-rgb: 38, 153, 214;
   }
 
   .contact-page {
     padding: 2rem 0 3.25rem;
-    background:
-      radial-gradient(circle at 12% 0%, rgba(var(--accent-rgb), 0.13), transparent 20rem),
-      linear-gradient(180deg, #f8fafc 0%, #ffffff 48%, #f9f7f2 100%);
+    background: var(--paper);
   }
 
   .contact-intro,
@@ -229,7 +224,7 @@
   .panel {
     background: rgba(255, 255, 255, 0.96);
     border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
   }
 
@@ -240,21 +235,21 @@
     margin-bottom: 1.2rem;
   }
 
-  .intro-copy h1,
+  .intro-copy h2,
   .section-heading h2,
   .social-card h2,
   .messages-head h2,
   .guest-panel h3 {
     margin: 0;
-    color: var(--desaga-heading, #14212b);
-    font-weight: 950;
+    color: var(--desaga-heading, var(--ink));
+    font-weight: 700;
     letter-spacing: -0.03em;
   }
 
-  .intro-copy h1 {
+  .intro-copy h2 {
     max-width: 760px;
-    font-size: clamp(1.55rem, 4vw, 2.7rem);
-    line-height: 1.02;
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
   }
 
   .intro-copy p,
@@ -269,7 +264,7 @@
 
   .intro-copy a {
     color: var(--accent);
-    font-weight: 900;
+    font-weight: 700;
     text-decoration: none;
   }
 
@@ -278,7 +273,7 @@
     margin-bottom: 0.42rem;
     color: var(--accent);
     font-size: 0.76rem;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -293,8 +288,8 @@
     align-items: center;
     gap: 0.8rem;
     padding: 0.95rem;
-    border-radius: 18px;
-    color: var(--desaga-heading, #14212b);
+    border-radius: var(--radius);
+    color: var(--desaga-heading, var(--ink));
     text-decoration: none;
     background: rgba(15, 23, 42, 0.035);
     border: 1px solid rgba(15, 23, 42, 0.08);
@@ -313,7 +308,7 @@
     display: grid;
     place-items: center;
     flex: 0 0 auto;
-    border-radius: 14px;
+    border-radius: var(--radius);
     color: var(--accent);
     background: rgba(var(--accent-rgb), 0.12);
   }
@@ -332,12 +327,12 @@
   .quick-action small {
     color: currentColor;
     opacity: 0.72;
-    font-weight: 850;
+    font-weight: 600;
   }
 
   .quick-action strong {
     overflow-wrap: anywhere;
-    font-weight: 950;
+    font-weight: 700;
   }
 
   .contact-layout {
@@ -374,7 +369,7 @@
     display: flex;
     gap: 0.85rem;
     padding: 1rem;
-    border-radius: 18px;
+    border-radius: var(--radius);
     background: rgba(248, 250, 252, 0.9);
     border: 1px solid rgba(15, 23, 42, 0.07);
   }
@@ -385,7 +380,7 @@
     display: grid;
     place-items: center;
     flex: 0 0 auto;
-    border-radius: 15px;
+    border-radius: var(--radius);
     color: var(--accent);
     background: rgba(var(--accent-rgb), 0.12);
   }
@@ -393,33 +388,50 @@
   .method-card h3 {
     margin: 0;
     font-size: 1rem;
-    color: var(--desaga-heading, #14212b);
-    font-weight: 950;
+    color: var(--desaga-heading, var(--ink));
+    font-weight: 700;
   }
 
+  /* These are the page's primary contact affordances, so they get real tap
+     targets rather than 22-25px lines of text. */
   .method-value {
     display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     margin-top: 0.2rem;
-    color: var(--desaga-heading, #14212b);
-    font-weight: 950;
+    color: var(--ink);
+    font-weight: 700;
     text-decoration: none;
     overflow-wrap: anywhere;
+  }
+
+  a.method-value:hover,
+  a.method-value:focus-visible {
+    color: var(--tomato-deep);
+    text-decoration: underline;
   }
 
   .method-action {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    margin-top: 0.65rem;
-    color: var(--accent);
-    font-weight: 900;
+    min-height: 44px;
+    margin-top: 0.35rem;
+    color: var(--tomato-ink);
+    font-weight: 600;
     text-decoration: none;
+  }
+
+  .method-action:hover,
+  .method-action:focus-visible {
+    color: var(--tomato-deep);
+    text-decoration: underline;
   }
 
   .social-card {
     display: grid;
     gap: 1rem;
-    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.09), rgba(255, 255, 255, 0.96));
+    background: var(--paper-2);
   }
 
   .social-links,
@@ -436,11 +448,11 @@
     align-items: center;
     gap: 0.45rem;
     padding: 0.68rem 0.85rem;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     color: var(--accent);
     background: #fff;
     border: 1px solid rgba(var(--accent-rgb), 0.18);
-    font-weight: 900;
+    font-weight: 700;
     text-decoration: none;
   }
 
@@ -458,7 +470,7 @@
     display: flex;
     gap: 0.75rem;
     padding: 0.85rem;
-    border-radius: 16px;
+    border-radius: var(--radius);
     background: rgba(15, 23, 42, 0.035);
     border: 1px solid rgba(15, 23, 42, 0.06);
   }
@@ -474,8 +486,8 @@
   }
 
   .detail-row strong {
-    color: var(--desaga-heading, #14212b);
-    font-weight: 950;
+    color: var(--desaga-heading, var(--ink));
+    font-weight: 700;
   }
 
   .detail-row span {
@@ -515,20 +527,20 @@
     background: var(--accent) !important;
     border-color: var(--accent) !important;
     color: #fff !important;
-    font-weight: 850;
+    font-weight: 600;
     box-shadow: 0 10px 22px rgba(var(--accent-rgb), 0.2);
   }
 
   :global(.btn-accent:hover),
   :global(.btn-accent:focus) {
-    background: var(--desaga-dark-blue, #1f7fb3) !important;
-    border-color: var(--desaga-dark-blue, #1f7fb3) !important;
+    background: var(--desaga-dark-blue, var(--tomato-deep)) !important;
+    border-color: var(--desaga-dark-blue, var(--tomato-deep)) !important;
   }
 
   :global(.btn-outline-accent) {
     border-color: rgba(var(--accent-rgb), 0.45) !important;
     color: var(--accent) !important;
-    font-weight: 850;
+    font-weight: 600;
   }
 
   :global(.btn-outline-accent:hover),
